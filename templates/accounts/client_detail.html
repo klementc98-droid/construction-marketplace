@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% load account_extras %}
+{% block title %}{{ profile }} — Construction's Finest{% endblock %}
+
+{% block content %}
+  {% url 'jobs:list' as jobs_url %}
+  {% include "_back.html" with href=back_href|default:jobs_url label=back_label|default:"Find work" %}
+
+  <div class="card">
+    <div class="profile-head">
+      {% include "_avatar.html" with person=profile.user size="lg" %}
+      <div class="who">
+        <p class="name">
+          {{ profile.company_name|default:profile.user.full_name|default:profile.user.email }}
+        </p>
+        {% if profile.company_name and profile.user.full_name %}
+          <p class="headline">{{ profile.user.full_name }}</p>
+        {% elif profile.user.headline %}
+          <p class="headline">{{ profile.user.headline }}</p>
+        {% endif %}
+        <p class="facts">
+          <span>{{ profile.location|default:profile.region.name }}</span>
+          <span class="sep">·</span>
+          <span>{{ profile.jobs_posted }} job{{ profile.jobs_posted|pluralize }} posted</span>
+          <span class="sep">·</span>
+          <span>Joined {{ profile.user.date_joined|date:"M Y" }}</span>
+        </p>
+      </div>
+    </div>
+
+    {# The same person, the other way round. #}
+    {% if profile.user.is_worker %}
+      <p class="note" style="margin-top:14px">
+        Also takes work on Construction's Finest —
+        <a href="{% url 'accounts:worker_detail' profile.user.worker_profile.pk %}">see their worker profile</a>.
+      </p>
+    {% endif %}
+  </div>
+
+  {# ---- what they're hiring for right now ------------------------------- #}
+  <div class="card {% if profile.is_hiring %}action-panel{% endif %}">
+    <h2>Hiring right now</h2>
+    <p style="margin:0"><strong>{{ profile.hiring_headline }}</strong></p>
+    {% if not profile.is_hiring %}
+      <p class="note">
+        Nothing open at the moment. Their track record below still tells you
+        what they're like to work for.
+      </p>
+    {% endif %}
+  </div>
+
+  {% comment %} The stats a worker actually wants before taking this client's gig: not
+     "do they pay" but "how long do they sit on it".
+  {% endcomment %}
+  <div class="card">
+    <div class="stat-row">
+      <div class="stat">
+        <div class="k">Rating from workers</div>
+        <div class="v {% if not profile.average_rating %}new{% endif %}">{{ profile.average_rating|stars }}</div>
+      </div>
+      <div class="stat">
+        <div class="k">Jobs completed</div>
+        <div class="v {% if not profile.jobs_completed %}new{% endif %}">
+          {% if profile.jobs_completed %}{{ profile.jobs_completed }}{% else %}None yet{% endif %}</div>
+      </div>
+      <div class="stat">
+        <div class="k">Approves in</div>
+        <div class="v {% if profile.average_approval_hours is None %}new{% endif %}">
+          {% if profile.average_approval_hours is None %}New{% else %}{{ profile.average_approval_hours }} hr{% endif %}
+        </div>
+      </div>
+      <div class="stat">
+        <div class="k">Cancellations</div>
+        <div class="v {% if profile.cancellation_rate is None %}new{% endif %}">{{ profile.cancellation_rate|as_percent }}</div>
+      </div>
+    </div>
+    {% if profile.is_new %}
+      <p class="note">New here — not enough completed jobs yet for rates to mean anything.</p>
+    {% endif %}
+  </div>
+
+  {% if open_jobs %}
+    <h2>Open right now</h2>
+    {% for job in open_jobs %}
+      {% include "jobs/_job_row.html" %}
+    {% endfor %}
+  {% endif %}
+
+  {% if is_own %}
+    <div class="btn-row">
+      <a class="btn secondary" href="{% url 'accounts:client_edit' %}">Edit hiring profile</a>
+      <a class="btn secondary" href="{% url 'accounts:details' %}">Edit name and photo</a>
+    </div>
+  {% endif %}
+{% endblock %}

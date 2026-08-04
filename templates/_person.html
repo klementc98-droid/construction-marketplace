@@ -1,0 +1,26 @@
+{% comment %}
+A person's avatar and name, linked to their public profile. Use anywhere a
+name appears that someone might want to click through from:
+
+    {% include "_person.html" with person=message.sender size="sm" %}
+
+Optional `sub` renders a second line under the name. Falls back to plain text
+when the person holds no role yet and therefore has no profile page.
+{% endcomment %}
+<div class="person">
+  {% if person.profile_url %}
+    <a class="person-pic" href="{{ person.profile_url }}" tabindex="-1" aria-hidden="true">
+      {% include "_avatar.html" with person=person size=size|default:"sm" %}
+    </a>
+  {% else %}
+    {% include "_avatar.html" with person=person size=size|default:"sm" %}
+  {% endif %}
+  <div class="person-text">
+    <div class="person-name">
+      {% if person.profile_url %}
+        <a href="{{ person.profile_url }}">{{ person }}</a>
+      {% else %}{{ person }}{% endif %}
+    </div>
+    {% if sub %}<div class="person-sub">{{ sub }}</div>{% endif %}
+  </div>
+</div>

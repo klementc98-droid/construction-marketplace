@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% block title %}How it works — Construction's Finest{% endblock %}
+{% block description %}Day gigs and standing positions for the trades. The client's money is held before the work starts, and released on a timer once the day is signed off.{% endblock %}
+
+{% comment %}
+Every figure on this page comes from the view, which reads config/business_rules.py.
+Do not type a number into this template. If the fee moves, this page moves with it —
+a marketing page that disagrees with the code is a false statement about someone's pay.
+{% endcomment %}
+
+{% block content %}
+  <h1>What we do</h1>
+  <p class="lede">
+    Construction's Finest is a hiring board for the building trades. Day gigs and
+    standing positions, in one market, with the money for a gig held before
+    anyone turns up.
+  </p>
+
+  <div class="prose">
+    <p>
+      The trades already had places to find work. What they did not have was any
+      answer to the question every worker asks before a first job with a stranger:
+      <strong>am I actually going to get paid?</strong> Chasing an invoice for a
+      day's work costs more in time than the day was worth, so most people stop
+      chasing — and the client who never pays finds someone new next week.
+    </p>
+    <p>
+      So we built the board around the money rather than bolting payment on at the
+      end. For a dated gig, the client's card is charged before the worker travels.
+      Nobody works on a promise.
+    </p>
+  </div>
+
+  <h2>The two kinds of post</h2>
+  <div class="card">
+    <p class="flush"><strong>A gig</strong> is one dated shift at a fixed price —
+      a day, a price, a site. This is the kind that runs through escrow, because
+      it has a defined end that everyone can agree has happened.</p>
+    <p style="margin:12px 0 0"><strong>A standing position</strong> is an open
+      role paid at a rate rather than a total: full-time, part-time, ongoing. We
+      introduce the two sides and step out of it. There is no escrow here, because
+      there is no single day to sign off.</p>
+  </div>
+
+  <h2>How the money moves on a gig</h2>
+  <ul class="timeline">
+    <li class="done">
+      <span class="dot"></span>
+      <div class="step-title">The client funds the job</div>
+      <div class="step-meta">
+        The full advertised price is authorised on their card — held, not yet
+        taken. Funding opens up to {{ funding_window_days }} day{{ funding_window_days|pluralize }}
+        before the gig; card authorisations expire, so a hold placed weeks out
+        would be dead by the morning of the job.
+      </div>
+    </li>
+    <li class="done">
+      <span class="dot"></span>
+      <div class="step-title">The worker checks in on site</div>
+      <div class="step-meta">
+        From check-in, they are guaranteed at least
+        {{ minimum_hours|floatformat:"-1" }} hour{{ minimum_hours|floatformat:"-1"|pluralize }}
+        of pay however early the day ends — someone who travelled to a site and
+        was sent home after twenty minutes has still spent their morning.
+      </div>
+    </li>
+    <li class="done">
+      <span class="dot"></span>
+      <div class="step-title">The work is signed off</div>
+      <div class="step-meta">
+        The client has {{ approval_hours }} hours to approve or dispute. If they
+        say nothing, the money releases anyway. Silence is approval here on
+        purpose: an unresponsive client must not be able to strand a worker's pay
+        by simply not opening the app.
+      </div>
+    </li>
+    <li class="current">
+      <span class="dot"></span>
+      <div class="step-title">The worker is paid</div>
+      <div class="step-meta">
+        Straight to their bank via Stripe. We take {{ fee_pct|floatformat:"-2" }}%,
+        deducted at this point and only this point.
+      </div>
+    </li>
+  </ul>
+
+  <div class="note">
+    <strong>On the fee.</strong> The {{ fee_pct|floatformat:"-2" }}% comes out of
+    the payout, not off the top of the client's card. A gig advertised at $400 costs
+    the client $400 — the price on the post is the price they pay, and the worker
+    knows what lands before they accept. If a day ends early, both the pay and the
+    fee are prorated; either side can flag it, and the other has
+    {{ dispute_hours }} hours to disagree before the adjusted amount releases.
+  </div>
+
+  <h2>Two ways to get hired</h2>
+  <div class="card">
+    <p class="flush"><strong>Apply.</strong> The board is public and readable
+      without an account. Find a job, send a message with your application, and
+      the client picks from everyone who put their hand up.</p>
+    <p style="margin:12px 0 0"><strong>Be offered it directly.</strong> A client
+      who has found your profile can write a gig for you by name. It never appears
+      on the public board — it goes to you, with a note, and you accept or decline.
+      Declining costs you nothing and needs no reason.</p>
+  </div>
+
+  <h2>What we don't do</h2>
+  <div class="card">
+    <ul class="prose" style="margin:0; padding-left:20px">
+      <li><strong>We are not your employer.</strong> Work arranged here is between
+        the client and the worker. We hold the money and keep the record.</li>
+      <li style="margin-top:10px"><strong>We do not verify licence numbers.</strong>
+        Trade licences on a profile are self-reported and shown as exactly that.
+        Check with your state board before hiring for regulated work.</li>
+      <li style="margin-top:10px"><strong>We do not judge who was right.</strong>
+        A dispute pauses the automatic release and puts a human in the loop. The
+        timers exist so that neither side can win by going quiet.</li>
+      <li style="margin-top:10px"><strong>We do not use location to block anyone.</strong>
+        If a client adds site coordinates, a check-in records how far away it
+        looked. It is a note on the record, never a condition of checking in —
+        GPS on a building site is unreliable, and a worker who is genuinely there
+        must never be locked out by their handset.</li>
+    </ul>
+  </div>
+
+  <h2>Keeping it honest</h2>
+  <div class="prose">
+    <p>
+      Profiles show completion and dispute rates only after
+      {{ min_jobs_for_stats }} finished jobs. Below that they read "New" — one bad
+      first day should not brand someone with a 0% completion rate forever, and a
+      single job at 100% is not evidence of anything either.
+    </p>
+    <p>
+      You must be {{ minimum_age }} or over. Construction sites are regulated
+      workplaces, and that is the floor in most jurisdictions.
+    </p>
+    <p>
+      Sign-in is Google only. There is no password here to phish, reset, or leak.
+    </p>
+  </div>
+
+  {% comment %} The longer version, for anyone who wants the whole model rather than the
+     summary — and the thing you send to a partner or a lender.
+  {% endcomment %}
+  <div class="card" style="margin-top:16px">
+    <p class="flush"><strong>Want the detail?</strong></p>
+    <p class="muted" style="margin:6px 0 0">
+      The whitepaper covers the escrow mechanism, why job and payment state are
+      one machine, the trust model, and what v1 deliberately does not do yet.
+    </p>
+    <div class="btn-row">
+      <a class="btn secondary" href="{% url 'core:whitepaper' %}">Read the whitepaper</a>
+    </div>
+  </div>
+
+  {% if not user.is_authenticated %}
+    <div class="btn-row" style="margin-top:16px">
+      <a class="btn" href="{% url 'account_login' %}">Get started</a>
+      <a class="btn secondary" href="{% url 'jobs:list' %}">Look at the board first</a>
+    </div>
+  {% endif %}
+{% endblock %}

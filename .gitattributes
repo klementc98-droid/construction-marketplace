@@ -1,0 +1,15 @@
+# Normalise line endings in the repository, whatever the checkout platform.
+# Without this, the same file committed from Windows and from Linux shows as a
+# whole-file diff, and a review of a one-line change becomes unreadable.
+* text=auto eol=lf
+
+# Binary — never touch these.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.pdf  binary
+*.woff binary
+*.woff2 binary
+*.sqlite3 binary

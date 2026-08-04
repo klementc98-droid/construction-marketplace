@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}{% if job %}Edit post{% else %}New post{% endif %} — Construction's Finest{% endblock %}
+
+{% block content %}
+  <h1>{% if job %}Edit this post{% else %}{% if is_gig %}Post a gig{% else %}Post a position{% endif %}{% endif %}</h1>
+  <p class="lede">
+    {% if is_gig %}One date, one price. You fund escrow when you confirm a worker.
+    {% else %}Ongoing work at a rate. Workers apply and you pick.{% endif %}
+  </p>
+
+  {% comment %} Only when posting something new. Editing an existing post is a change to
+     one or two fields, and being walked through all of them again is worse than
+     just typing into the one you came to fix.
+  {% endcomment %}
+  {% if not job %}
+    {% include "assistant/_form_offer.html" with form_key=job_type %}
+  {% endif %}
+
+  <form method="post" class="card">
+    {% csrf_token %}
+    {% include "_required_note.html" %}
+    {{ form.non_field_errors }}
+    {% for field in form %}{% include "_field.html" %}{% endfor %}
+
+    {% comment %} Said where the price is typed, not only on the How it works page. The
+       number in that box is what the client will be charged and what the worker
+       will be paid, and it is the moment somebody wonders who is holding it.
+    {% endcomment %}
+    {% if is_gig %}
+      <p class="trust">
+        <svg class="trust-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-shield"/></svg>
+        You're charged when you confirm a worker, not now. We hold it until the
+        day is signed off.
+      </p>
+    {% endif %}
+
+    <div class="btn-row" style="margin-top:16px">
+      <button class="btn" type="submit"
+              data-busy-label="{% if job %}Saving…{% else %}Posting…{% endif %}">{% if job %}Save changes{% else %}Post it{% endif %}</button>
+      <a class="btn secondary" href="{% if job %}{% url 'jobs:detail' job.pk %}{% else %}{% url 'jobs:post_choose' %}{% endif %}">Cancel</a>
+    </div>
+  </form>
+{% endblock %}

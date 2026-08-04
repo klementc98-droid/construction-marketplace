@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Contact {{ worker.user }} — Construction's Finest{% endblock %}
+
+{% block content %}
+  <h1>Contact {{ worker.user }}</h1>
+  <p class="lede">Pick which gig you're contacting them about.</p>
+
+  {% if gigs %}
+    <form method="post" class="card">
+      {% csrf_token %}
+      <label for="job">Gig</label>
+      <select name="job" id="job" required>
+        {% for gig in gigs %}
+          <option value="{{ gig.pk }}">
+            {{ gig.title }} — {{ gig.gig_date|date:"D j M" }} — {{ gig.pay_display }}
+          </option>
+        {% endfor %}
+      </select>
+      <p class="note">
+        They'll see the gig alongside your first message, so they know what
+        they're being asked about.
+      </p>
+      <div class="btn-row" style="margin-top:22px">
+        <button class="btn" type="submit">Open a thread</button>
+        <a class="btn secondary" href="{% url 'accounts:worker_detail' worker.pk %}">Back</a>
+      </div>
+    </form>
+  {% else %}
+    <div class="card empty">
+      <p>You have no open gigs to contact them about.</p>
+      <p class="muted">
+        Direct contact is attached to a gig so the worker knows what the message
+        is about — post one first.
+      </p>
+      <a class="btn" href="{% url 'jobs:post' 'gig' %}">Post a gig</a>
+    </div>
+  {% endif %}
+{% endblock %}

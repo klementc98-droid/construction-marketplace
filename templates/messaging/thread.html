@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}{{ other }} — Construction's Finest{% endblock %}
+
+{% block content %}
+  {% comment %} A DM header: back, face, name. Sticky under the site header so you always
+     know whose thread you are in, however far you have scrolled back.
+  {% endcomment %}
+  <div class="dm-head">
+    <a class="dm-back" href="{% url 'messaging:inbox' %}" aria-label="All messages"></a>
+
+    {% if other.profile_url %}
+      <a href="{{ other.profile_url }}" class="dm-face" tabindex="-1" aria-hidden="true">
+        {% include "_avatar.html" with person=other size="sm" %}
+      </a>
+    {% else %}
+      <span class="dm-face">{% include "_avatar.html" with person=other size="sm" %}</span>
+    {% endif %}
+
+    <div class="dm-head-text">
+      <p class="dm-head-name">
+        {% if other.profile_url %}
+          <a href="{{ other.profile_url }}">{{ other }}</a>
+        {% else %}{{ other }}{% endif %}
+      </p>
+      {% if other.headline %}<p class="dm-head-sub">{{ other.headline }}</p>{% endif %}
+    </div>
+  </div>
+
+  {% comment %} The job sits above every thread: "are you free Thursday?" is unreadable
+     without the gig it refers to.
+  {% endcomment %}
+  <a class="job-row" href="{% url 'jobs:detail' job.pk %}">
+    <div class="card">
+      <div class="row-top">
+        <span class="title">{{ job.title }}</span>
+        <span class="pay">{{ job.pay_display }}</span>
+      </div>
+      <div class="row-meta">
+        {% if job.is_gig %}
+          <span class="badge gig">Gig</span> {{ job.gig_date|date:"D j M" }}
+        {% else %}
+          <span class="badge">{{ job.get_position_type_display }}</span>
+        {% endif %}
+        {% if not job.is_open %}<span class="badge state-{{ job.state_tone }}">{{ job.get_state_display }}</span>{% endif %}
+        · {{ job.trade.name }}
+      </div>
+    </div>
+  </a>
+
+  {% comment %} Messages are grouped by sender rather than stamped one by one. A run of
+     four lines from the same person is one person talking, and repeating their
+     face and name against each line is four times the furniture for no extra
+     information.
+
+     The ifchanged tag is what does the grouping: it fires only on the
+     iteration where the value differs from the previous one. Three of them run
+     here — the date chip, the "head" class, and whether the face and name are
+     printed — and each keeps its own state, so the last two fire together on
+     the same messages.
+
+     The date chip is the same idea a level up. Which side a bubble sits on
+     carries "who said this" faster than a name does, but the name is still
+     printed at the head of each run, because side alone means nothing to a
+     screen reader.
+  {% endcomment %}
+  <div class="thread">
+    {% for message in messages_list %}
+      {% ifchanged message.created_at|date:"Y-m-d" %}
+        <p class="dm-day"><span>{{ message.created_at|date:"j M Y" }}</span></p>
+      {% endifchanged %}
+
+      <div class="bubble{% if message.sender == user %} mine{% endif %}{% ifchanged message.sender %} head{% endifchanged %}">
+        <div class="bubble-side">
+          {% ifchanged message.sender %}
+            {% if message.sender.profile_url %}
+              <a class="person-pic" href="{{ message.sender.profile_url }}"
+                 tabindex="-1" aria-hidden="true">
+                {% include "_avatar.html" with person=message.sender size="sm" %}
+              </a>
+            {% else %}
+              {% include "_avatar.html" with person=message.sender size="sm" %}
+            {% endif %}
+          {% endifchanged %}
+        </div>
+
+        <div class="bubble-body">
+          {% ifchanged message.sender %}
+            <p class="bubble-name">
+              {% if message.sender == user %}You{% else %}{{ message.sender }}{% endif %}
+            </p>
+          {% endifchanged %}
+          <p class="bubble-text">{{ message.body }}</p>
+          <time class="bubble-time" datetime="{{ message.created_at|date:'c' }}">
+            {{ message.created_at|date:"H:i" }}</time>
+        </div>
+      </div>
+    {% empty %}
+      <div class="card empty">
+        <svg class="empty-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-messages"/></svg>
+        <p>No messages yet — say something.</p>
+      </div>
+    {% endfor %}
+  </div>
+
+  {# What the send redirect anchors to, so you land on your own message. #}
+  <div id="dm-end"></div>
+
+  <form method="post" class="dm-form">
+    {% csrf_token %}
+    <label class="sr-only" for="{{ form.body.id_for_label }}">Message</label>
+    <div class="dm-compose">
+      {{ form.body }}
+      <button class="btn dm-send" type="submit">Send</button>
+    </div>
+    {{ form.body.errors }}
+  </form>
+{% endblock %}

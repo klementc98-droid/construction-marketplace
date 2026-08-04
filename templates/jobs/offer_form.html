@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Offer {{ worker.user }} a job — Construction's Finest{% endblock %}
+
+{% block content %}
+  <h1>Offer {{ worker.user.short_name|default:worker.user }} a job</h1>
+  <p class="lede">
+    A gig written for them alone. It never goes on the public board — only
+    they can see it, and only they can accept it.
+  </p>
+
+  {% comment %} Who you are writing to, kept in front of the person writing. It is easy to
+     open three profiles and lose track of which tab you are in, and the price
+     you are about to type depends on whose rate you have in mind.
+  {% endcomment %}
+  <div class="card">
+    <div class="media">
+      {% include "_avatar.html" with person=worker.user size="md" %}
+      <div class="media-body">
+        <div class="row-top">
+          <span class="title">
+            <a href="{% url 'accounts:worker_detail' worker.pk %}">{{ worker.user }}</a>
+          </span>
+          <span class="pay">{{ worker.rate_display }}</span>
+        </div>
+        <p class="avail avail-{{ worker.availability_tone }}">
+          <span class="avail-dot" aria-hidden="true"></span>{{ worker.availability_headline }}
+        </p>
+        <p class="row-meta" style="margin-top:5px">
+          {{ worker.years_experience }} yr{{ worker.years_experience|pluralize }} in the trade
+          <span class="sep">·</span>{{ worker.jobs_completed }} job{{ worker.jobs_completed|pluralize }} done on Construction's Finest
+          <span class="sep">·</span>
+          {% if worker.average_rating %}{{ worker.average_rating }}★{% else %}New here{% endif %}
+        </p>
+        {% if worker.trades.all %}
+          <p class="worker-trades">
+            {% for t in worker.trades.all %}<span class="pill">{{ t.name }}</span>{% endfor %}
+          </p>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if worker.upcoming_dates %}
+      <p class="note">
+        They've said they're free on
+        {% for d in worker.upcoming_dates %}{{ d.date|date:"D j M" }}{% if not forloop.last %}, {% endif %}{% endfor %}.
+        Those are the days to aim for — you can still ask about any other.
+      </p>
+    {% elif worker.available_from %}
+      <p class="note">
+        Booked until {{ worker.busy_until|date:"D j M" }}, free from
+        {{ worker.available_from|date:"D j M" }}.
+      </p>
+    {% endif %}
+  </div>
+
+  <form method="post">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+
+    <div class="card">
+      <h2>The work</h2>
+      {% include "_required_note.html" %}
+      {% for field in form %}
+        {% if field.name != "note" %}{% include "_field.html" %}{% endif %}
+      {% endfor %}
+      <p class="trust">
+        <svg class="trust-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-shield"/></svg>
+        Nothing is charged by sending this. You fund escrow only if they accept.
+      </p>
+    </div>
+
+    {% comment %} The covering note is its own card, not the last field of a long form. It
+       is the part that makes this an offer to a person rather than a job spec,
+       and it is the first thing they read.
+    {% endcomment %}
+    <div class="card">
+      <h2>Your message to them</h2>
+      {% include "_field.html" with field=form.note %}
+      <p class="note">
+        Sent as your first message in a thread, so they can ask a question
+        without having to say no first.
+      </p>
+    </div>
+
+    <div class="btn-row" style="margin-top:0">
+      <button class="btn" type="submit" data-busy-label="Sending…">Send the offer</button>
+      <a class="btn secondary" href="{% url 'accounts:worker_detail' worker.pk %}">Cancel</a>
+    </div>
+  </form>
+
+  <p class="note">
+    Nothing is charged now. If they accept, you fund the escrow and the money
+    is held until the day's work is signed off.
+  </p>
+{% endblock %}

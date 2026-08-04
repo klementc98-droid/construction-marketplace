@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Whitepaper — Construction's Finest{% endblock %}
+{% block description %}The model behind Construction's Finest: how escrow works, why job and payment state are one machine, and the deliberate limits of v1.{% endblock %}
+
+{% comment %}
+The body is docs/whitepaper.md, rendered. Nothing about the document lives in
+this template — it is a frame, a back link and a print button, so that editing
+the Markdown is the only way to change what this page says.
+{% endcomment %}
+
+{% block content %}
+  <div class="doc-top">
+    <a class="muted" href="{% url 'core:about' %}">← How it works</a>
+    <button class="btn secondary doc-print" type="button" onclick="window.print()">
+      Print or save as PDF
+    </button>
+  </div>
+
+  <article class="doc">{{ body }}</article>
+
+  <div class="doc-foot">
+    <p class="muted">
+      Questions this doesn't answer? The
+      <a href="{% url 'core:about' %}">How it works</a> page covers the same
+      ground in plainer language.
+    </p>
+  </div>
+{% endblock %}

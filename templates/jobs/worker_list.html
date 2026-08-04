@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Find workers — Construction's Finest{% endblock %}
+
+{% block content %}
+  <h1>Find workers</h1>
+  <p class="lede">{{ total }} worker{{ total|pluralize }}.</p>
+
+  {% include "jobs/_filters.html" %}
+
+  {% for worker in workers %}
+    {% include "accounts/_worker_card.html" %}
+  {% empty %}
+    {% comment %} Two different empty boards, and telling them apart is the whole point.
+       "Nothing matches these filters" is a filter problem with an obvious next
+       move; "nobody has signed up in your region yet" is not, and offering
+       "clear filters" to someone who set none reads as a broken button.
+    {% endcomment %}
+    <div class="card empty">
+      <svg class="empty-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-workers"/></svg>
+      {% if request.GET %}
+        <p><strong>No workers match these filters.</strong></p>
+        <p class="muted">
+          Try widening the search area, or drop the trade filter — most people
+          list more than one trade and only tag their main one.
+        </p>
+        <a class="btn secondary" href="{% url 'jobs:worker_list' %}">Clear filters</a>
+      {% else %}
+        <p><strong>Nobody's listed here yet.</strong></p>
+        <p class="muted">
+          Post the job anyway — new workers see the board before they finish
+          their own profile, and posts are what bring them in.
+        </p>
+        {% if user.is_authenticated and user.is_client %}
+          <a class="btn" href="{% url 'jobs:post_choose' %}">Post a job</a>
+        {% endif %}
+      {% endif %}
+    </div>
+  {% endfor %}
+{% endblock %}

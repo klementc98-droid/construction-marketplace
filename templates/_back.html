@@ -1,0 +1,15 @@
+{% comment %}
+The way out of a nested page. Expects `href` and `label`:
+
+    {% include "_back.html" with href=jobs_list_url label="Find work" %}
+
+A real link to a named place, not history.back(): somebody who arrived from a
+message, a notification or a pasted URL has no history to go back to, and a
+button that does nothing on the one screen where you feel lost is worse than
+no button. It names the destination for the same reason — "Back" tells you
+that you will move, not where to.
+
+The chevron is drawn in CSS on .back-link and is decorative, so it is not in
+the markup at all.
+{% endcomment %}
+<a class="back-link" href="{{ href }}">{{ label }}</a>

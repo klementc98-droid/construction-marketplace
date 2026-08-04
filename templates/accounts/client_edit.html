@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Edit client profile — Construction's Finest{% endblock %}
+
+{% block content %}
+  <h1>Client profile</h1>
+  <p class="lede">This is what workers see when you post a job.</p>
+
+  <form method="post">
+    {% csrf_token %}
+    {{ form.region }}
+    <div class="card">
+      {% include "_required_note.html" %}
+      {{ form.non_field_errors }}
+      {% include "_field.html" with field=form.company_name %}
+      <span class="helptext">Leave blank if you're hiring as an individual.</span>
+      {% include "_field.html" with field=form.location %}
+    </div>
+    <button class="btn" type="submit" data-busy-label="Saving…">Save profile</button>
+  </form>
+{% endblock %}

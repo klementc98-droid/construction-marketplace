@@ -1,0 +1,25 @@
+{% comment %}
+The filter bar, shared by the job board and the workers board.
+
+GET, not POST: a filtered list should be a URL you can send someone.
+
+Checkboxes are rendered inline with their label rather than under it — a tick
+box below a caption reads as an unanswered question, and the generic
+label-then-widget loop the text fields use gets it wrong for exactly this one
+widget type.
+{% endcomment %}
+<form class="card filters" method="get">
+  {% for field in form %}
+    {% if field.field.widget.input_type == "checkbox" %}
+      <label class="check-inline" for="{{ field.id_for_label }}">
+        {{ field }}<span>{{ field.label }}</span>
+      </label>
+    {% else %}
+      <div>
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+      </div>
+    {% endif %}
+  {% endfor %}
+  <button class="btn" type="submit">Filter</button>
+</form>

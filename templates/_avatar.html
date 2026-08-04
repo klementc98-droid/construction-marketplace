@@ -1,0 +1,16 @@
+{% comment %}
+One avatar, everywhere. Include with a `person` (a User) and a `size`:
+
+    {% include "_avatar.html" with person=job.client.user size="sm" %}
+
+Falls back to initials rather than a broken <img> or an anonymous silhouette —
+a face you have not uploaded is still a person with a name.
+
+The initials are decorative: every place this is used already renders the name
+in text nearby, so announcing "J D" as well would only be noise.
+{% endcomment %}
+<span class="pic {{ size|default:'sm' }}" aria-hidden="true">
+  {% if person.display_photo %}
+    <img src="{{ person.display_photo }}" alt="" loading="lazy" decoding="async">
+  {% else %}{{ person.initials }}{% endif %}
+</span>

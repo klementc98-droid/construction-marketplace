@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Apply — {{ job.title }}{% endblock %}
+
+{% block content %}
+  <h1>{% if existing %}Update your application{% else %}Apply{% endif %}</h1>
+  <p class="lede">{{ job.title }} · {{ job.pay_display }}</p>
+
+  <form method="post" class="card">
+    {% csrf_token %}
+    {% include "_required_note.html" %}
+    {{ form.non_field_errors }}
+    {% for field in form %}{% include "_field.html" %}{% endfor %}
+
+    {% if job.is_gig %}
+      <p class="trust">
+        <svg class="trust-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-shield"/></svg>
+        If you get this gig, the client funds it before you travel — and escrow
+        releases on its own once the day is signed off.
+      </p>
+    {% endif %}
+
+    <p class="note">
+      The client sees your worker profile with this — your trades, rate, experience
+      and reviews. Nothing else is sent.
+    </p>
+    <div class="btn-row" style="margin-top:16px">
+      <button class="btn" type="submit"
+              data-busy-label="Sending…">{% if existing %}Save{% else %}Send application{% endif %}</button>
+      <a class="btn secondary" href="{% url 'jobs:detail' job.pk %}">Back</a>
+    </div>
+  </form>
+{% endblock %}

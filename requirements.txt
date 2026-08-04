@@ -1,0 +1,39 @@
+# Direct dependencies. Pinned because a marketplace that moves money should
+# not have its payment library change underneath it on a redeploy.
+Django==6.0.7
+django-allauth==65.18.0
+python-dotenv==1.2.2
+pillow==12.3.0
+stripe==15.3.1
+openai==2.52.0
+# Renders docs/whitepaper.md at /whitepaper/. The document stays a plain file;
+# this is only what turns it into a page.
+markdown==3.10.3
+
+# Pulled in by the above; pinned so a fresh install matches this one.
+annotated-types==0.8.0
+anyio==4.14.2
+asgiref==3.12.1
+certifi==2026.7.22
+cffi==2.1.0
+charset-normalizer==3.4.9
+colorama==0.4.6
+cryptography==49.0.0
+distro==1.9.0
+h11==0.16.0
+httpcore==1.0.9
+httpx==0.28.1
+idna==3.18
+jiter==0.16.0
+pycparser==3.0
+pydantic==2.13.4
+pydantic_core==2.46.4
+PyJWT==2.13.0
+requests==2.34.2
+sniffio==1.3.1
+sqlparse==0.5.5
+tqdm==4.70.0
+typing_extensions==4.16.0
+typing-inspection==0.4.2
+tzdata==2026.3
+urllib3==2.7.0

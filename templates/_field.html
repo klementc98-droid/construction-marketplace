@@ -1,0 +1,32 @@
+{% comment %}
+One form field, rendered the same way everywhere.
+
+Order is label → errors → widget → help. The errors sit *above* the input on
+purpose, and not only because reading the problem before the thing that has it
+is the better order: the stylesheet turns the field's border red with
+`.errorlist + input`, which is an adjacent-sibling rule and only fires when
+the list is immediately before the control. With the errors underneath, as
+they were, that border never appeared and a long form gave you no way to spot
+which field had failed without reading every message.
+
+Required is marked before submission, not discovered after it. The asterisk is
+aria-hidden and paired with sr-only text, because a screen reader announcing
+"asterisk" is noise — `required` on the widget itself is what the accessibility
+tree actually uses, and Django puts it there.
+
+Use for a whole form:      {% for field in form %}{% include "_field.html" %}{% endfor %}
+or for one field at a time: {% include "_field.html" with field=form.company_name %}
+{% endcomment %}
+{% if field.is_hidden %}
+  {{ field }}
+{% else %}
+  <label for="{{ field.id_for_label }}">
+    {{ field.label }}
+    {% if field.field.required %}
+      <span class="req" aria-hidden="true">*</span><span class="sr-only">(required)</span>
+    {% endif %}
+  </label>
+  {{ field.errors }}
+  {{ field }}
+  {% if field.help_text %}<span class="helptext">{{ field.help_text }}</span>{% endif %}
+{% endif %}

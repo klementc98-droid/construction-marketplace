@@ -1,0 +1,48 @@
+{% comment %}
+One inbox row. Expects `conversation`, plus `other` (the person on the far end)
+and `name` (what to print for them — a client shows their company where they
+have one) resolved by the caller, which is the only place that knows which
+side of the thread the reader is on.
+
+The whole row is the target: a 44px name link inside a 72px row would be a
+miss waiting to happen with gloves on, which is the same reason job cards work
+this way.
+{% endcomment %}
+<a class="dm-row{% if conversation.unread_count %} unread{% endif %}"
+   href="{% url 'messaging:thread' conversation.pk %}">
+  {% include "_avatar.html" with person=other size="md" %}
+
+  <div class="dm-main">
+    <div class="dm-top">
+      <span class="dm-name">{{ name }}</span>
+      {% if conversation.last_message_at %}
+        <time class="dm-when" datetime="{{ conversation.last_message_at|date:'c' }}">
+          {{ conversation.last_message_at|timesince }}</time>
+      {% endif %}
+    </div>
+
+    {% comment %} "You:" so a thread whose last line is your own does not read as a reply
+       you have not answered. Truncated hard — this is a preview, and a row that
+       grows to three lines breaks the rhythm of the list.
+    {% endcomment %}
+    <p class="dm-preview">
+      {% if conversation.last_body %}
+        {% if conversation.last_sender == user.pk %}<span class="dm-you">You:</span> {% endif %}
+        {{ conversation.last_body|truncatechars:64 }}
+      {% else %}
+        <span class="muted">No messages yet</span>
+      {% endif %}
+    </p>
+
+    <p class="dm-job">{{ conversation.job.title }} · {{ conversation.job.pay_display }}</p>
+  </div>
+
+  {% comment %} A dot, not a count. At this size the number was never the useful part —
+     "is there something here for me" is, and the screen-reader text carries the
+     exact figure for anyone who wants it.
+  {% endcomment %}
+  {% if conversation.unread_count %}
+    <span class="dm-dot" aria-hidden="true"></span>
+    <span class="sr-only">{{ conversation.unread_count }} unread</span>
+  {% endif %}
+</a>

@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Your account — Construction's Finest{% endblock %}
+
+{% block content %}
+  <div class="card">
+    <div class="profile-head">
+      {% include "_avatar.html" with person=user size="lg" %}
+      <div class="who">
+        <p class="name">{{ user.full_name|default:user.email }}</p>
+        {% if user.headline %}<p class="headline">{{ user.headline }}</p>{% endif %}
+        <p class="facts">
+          <span>
+            {% if user.roles|length > 1 %}Worker and client
+            {% elif user.is_worker %}Worker
+            {% else %}Client{% endif %}
+          </span>
+          {% if user.age %}<span class="sep">·</span><span>{{ user.age }}</span>{% endif %}
+          <span class="sep">·</span><span>Joined {{ user.date_joined|date:"M Y" }}</span>
+        </p>
+        <p style="margin:12px 0 0">
+          <a class="btn secondary" href="{% url 'accounts:details' %}">Edit your details</a>
+        </p>
+      </div>
+    </div>
+    {% if not user.full_name or not user.display_photo %}
+      <p class="note">
+        {% if not user.full_name and not user.display_photo %}
+          Add your name and a photo — clients skip profiles they can't put a face to.
+        {% elif not user.display_photo %}
+          Add a photo. Profiles with one get picked noticeably more often.
+        {% else %}
+          Add your name so people know who they're hiring.
+        {% endif %}
+      </p>
+    {% endif %}
+  </div>
+
+  {% if user.is_worker %}
+    <div class="card">
+      <h2>Worker profile</h2>
+      {% with p=user.worker_profile %}
+        <p class="muted" style="margin-top:0">
+          {% if p.trades.exists %}
+            {% for t in p.trades.all %}<span class="pill">{{ t.name }}</span>{% endfor %}
+          {% else %}
+            No trades selected yet — clients search by trade, so this is the one to fill in first.
+          {% endif %}
+        </p>
+        <div class="btn-row">
+          <a class="btn secondary" href="{% url 'accounts:worker_edit' %}">Edit worker profile</a>
+          <a class="btn secondary" href="{% url 'accounts:worker_detail' p.pk %}">View as others see it</a>
+        </div>
+      {% endwith %}
+    </div>
+  {% endif %}
+
+  {% if user.is_client %}
+    <div class="card">
+      <h2>Client profile</h2>
+      {% with p=user.client_profile %}
+        <p class="muted" style="margin-top:0">
+          {{ p.company_name|default:"Individual" }} · {{ p.location|default:p.region.name }}
+        </p>
+        <div class="btn-row">
+          <a class="btn secondary" href="{% url 'accounts:client_edit' %}">Edit client profile</a>
+          <a class="btn secondary" href="{% url 'accounts:client_detail' p.pk %}">View as others see it</a>
+        </div>
+      {% endwith %}
+    </div>
+  {% endif %}
+
+  {% if user.roles|length == 1 %}
+    <div class="card">
+      <h2>Do both?</h2>
+      <p class="muted" style="margin-top:0">
+        {% if user.is_worker %}Hiring someone for a job of your own?
+        {% else %}Looking to pick up work yourself?{% endif %}
+        You can add the other side to this same account — your reputation stays in one place.
+      </p>
+      <div class="btn-row">
+        <a class="btn secondary" href="{% url 'accounts:select_role' %}">
+          Add {% if user.is_worker %}a client{% else %}a worker{% endif %} profile
+        </a>
+      </div>
+    </div>
+  {% endif %}
+
+  <div class="card">
+    <h2>Work</h2>
+    {% if user.is_client %}
+      <a class="btn" href="{% url 'jobs:post_choose' %}">Post a job</a>
+    {% endif %}
+    <div class="btn-row" {% if not user.is_client %}style="margin-top:0"{% endif %}>
+      <a class="btn secondary" href="{% url 'jobs:list' %}">Find work</a>
+      <a class="btn secondary" href="{% url 'jobs:worker_list' %}">Find workers</a>
+      <a class="btn secondary" href="{% url 'jobs:mine' %}">Your jobs</a>
+      {% if user.is_worker %}
+        <a class="btn secondary" href="{% url 'payments:payouts' %}">Getting paid</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <p class="note">
+    Escrow payments, check-in and ratings arrive in phases 4–6.
+    Posting, search, applications and messaging are live.
+  </p>
+{% endblock %}

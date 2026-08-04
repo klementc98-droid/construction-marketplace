@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Your details — Construction's Finest{% endblock %}
+
+{% block content %}
+  <h1>Your details</h1>
+  <p class="lede">
+    This is you, not a role. The same name and photo show whether you're picking
+    up work or hiring someone.
+  </p>
+
+  <div class="card">
+    <div class="profile-head">
+      {% include "_avatar.html" with person=user size="lg" %}
+      <div class="who">
+        <p class="name">{{ user.full_name|default:"Add your name" }}</p>
+        {% if user.headline %}<p class="headline">{{ user.headline }}</p>{% endif %}
+        <p class="facts">
+          <span>{{ user.email }}</span>
+          {% if user.age %}<span class="sep">·</span><span>{{ user.age }} years old</span>{% endif %}
+          <span class="sep">·</span><span>Joined {{ user.date_joined|date:"F Y" }}</span>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <div class="card">
+      {% include "_required_note.html" %}
+      {% for field in form %}{% include "_field.html" %}{% endfor %}
+    </div>
+    <div class="btn-row" style="margin-top:0">
+      <button class="btn" type="submit" data-busy-label="Saving…">Save details</button>
+      <a class="btn secondary" href="{% url 'accounts:home' %}">Back</a>
+    </div>
+  </form>
+
+  <p class="note">
+    Your email comes from Google and can't be changed here. Your phone is only
+    shown to people you're actively working with on a job.
+  </p>
+{% endblock %}

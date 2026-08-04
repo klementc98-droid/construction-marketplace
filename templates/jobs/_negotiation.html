@@ -1,0 +1,117 @@
+{% comment %}
+The negotiation panel, rendered for whichever side is looking.
+
+Expects: counter_worker, my_party, live_counter, my_turn, terms,
+counter_history.
+
+One partial for both sides rather than two mirrored blocks. What differs
+between a worker and a client here is two words of copy and where the "accept"
+button posts to — everything else, including whose turn it is, comes off the
+offer itself. Two blocks would be two places to get the turn logic wrong, and
+getting it wrong means showing both people an accept button for terms only one
+of them has seen.
+{% endcomment %}
+{% if live_counter or counter_history %}
+  <div class="card {% if my_turn %}action-panel{% endif %} negotiation">
+    <h2>
+      {% if live_counter %}
+        {% if my_turn %}
+          {% if live_counter.proposed_by == 'worker' %}
+            {{ counter_worker.user }} came back with different terms
+          {% else %}
+            {{ job.client.company_name|default:job.client.user }} came back with different terms
+          {% endif %}
+        {% else %}
+          Your terms are with
+          {% if my_party == 'worker' %}{{ job.client.company_name|default:job.client.user }}
+          {% else %}{{ counter_worker.user }}{% endif %}
+        {% endif %}
+      {% else %}
+        How the terms were agreed
+      {% endif %}
+    </h2>
+
+    {% if live_counter %}
+      {% comment %} Before and after, never the new figure alone. Somebody being asked to
+         agree to "$280" cannot weigh it without knowing it was $240.
+      {% endcomment %}
+      <ul class="terms-diff">
+        {% for label, before, after in live_counter.changes %}
+          <li>
+            <span class="td-k">{{ label }}</span>
+            <span class="td-was">{{ before }}</span>
+            <svg class="td-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M4 12h15M13 6l6 6-6 6"/>
+            </svg>
+            <span class="td-now">{{ after }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+
+      {% if live_counter.note %}
+        <p class="pre prose">“{{ live_counter.note }}”</p>
+      {% endif %}
+
+      {% if my_turn %}
+        <p class="note">
+          Accepting agrees these terms and books the job.
+          {% if my_party == 'client' %}You fund escrow next.{% endif %}
+        </p>
+        <div class="btn-row">
+          <form method="post" action="{% url 'jobs:counter_respond' live_counter.pk %}">
+            {% csrf_token %}
+            <button class="btn" type="submit" name="answer" value="accept"
+                    data-confirm="Agree to these terms and book the job?">
+              Accept — ${{ live_counter.fixed_pay|default:terms.fixed_pay|floatformat:0 }}
+            </button>
+          </form>
+          <a class="btn secondary"
+             href="{% if my_party == 'client' %}{% url 'jobs:counter_to' job.pk counter_worker.pk %}{% else %}{% url 'jobs:counter' job.pk %}{% endif %}">
+            Counter again
+          </a>
+          <form method="post" action="{% url 'jobs:counter_respond' live_counter.pk %}">
+            {% csrf_token %}
+            <button class="btn danger" type="submit" name="answer" value="decline"
+                    data-confirm="Turn this down? That ends the negotiation — counter instead if you want to keep talking.">
+              No thanks
+            </button>
+          </form>
+        </div>
+      {% else %}
+        <p class="flush muted">
+          Sent {{ live_counter.created_at|timesince }} ago. Nothing is booked until
+          they answer.
+        </p>
+      {% endif %}
+    {% endif %}
+
+    {% comment %} The trail. Superseded rounds are kept rather than deleted — how a figure
+       was arrived at is part of deciding whether to accept it.
+    {% endcomment %}
+    {% if counter_history|length > 1 or not live_counter %}
+      <details class="negotiation-log">
+        <summary>{{ counter_history|length }} round{{ counter_history|length|pluralize }} of terms</summary>
+        <ul class="timeline">
+          {% for round in counter_history %}
+            <li class="{% if round.status == 'accepted' %}done{% elif round.is_pending %}current{% endif %}">
+              <span class="dot"></span>
+              <div class="step-title">
+                {% if round.proposed_by == 'worker' %}{{ counter_worker.user }}
+                {% else %}{{ job.client.company_name|default:job.client.user }}{% endif %}
+                asked for
+                {% if round.fixed_pay %}${{ round.fixed_pay|floatformat:0 }}{% endif %}
+                {% if round.gig_hours %}· {{ round.gig_hours|floatformat:"-1" }} hrs{% endif %}
+                {% if round.gig_date %}· {{ round.gig_date|date:"D j M" }}{% endif %}
+              </div>
+              <div class="step-meta">
+                {{ round.get_status_display }} · {{ round.created_at|timesince }} ago
+                {% if round.note %}<br>“{{ round.note }}”{% endif %}
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
+      </details>
+    {% endif %}
+  </div>
+{% endif %}

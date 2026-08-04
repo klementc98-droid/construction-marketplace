@@ -1,0 +1,24 @@
+{% comment %}
+One row on any list of jobs. Shared by the board, "mine", and search results
+so a job looks the same everywhere it appears.
+{% endcomment %}
+<a class="job-row" href="{% url 'jobs:detail' job.pk %}">
+  <div class="card">
+    <div class="row-top">
+      <span class="title">{{ job.title }}</span>
+      <span class="pay">{{ job.pay_display }}</span>
+    </div>
+    <div class="row-meta">
+      {% if job.is_gig %}
+        <span class="badge gig">Gig</span>
+        {{ job.gig_date|date:"D j M" }}
+        {% if job.implied_hourly %}· ≈${{ job.implied_hourly }}/hr{% endif %}
+      {% else %}
+        <span class="badge">{{ job.get_position_type_display }}</span>
+      {% endif %}
+      {% if not job.is_open %}<span class="badge state-{{ job.state_tone }}">{{ job.get_state_display }}</span>{% endif %}
+      <br>
+      {{ job.trade.name }}{% if job.location %} · {{ job.location }}{% endif %}
+    </div>
+  </div>
+</a>

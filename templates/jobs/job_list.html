@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Find work — Construction's Finest{% endblock %}
+
+{% block content %}
+  <h1>Find work</h1>
+  <p class="lede">{{ total }} open post{{ total|pluralize }}.</p>
+
+  {% include "jobs/_filters.html" %}
+
+  {% for job in jobs %}
+    {% include "jobs/_job_row.html" %}
+  {% empty %}
+    {% comment %} A filtered board and a bare board are different problems — see the same
+       split in worker_list.html. Offering "clear filters" to somebody who set
+       none is a button that appears to do nothing.
+    {% endcomment %}
+    <div class="card empty">
+      <svg class="empty-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-jobs"/></svg>
+      {% if request.GET %}
+        <p><strong>No open work matches these filters.</strong></p>
+        <p class="muted">
+          Try clearing the trade, or search a wider area — gigs are posted for
+          a single day and the board turns over fast.
+        </p>
+        <a class="btn secondary" href="{% url 'jobs:list' %}">Clear filters</a>
+      {% else %}
+        <p><strong>Nothing on the board right now.</strong></p>
+        <p class="muted">
+          {% if user.is_authenticated and user.is_client %}
+            Yours would be the first.
+          {% else %}
+            New gigs go up daily — and workers who've filled in a profile get
+            found by clients before a post is ever written.
+          {% endif %}
+        </p>
+        {% if user.is_authenticated and user.is_client %}
+          <a class="btn" href="{% url 'jobs:post_choose' %}">Post the first job</a>
+        {% elif user.is_authenticated and user.is_worker %}
+          <a class="btn secondary" href="{% url 'accounts:worker_edit' %}">Finish your profile</a>
+        {% endif %}
+      {% endif %}
+    </div>
+  {% endfor %}
+
+  {% if user.is_authenticated and user.is_client %}
+    <div class="btn-row">
+      <a class="btn" href="{% url 'jobs:post_choose' %}">Post a job</a>
+    </div>
+  {% endif %}
+{% endblock %}

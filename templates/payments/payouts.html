@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Getting paid — Construction's Finest{% endblock %}
+
+{% block content %}
+  <h1>Getting paid</h1>
+  <p class="lede">
+    Gig pay goes through the platform. Set this up once and the money lands in
+    your bank after each job.
+  </p>
+
+  {% if not stripe_configured %}
+    <div class="card">
+      <p style="margin:0"><strong>Payments aren't switched on yet.</strong></p>
+      <p class="muted" style="margin:8px 0 0">
+        This install has no Stripe keys. Everything else works — you just can't
+        set up payouts until they're added.
+      </p>
+    </div>
+  {% elif account and account.is_ready %}
+    <div class="card">
+      <div class="stat-row">
+        <div class="stat"><div class="k">Status</div><div class="v" style="color:var(--ok)">Ready</div></div>
+        <div class="stat"><div class="k">Platform fee</div><div class="v">{{ platform_fee_pct|floatformat:0 }}%</div></div>
+      </div>
+      <p class="note">
+        The fee comes off at payout, not off the top — a $90 gig is $90 to the
+        client, and you receive it less {{ platform_fee_pct|floatformat:0 }}%.
+      </p>
+    </div>
+  {% elif account %}
+    <div class="card">
+      <div class="stat-row">
+        <div class="stat">
+          <div class="k">Details submitted</div>
+          <div class="v">{% if account.details_submitted %}Yes{% else %}No{% endif %}</div>
+        </div>
+        <div class="stat">
+          <div class="k">Payouts enabled</div>
+          <div class="v">{% if account.payouts_enabled %}Yes{% else %}Not yet{% endif %}</div>
+        </div>
+      </div>
+      <p class="note">
+        Stripe still needs something from you. Clients can't fund a gig with you
+        on it until this is finished.
+      </p>
+      <form method="post" action="{% url 'payments:payouts_start' %}" style="margin-top:14px">
+        {% csrf_token %}
+        <button class="btn" type="submit">Finish setup</button>
+      </form>
+    </div>
+  {% else %}
+    <div class="card">
+      <p style="margin:0 0 12px">
+        You'll be handed to Stripe to confirm who you are and where the money
+        goes. We never see your bank details.
+      </p>
+      <form method="post" action="{% url 'payments:payouts_start' %}">
+        {% csrf_token %}
+        <button class="btn" type="submit">Set up payouts</button>
+      </form>
+    </div>
+  {% endif %}
+{% endblock %}

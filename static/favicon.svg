@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- The roofline from the header mark, redrawn at tab size: heavier strokes
+       and more air around it, because 16px is the size that actually ships.
+       The gradient runs the same amber-to-brick heat scale as the app, and it
+       is stated as a gradient rather than a flat orange because at 16px the
+       lighter left end is what keeps the mark from reading as a solid blob on
+       dark browser chrome. -->
+  <defs>
+    <linearGradient id="heat" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#e8951f"/>
+      <stop offset=".58" stop-color="#e0561a"/>
+      <stop offset="1" stop-color="#a13a18"/>
+    </linearGradient>
+  </defs>
+  <path d="M4 20 16 6l12 14" fill="none" stroke="url(#heat)" stroke-width="4"
+        stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M11 26h10" fill="none" stroke="#9a8676" stroke-width="4"
+        stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Messages — Construction's Finest{% endblock %}
+
+{% comment %}
+A DM list, not a list of cards. Rows sit directly on the page separated by a
+hairline, which is what lets you scan twenty threads in one glance — twenty
+bordered panels each with their own shadow is twenty things to look at.
+
+Three lines per row, in order of what triages fastest: who it is and when,
+what they last said, and only then which job it is about. The job stays
+because every thread here is about one — see the module docstring in
+messaging/models.py — but it is the thing you check after you have already
+decided the row is interesting.
+{% endcomment %}
+
+{% block content %}
+  <h1>Messages</h1>
+
+  {% if conversations %}
+    <div class="dm-list">
+      {% for conversation in conversations %}
+        {% if conversation.worker.user == user %}
+          {% with other=conversation.job.client.user %}
+            {% include "messaging/_dm_row.html" with other=other name=conversation.job.client.company_name|default:other %}
+          {% endwith %}
+        {% else %}
+          {% include "messaging/_dm_row.html" with other=conversation.worker.user name=conversation.worker.user %}
+        {% endif %}
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="card empty">
+      <svg class="empty-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-messages"/></svg>
+      <p>No conversations yet.</p>
+      <p class="muted">
+        Threads open once a worker applies to one of your jobs, or once you apply to one.
+      </p>
+      <a class="btn secondary" href="{% url 'jobs:list' %}">Browse work</a>
+    </div>
+  {% endif %}
+{% endblock %}
