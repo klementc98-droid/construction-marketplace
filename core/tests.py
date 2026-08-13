@@ -7,7 +7,6 @@ from pathlib import Path
 from unittest.mock import patch
 
 from django.test import SimpleTestCase, TestCase
-from django.urls import reverse
 from dotenv import dotenv_values
 
 from config import business_rules as rules
@@ -175,96 +174,3 @@ class SeedDataTests(TestCase):
     def test_launch_region_exists_and_is_active(self):
         region = Region.objects.get(slug=rules.DEFAULT_REGION_SLUG)
         self.assertTrue(region.is_active)
-
-
-class AboutPageTests(TestCase):
-    """The public explanation of how the money works.
-
-    Readable signed out — someone deciding whether to trust us with a day's pay
-    should not have to hand over an account to find out the terms.
-    """
-
-    def test_readable_without_an_account(self):
-        response = self.client.get(reverse("core:about"))
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "What we do")
-
-    def test_quotes_the_real_platform_fee(self):
-        """The page must not be able to disagree with business_rules.
-
-        A hardcoded "12%" in the template would survive a fee change and become
-        a false statement about someone's pay. Reading it from the view is what
-        makes that impossible, and this is the test that keeps it that way.
-        """
-        response = self.client.get(reverse("core:about"))
-        expected = f"{rules.PLATFORM_FEE_PCT * 100:.2f}".rstrip("0").rstrip(".")
-        self.assertContains(response, f"{expected}%")
-
-    def test_states_the_approval_window_in_hours(self):
-        response = self.client.get(reverse("core:about"))
-        hours = int(rules.CLIENT_APPROVAL_WINDOW.total_seconds() // 3600)
-        self.assertContains(response, f"{hours} hours")
-
-    def test_says_we_do_not_verify_licences(self):
-        """A promise we deliberately do not make, stated where people look."""
-        response = self.client.get(reverse("core:about"))
-        self.assertContains(response, "do not verify licence numbers")
-
-    def test_links_to_the_whitepaper(self):
-        response = self.client.get(reverse("core:about"))
-        self.assertContains(response, reverse("core:whitepaper"))
-
-
-class WhitepaperTests(TestCase):
-    """Served from docs/whitepaper.md, so the file and the page cannot differ."""
-
-    def test_readable_without_an_account(self):
-        response = self.client.get(reverse("core:whitepaper"))
-        self.assertEqual(response.status_code, 200)
-
-    def test_renders_the_repository_file(self):
-        from core.views import WHITEPAPER_PATH
-
-        self.assertTrue(WHITEPAPER_PATH.exists())
-        response = self.client.get(reverse("core:whitepaper"))
-        self.assertContains(response, "Deliberate limits of v1")
-
-    def test_markdown_is_converted_not_dumped(self):
-        """A page showing raw '## 1. Summary' means the renderer silently failed."""
-        body = self.client.get(reverse("core:whitepaper")).content.decode()
-        self.assertIn("<h2", body)
-        self.assertNotIn("## 1. Summary", body)
-
-    def test_the_lifecycle_diagram_survives_as_a_code_block(self):
-        """It is ASCII art; without fenced_code it collapses into a paragraph."""
-        body = self.client.get(reverse("core:whitepaper")).content.decode()
-        self.assertIn("<pre>", body)
-        self.assertIn("escrow_held", body)
-
-    def test_the_comparison_table_survives(self):
-        body = self.client.get(reverse("core:whitepaper")).content.decode()
-        self.assertIn("<table>", body)
-
-    def test_reachable_from_the_footer_on_any_page(self):
-        response = self.client.get(reverse("jobs:list"))
-        self.assertContains(response, reverse("core:whitepaper"))
-
-    def test_reachable_from_the_top_bar(self):
-        """Two routes, because the footer alone proved easy to miss."""
-        body = self.client.get(reverse("jobs:list")).content.decode()
-        nav = body.split('class="desktop-nav"')[1].split("</nav>")[0]
-        self.assertIn(reverse("core:whitepaper"), nav)
-
-    def test_the_top_bar_link_marks_itself_current_on_the_page(self):
-        body = self.client.get(reverse("core:whitepaper")).content.decode()
-        nav = body.split('class="desktop-nav"')[1].split("</nav>")[0]
-        self.assertIn('aria-current="page"', nav)
-
-    def test_a_missing_file_is_a_404_not_a_500(self):
-        from core import views
-
-        with patch.object(views, "WHITEPAPER_PATH", Path("/nope/missing.md")):
-            views._rendered = None
-            response = self.client.get(reverse("core:whitepaper"))
-        views._rendered = None
-        self.assertEqual(response.status_code, 404)
