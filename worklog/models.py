@@ -21,6 +21,7 @@ from math import asin, cos, radians, sin, sqrt
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 
 from accounts.models import WorkerProfile
 from config import business_rules as rules
@@ -98,8 +99,8 @@ class CheckIn(TimestampedModel):
 
 
 class EndedBy(models.TextChoices):
-    WORKER = "worker", "Worker"
-    CLIENT = "client", "Client"
+    WORKER = "worker", _("Worker")
+    CLIENT = "client", _("Client")
 
 
 class Completion(TimestampedModel):
@@ -169,9 +170,9 @@ def payable_for(job: Job, hours_worked: Decimal) -> Decimal:
 
 
 class DisputeStatus(models.TextChoices):
-    OPEN = "open", "Awaiting review"
-    RESOLVED_WORKER = "resolved_worker", "Resolved — paid to worker"
-    RESOLVED_CLIENT = "resolved_client", "Resolved — refunded to client"
+    OPEN = "open", _("Awaiting review")
+    RESOLVED_WORKER = "resolved_worker", _("Resolved — paid to worker")
+    RESOLVED_CLIENT = "resolved_client", _("Resolved — refunded to client")
 
 
 class Dispute(TimestampedModel):

@@ -16,6 +16,7 @@ from __future__ import annotations
 from decimal import Decimal
 
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 
 from accounts.models import WorkerProfile
 from core.models import TimestampedModel
@@ -61,19 +62,19 @@ class StripeAccount(TimestampedModel):
 
 
 class EscrowStatus(models.TextChoices):
-    PENDING = "pending", "Awaiting payment"
+    PENDING = "pending", _("Awaiting payment")
     """A checkout session exists; the client has not completed it."""
 
-    AUTHORIZED = "authorized", "Funds held"
+    AUTHORIZED = "authorized", _("Funds held")
     """The card is authorised and the money is committed but not taken."""
 
-    RELEASED = "released", "Released to worker"
+    RELEASED = "released", _("Released to worker")
     """Captured. Terminal."""
 
-    REFUNDED = "refunded", "Returned to client"
+    REFUNDED = "refunded", _("Returned to client")
     """The authorisation was cancelled or the charge refunded. Terminal."""
 
-    FAILED = "failed", "Failed"
+    FAILED = "failed", _("Failed")
     """Stripe refused. ``last_error`` says why. Terminal for this attempt."""
 
 

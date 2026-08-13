@@ -8,6 +8,7 @@ adding the second one is an INSERT, not a migration and a refactor.
 from __future__ import annotations
 
 from django.db import models
+from django.utils.translation import gettext, gettext_lazy as _
 
 
 class TimestampedModel(models.Model):
@@ -75,4 +76,34 @@ class Trade(TimestampedModel):
         ordering = ("display_order", "name")
 
     def __str__(self) -> str:
-        return self.name
+        """The trade's name, translated when a catalogue has it.
+
+        Trade names are rows, not code, so gettext cannot find them by reading
+        the source — SEEDED_TRADE_NAMES below exists purely so the extractor
+        sees them. The lookup is by the English name because that is what the
+        seed migration writes and what the slug is derived from.
+
+        A trade added later through the admin simply renders as typed, which is
+        the right failure: an untranslated name is readable, and the alternative
+        is a second name column that nobody remembers to fill in.
+        """
+        return gettext(self.name)
+
+
+#: The v1 trade list, restated so ``extractpo`` can find these strings. Nothing
+#: reads this at runtime; it exists to put the names in the catalogue. Keep it
+#: in step with the seed migration.
+SEEDED_TRADE_NAMES = (
+    _("General labor"),
+    _("Electrician"),
+    _("Plumber"),
+    _("Carpenter"),
+    _("Mason/Concrete"),
+    _("Painter"),
+    _("Roofer"),
+    _("HVAC"),
+    _("Drywall/Framing"),
+    _("Landscaping/Excavation"),
+    _("Welder"),
+    _("Heavy equipment operator"),
+)

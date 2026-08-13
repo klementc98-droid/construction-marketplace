@@ -24,16 +24,17 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 
 
 class JobState(models.TextChoices):
     """Every state a gig can occupy. Stored directly on the job row."""
 
     # -- before work -------------------------------------------------------
-    POSTED = "posted", "Posted"
+    POSTED = "posted", _("Posted")
     """Open. Workers can see and apply. No worker committed, no money moved."""
 
-    ACCEPTED = "accepted", "Accepted"
+    ACCEPTED = "accepted", _("Accepted")
     """A worker is confirmed, but the client has not funded escrow yet.
 
     Deliberately distinct from ESCROW_HELD. A worker must be able to tell the
@@ -41,37 +42,37 @@ class JobState(models.TextChoices):
     because only the second one is worth travelling across town for.
     """
 
-    ESCROW_HELD = "escrow_held", "Escrow held"
+    ESCROW_HELD = "escrow_held", _("Escrow held")
     """Client's funds are captured and held by the platform. Work may begin."""
 
     # -- during work -------------------------------------------------------
-    IN_PROGRESS = "in_progress", "In progress"
+    IN_PROGRESS = "in_progress", _("In progress")
     """Worker has checked in on site."""
 
-    ENDED_EARLY = "ended_early", "Ended early"
+    ENDED_EARLY = "ended_early", _("Ended early")
     """Either party flagged an early finish; the short dispute window is open.
 
     Resolves to PAID_OUT with a prorated amount (floored at the guaranteed
     minimum hours) unless someone disputes first.
     """
 
-    COMPLETED = "completed", "Completed — awaiting approval"
+    COMPLETED = "completed", _("Completed — awaiting approval")
     """Worker marked the job done. The client's approval window is running."""
 
     # -- resolution --------------------------------------------------------
-    DISPUTED = "disputed", "Disputed — under review"
+    DISPUTED = "disputed", _("Disputed — under review")
     """Escrow is frozen and a human has to look at it. Never auto-resolves."""
 
-    PAID_OUT = "paid_out", "Paid out"
+    PAID_OUT = "paid_out", _("Paid out")
     """Funds released to the worker, less the platform fee. Terminal."""
 
-    REFUNDED = "refunded", "Refunded"
+    REFUNDED = "refunded", _("Refunded")
     """Funds returned to the client. Terminal."""
 
-    CANCELLED = "cancelled", "Cancelled"
+    CANCELLED = "cancelled", _("Cancelled")
     """Called off before any work happened. Terminal."""
 
-    EXPIRED = "expired", "Expired"
+    EXPIRED = "expired", _("Expired")
     """A gig whose date passed without a worker being confirmed. Terminal."""
 
 
@@ -113,10 +114,10 @@ class Actor(models.TextChoices):
     accident — the transition table simply will not allow it.
     """
 
-    WORKER = "worker", "Worker"
-    CLIENT = "client", "Client"
-    SYSTEM = "system", "System"
-    ADMIN = "admin", "Admin"
+    WORKER = "worker", _("Worker")
+    CLIENT = "client", _("Client")
+    SYSTEM = "system", _("System")
+    ADMIN = "admin", _("Admin")
 
 
 @dataclass(frozen=True)

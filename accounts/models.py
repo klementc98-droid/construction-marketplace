@@ -20,6 +20,7 @@ from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.core.validators import FileExtensionValidator, MinValueValidator
 from django.db import models
 from django.utils import formats, timezone
+from django.utils.translation import gettext_lazy as _
 
 from config import business_rules as rules
 from core.models import Region, TimestampedModel, Trade
@@ -272,15 +273,15 @@ class ReputationMixin(models.Model):
 
 
 class RateType(models.TextChoices):
-    HOURLY = "hourly", "Per hour"
-    DAILY = "daily", "Per day"
+    HOURLY = "hourly", _("Per hour")
+    DAILY = "daily", _("Per day")
 
 
 class AvailabilityStatus(models.TextChoices):
-    AVAILABLE_NOW = "available_now", "Available now"
-    SPECIFIC_DAYS = "specific_days", "Specific days"
-    ONGOING = "ongoing", "Open to ongoing work"
-    UNAVAILABLE = "unavailable", "Not currently available"
+    AVAILABLE_NOW = "available_now", _("Available now")
+    SPECIFIC_DAYS = "specific_days", _("Specific days")
+    ONGOING = "ongoing", _("Open to ongoing work")
+    UNAVAILABLE = "unavailable", _("Not currently available")
 
 
 def cv_upload_path(instance: "WorkerProfile", filename: str) -> str:

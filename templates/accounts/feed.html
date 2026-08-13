@@ -1,5 +1,6 @@
 {% extends "base.html" %}
-{% block title %}Construction's Finest — find work, hire crew{% endblock %}
+{% load i18n %}
+{% block title %}{% translate "Construction's Finest — find work, hire crew" %}{% endblock %}
 
 {% block content %}
   {% if not user.is_authenticated %}
@@ -9,10 +10,9 @@
        it costs to look.
     {% endcomment %}
     <section class="hero">
-      <h1>Find work. <span class="hot">Hire crew.</span></h1>
+      <h1>{% translate "Find work." %} <span class="hot">{% translate "Hire crew." %}</span></h1>
       <p>
-        Day gigs and standing positions for the trades, with gig pay held in
-        escrow until the job's done.
+        {% translate "Day gigs and standing positions for the trades, with gig pay held in escrow until the job's done." %}
       </p>
       <a class="btn" href="{% url 'google_login' %}?process=login">
         <svg viewBox="0 0 24 24" aria-hidden="true" width="17" height="17">
@@ -21,30 +21,30 @@
           <path fill="currentColor" d="M6.4 13.89a6 6 0 0 1 0-3.83V7.47H3.08a10 10 0 0 0 0 9.01l3.32-2.59Z" opacity=".6"/>
           <path fill="currentColor" d="M12 5.94c1.47 0 2.79.5 3.83 1.5l2.86-2.86C16.95 2.98 14.7 2 12 2a10 10 0 0 0-8.92 5.47l3.32 2.59C7.2 7.7 9.4 5.94 12 5.94Z" opacity=".85"/>
         </svg>
-        Continue with Google
+        {% translate "Continue with Google" %}
       </a>
       {# For the half who want to know how the money works before handing over an account. #}
-      <p class="hero-more"><a href="{% url 'core:about' %}">How it works&nbsp;→</a></p>
+      <p class="hero-more"><a href="{% url 'core:about' %}">{% translate "How it works&nbsp;→" %}</a></p>
 
       <ul class="hero-points">
         <li>
           <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-shield"/></svg>
-          <span><strong>Money held first</strong>The client funds a gig before you turn up.</span>
+          <span><strong>{% translate "Money held first" %}</strong>{% translate "The client funds a gig before you turn up." %}</span>
         </li>
         <li>
           <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-clock"/></svg>
-          <span><strong>Paid on a timer</strong>Escrow releases on its own once the day's signed off.</span>
+          <span><strong>{% translate "Paid on a timer" %}</strong>{% translate "Escrow releases on its own once the day's signed off." %}</span>
         </li>
         <li>
           <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check"/></svg>
-          <span><strong>Free to look</strong>Browse the whole board without an account.</span>
+          <span><strong>{% translate "Free to look" %}</strong>{% translate "Browse the whole board without an account." %}</span>
         </li>
       </ul>
     </section>
   {% else %}
     <div class="feed-head">
-      <h1>Latest work</h1>
-      <a class="muted" href="{% url 'jobs:list' %}">Filter&nbsp;→</a>
+      <h1>{% translate "Latest work" %}</h1>
+      <a class="muted" href="{% url 'jobs:list' %}">{% translate "Filter&nbsp;→" %}</a>
     </div>
   {% endif %}
 
@@ -56,22 +56,22 @@
   {% if not page.object_list and not filler_jobs and not filler_workers %}
     <div class="card empty">
       <svg class="empty-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-jobs"/></svg>
-      <p>Nothing on the board yet.</p>
+      <p>{% translate "Nothing on the board yet." %}</p>
       {% if user.is_authenticated and user.is_client %}
-        <a class="btn" href="{% url 'jobs:post_choose' %}">Post the first job</a>
+        <a class="btn" href="{% url 'jobs:post_choose' %}">{% translate "Post the first job" %}</a>
       {% else %}
-        <p class="muted">Check back — new gigs go up daily.</p>
+        <p class="muted">{% translate "Check back — new gigs go up daily." %}</p>
       {% endif %}
     </div>
   {% elif not page.object_list %}
     <div class="card">
-      <p class="flush"><strong>No open work at the moment.</strong></p>
+      <p class="flush"><strong>{% translate "No open work at the moment." %}</strong></p>
       <p class="muted" style="margin:8px 0 0">
-        Here's who's around and what's been going up lately.
+        {% translate "Here's who's around and what's been going up lately." %}
       </p>
       {% if user.is_authenticated and user.is_client %}
         <div class="btn-row">
-          <a class="btn" href="{% url 'jobs:post_choose' %}">Post a job</a>
+          <a class="btn" href="{% url 'jobs:post_choose' %}">{% translate "Post a job" %}</a>
         </div>
       {% endif %}
     </div>

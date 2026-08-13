@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load account_extras %}
+{% load account_extras i18n %}
 {% block title %}{{ profile.user }} — Construction's Finest{% endblock %}
 
 {% block content %}
@@ -32,7 +32,7 @@
       {% for trade in profile.trades.all %}
         <span class="pill {% if trade.requires_license %}regulated{% endif %}">{{ trade.name }}</span>
       {% empty %}
-        <span class="muted">No trades listed.</span>
+        <span class="muted">{% translate "No trades listed." %}</span>
       {% endfor %}
     </p>
 
@@ -42,7 +42,7 @@
     {% if profile.user.is_client %}
       <p class="note" style="margin-top:14px">
         Also hires on Construction's Finest —
-        <a href="{% url 'accounts:client_detail' profile.user.client_profile.pk %}">see their hiring profile</a>.
+        <a href="{% url 'accounts:client_detail' profile.user.client_profile.pk %}">{% translate "see their hiring profile" %}</a>.
       </p>
     {% endif %}
   </div>
@@ -52,7 +52,7 @@
      for what?" is the question a client opens a profile to answer.
   {% endcomment %}
   <div class="card {% if profile.is_open_to_offers %}action-panel{% endif %}">
-    <h2>Looking for right now</h2>
+    <h2>{% translate "Looking for right now" %}</h2>
     {% if profile.seeking %}
       <p style="margin:0 0 10px; font-size:16px; font-weight:600">“{{ profile.seeking }}”</p>
     {% endif %}
@@ -66,7 +66,7 @@
     <p style="margin:12px 0 0">
       {% if profile.open_to_full_time is not None %}
         <span class="pill{% if profile.open_to_full_time %} regulated{% endif %}">
-          {% if profile.open_to_full_time %}Wants full-time{% else %}Day work only{% endif %}
+          {% if profile.open_to_full_time %}{% translate "Wants full-time" %}{% else %}{% translate "Day work only" %}{% endif %}
         </span>
       {% endif %}
       {% if profile.upcoming_dates %}
@@ -89,8 +89,7 @@
       </p>
     {% elif profile.has_open_ended_commitment %}
       <p class="note">
-        On a longer-term placement with no set finish date. Worth asking if
-        you're planning ahead.
+        {% translate "On a longer-term placement with no set finish date. Worth asking if you're planning ahead." %}
       </p>
     {% elif profile.is_open_to_offers %}
       <p class="note">Open to offers — their rate is {{ profile.rate_display }}.</p>
@@ -111,17 +110,15 @@
           Offer {{ profile.user.short_name|default:profile.user }} a job
         </a>
         <a class="btn secondary" href="{% url 'messaging:start_direct' profile.pk %}">
-          Just message them
+          {% translate "Just message them" %}
         </a>
       </div>
       <p class="note">
-        You write the day, the hours and the price. They accept or decline, and
-        nothing is charged until you fund the escrow afterwards.
+        {% translate "You write the day, the hours and the price. They accept or decline, and nothing is charged until you fund the escrow afterwards." %}
       </p>
     {% elif user.is_client and not is_own %}
       <p class="note">
-        Not taking work at the moment, so offers are turned off. Their profile
-        stays up — worth checking back.
+        {% translate "Not taking work at the moment, so offers are turned off. Their profile stays up — worth checking back." %}
       </p>
     {% endif %}
   </div>
@@ -133,29 +130,29 @@
   <div class="card">
     <div class="stat-row">
       <div class="stat">
-        <div class="k">Rate</div>
+        <div class="k">{% translate "Rate" %}</div>
         <div class="v" style="font-size:16px">{{ profile.rate_display }}</div>
       </div>
       <div class="stat">
-        <div class="k">Rating</div>
+        <div class="k">{% translate "Rating" %}</div>
         <div class="v {% if not profile.average_rating %}new{% endif %}">{{ profile.average_rating|stars }}</div>
       </div>
       <div class="stat">
-        <div class="k">Jobs done</div>
+        <div class="k">{% translate "Jobs done" %}</div>
         <div class="v {% if not profile.jobs_completed %}new{% endif %}">
-          {% if profile.jobs_completed %}{{ profile.jobs_completed }}{% else %}None yet{% endif %}</div>
+          {% if profile.jobs_completed %}{{ profile.jobs_completed }}{% else %}{% translate "None yet" %}{% endif %}</div>
       </div>
       <div class="stat">
-        <div class="k">Completion</div>
+        <div class="k">{% translate "Completion" %}</div>
         <div class="v {% if profile.completion_rate is None %}new{% endif %}">{{ profile.completion_rate|as_percent }}</div>
       </div>
       <div class="stat">
-        <div class="k">Disputes</div>
+        <div class="k">{% translate "Disputes" %}</div>
         <div class="v {% if profile.dispute_rate is None %}new{% endif %}">{{ profile.dispute_rate|as_percent }}</div>
       </div>
     </div>
     {% if profile.is_new %}
-      <p class="note">New here — not enough completed jobs yet for rates to mean anything.</p>
+      <p class="note">{% translate "New here — not enough completed jobs yet for rates to mean anything." %}</p>
     {% endif %}
   </div>
 
@@ -165,32 +162,31 @@
   {% endcomment %}
 
   {% if profile.bio %}
-    <h2>About</h2>
+    <h2>{% translate "About" %}</h2>
     <div class="card"><p style="margin:0">{{ profile.bio|linebreaksbr }}</p></div>
   {% endif %}
 
   {% if profile.licenses.exists %}
-    <h2>Licences</h2>
+    <h2>{% translate "Licences" %}</h2>
     <div class="card">
       {% for lic in profile.licenses.all %}
         <p style="margin:0 0 8px">
           <strong>{{ lic.trade.name }}</strong> — {{ lic.number }}
           {% if lic.is_verified %}
-            <span class="pill" style="border-color:var(--ok);color:var(--ok)">Verified</span>
+            <span class="pill" style="border-color:var(--ok);color:var(--ok)">{% translate "Verified" %}</span>
           {% else %}
-            <span class="pill">Self-reported</span>
+            <span class="pill">{% translate "Self-reported" %}</span>
           {% endif %}
         </p>
       {% endfor %}
       <p class="note">
-        Construction's Finest does not verify licence numbers. Check with your
-        state board before hiring for regulated work.
+        {% translate "Construction's Finest does not verify licence numbers. Check with your state board before hiring for regulated work." %}
       </p>
     </div>
   {% endif %}
 
   {% if profile.portfolio_photos.exists %}
-    <h2>Past work</h2>
+    <h2>{% translate "Past work" %}</h2>
     <div class="card">
       <div class="gallery">
         {% for photo in profile.portfolio_photos.all %}
@@ -205,14 +201,14 @@
 
   {% if profile.cv %}
     <div class="card" style="margin-top:14px">
-      <a href="{{ profile.cv.url }}">Download résumé (PDF)</a>
+      <a href="{{ profile.cv.url }}">{% translate "Download résumé (PDF)" %}</a>
     </div>
   {% endif %}
 
   {% if is_own %}
     <div class="btn-row">
-      <a class="btn secondary" href="{% url 'accounts:worker_edit' %}">Edit work profile</a>
-      <a class="btn secondary" href="{% url 'accounts:details' %}">Edit name and photo</a>
+      <a class="btn secondary" href="{% url 'accounts:worker_edit' %}">{% translate "Edit work profile" %}</a>
+      <a class="btn secondary" href="{% url 'accounts:details' %}">{% translate "Edit name and photo" %}</a>
     </div>
   {% elif user.is_client and not profile.can_receive_offers %}
     {% comment %} Direct contact, for the case the card at the top could not offer: this

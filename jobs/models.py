@@ -26,6 +26,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 
 from accounts.models import ClientProfile, RateType, WorkerProfile
 from config import business_rules as rules
@@ -34,8 +35,8 @@ from core.state_machine import JobState, state_tone
 
 
 class JobType(models.TextChoices):
-    STANDING = "standing", "Standing position"
-    GIG = "gig", "One-day gig"
+    STANDING = "standing", _("Standing position")
+    GIG = "gig", _("One-day gig")
 
 
 class PositionType(models.TextChoices):
@@ -45,10 +46,10 @@ class PositionType(models.TextChoices):
     is the second question every worker asks after the rate.
     """
 
-    TEMPORARY = "temporary", "Temporary / short term"
-    ONGOING = "ongoing", "Ongoing"
-    FULL_TIME = "full_time", "Full time"
-    CONTRACT = "contract", "Contract / project-based"
+    TEMPORARY = "temporary", _("Temporary / short term")
+    ONGOING = "ongoing", _("Ongoing")
+    FULL_TIME = "full_time", _("Full time")
+    CONTRACT = "contract", _("Contract / project-based")
 
 
 class JobQuerySet(models.QuerySet):
@@ -464,11 +465,11 @@ class Job(TimestampedModel):
 
 
 class OfferStatus(models.TextChoices):
-    PENDING = "pending", "Waiting on the worker"
-    ACCEPTED = "accepted", "Accepted"
-    DECLINED = "declined", "Declined"
+    PENDING = "pending", _("Waiting on the worker")
+    ACCEPTED = "accepted", _("Accepted")
+    DECLINED = "declined", _("Declined")
     #: The client pulled it before the worker answered.
-    WITHDRAWN = "withdrawn", "Withdrawn"
+    WITHDRAWN = "withdrawn", _("Withdrawn")
 
 
 class Offer(TimestampedModel):
@@ -615,18 +616,18 @@ class Party(models.TextChoices):
     that cannot express "the system countered" is the cheapest way to say so.
     """
 
-    WORKER = "worker", "Worker"
-    CLIENT = "client", "Client"
+    WORKER = "worker", _("Worker")
+    CLIENT = "client", _("Client")
 
 
 class CounterStatus(models.TextChoices):
-    PENDING = "pending", "On the table"
-    ACCEPTED = "accepted", "Agreed"
-    DECLINED = "declined", "Turned down"
+    PENDING = "pending", _("On the table")
+    ACCEPTED = "accepted", _("Agreed")
+    DECLINED = "declined", _("Turned down")
     #: Replaced by a newer counter from the other side. Kept, not deleted —
     #: the sequence of numbers is the negotiation, and either party should be
     #: able to see how they got to the figure they are being asked to accept.
-    SUPERSEDED = "superseded", "Replaced by a later offer"
+    SUPERSEDED = "superseded", _("Replaced by a later offer")
 
 
 class Counter(TimestampedModel):
@@ -767,12 +768,12 @@ class Counter(TimestampedModel):
 
 
 class ApplicationStatus(models.TextChoices):
-    APPLIED = "applied", "Applied"
-    SELECTED = "selected", "Selected"
+    APPLIED = "applied", _("Applied")
+    SELECTED = "selected", _("Selected")
     #: Set on the others when someone is chosen, so a worker gets a definite
     #: answer instead of an application that just goes quiet.
-    PASSED_OVER = "passed_over", "Not selected"
-    WITHDRAWN = "withdrawn", "Withdrawn"
+    PASSED_OVER = "passed_over", _("Not selected")
+    WITHDRAWN = "withdrawn", _("Withdrawn")
 
 
 class Application(TimestampedModel):
@@ -832,8 +833,8 @@ class ReviewDirection(models.TextChoices):
     disagree with the job it hangs off.
     """
 
-    CLIENT_ON_WORKER = "client_on_worker", "Client rating the worker"
-    WORKER_ON_CLIENT = "worker_on_client", "Worker rating the client"
+    CLIENT_ON_WORKER = "client_on_worker", _("Client rating the worker")
+    WORKER_ON_CLIENT = "worker_on_client", _("Worker rating the client")
 
 
 class Review(TimestampedModel):

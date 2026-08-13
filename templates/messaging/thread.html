@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load i18n %}
 {% block title %}{{ other }} — Construction's Finest{% endblock %}
 
 {% block content %}
@@ -6,7 +7,7 @@
      know whose thread you are in, however far you have scrolled back.
   {% endcomment %}
   <div class="dm-head">
-    <a class="dm-back" href="{% url 'messaging:inbox' %}" aria-label="All messages"></a>
+    <a class="dm-back" href="{% url 'messaging:inbox' %}" aria-label="{% translate "All messages" %}"></a>
 
     {% if other.profile_url %}
       <a href="{{ other.profile_url }}" class="dm-face" tabindex="-1" aria-hidden="true">
@@ -37,7 +38,7 @@
       </div>
       <div class="row-meta">
         {% if job.is_gig %}
-          <span class="badge gig">Gig</span> {{ job.gig_date|date:"D j M" }}
+          <span class="badge gig">{% translate "Gig" %}</span> {{ job.gig_date|date:"D j M" }}
         {% else %}
           <span class="badge">{{ job.get_position_type_display }}</span>
         {% endif %}
@@ -86,7 +87,7 @@
         <div class="bubble-body">
           {% ifchanged message.sender %}
             <p class="bubble-name">
-              {% if message.sender == user %}You{% else %}{{ message.sender }}{% endif %}
+              {% if message.sender == user %}{% translate "You" %}{% else %}{{ message.sender }}{% endif %}
             </p>
           {% endifchanged %}
           <p class="bubble-text">{{ message.body }}</p>
@@ -97,7 +98,7 @@
     {% empty %}
       <div class="card empty">
         <svg class="empty-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-messages"/></svg>
-        <p>No messages yet — say something.</p>
+        <p>{% translate "No messages yet — say something." %}</p>
       </div>
     {% endfor %}
   </div>
@@ -107,10 +108,10 @@
 
   <form method="post" class="dm-form">
     {% csrf_token %}
-    <label class="sr-only" for="{{ form.body.id_for_label }}">Message</label>
+    <label class="sr-only" for="{{ form.body.id_for_label }}">{% translate "Message" %}</label>
     <div class="dm-compose">
       {{ form.body }}
-      <button class="btn dm-send" type="submit">Send</button>
+      <button class="btn dm-send" type="submit">{% translate "Send" %}</button>
     </div>
     {{ form.body.errors }}
   </form>

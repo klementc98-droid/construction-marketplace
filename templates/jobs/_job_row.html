@@ -1,4 +1,4 @@
-{% comment %}
+{% load i18n %}{% comment %}
 One row on any list of jobs. Shared by the board, "mine", and search results
 so a job looks the same everywhere it appears.
 {% endcomment %}
@@ -10,7 +10,7 @@ so a job looks the same everywhere it appears.
     </div>
     <div class="row-meta">
       {% if job.is_gig %}
-        <span class="badge gig">Gig</span>
+        <span class="badge gig">{% translate "Gig" %}</span>
         {{ job.gig_date|date:"D j M" }}
         {% if job.implied_hourly %}· ≈${{ job.implied_hourly }}/hr{% endif %}
       {% else %}

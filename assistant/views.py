@@ -17,6 +17,7 @@ import json
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseBadRequest, JsonResponse
+from django.utils.translation import gettext as _
 from django.views.decorators.http import require_GET, require_POST
 
 from . import llm, prompts, registry
@@ -84,7 +85,7 @@ def start(request):
 
     if branch == BRANCH_QA:
         conversation.start(BRANCH_QA)
-        opening = (
+        opening = _(
             "Ask me anything about how this app works — how you get paid, when "
             "money is released, check-ins, ratings, or where to find something."
         )
@@ -93,11 +94,11 @@ def start(request):
         if spec is None:
             return HttpResponseBadRequest("Unknown form.")
         conversation.start(BRANCH_FORM, spec.key)
-        opening = (
-            f"Right — let's do {spec.noun} together. I'll ask one thing at a "
+        opening = _(
+            "Right — let's do %(noun)s together. I'll ask one thing at a "
             "time, and you can answer however you like. Nothing gets saved "
             "until you've seen the finished form and pressed save."
-        )
+        ) % {"noun": spec.noun}
     else:
         return HttpResponseBadRequest("Unknown branch.")
 
@@ -121,7 +122,7 @@ def say(request):
     if conversation.rate_limited():
         return JsonResponse(
             {
-                "reply": (
+                "reply": _(
                     "That's a lot of messages in one go — give it a few minutes "
                     "and try again."
                 ),
@@ -142,7 +143,7 @@ def say(request):
         conversation.save(request)
         return JsonResponse(
             {
-                "reply": (
+                "reply": _(
                     "Sorry — I can't reach the assistant right now. You can "
                     "still fill the form in yourself, everything works as normal."
                 ),
@@ -191,7 +192,7 @@ def _fill_form(request, conversation: Conversation) -> dict:
     if reply.calls_named("ready_for_review"):
         if url := conversation.handoff(request):
             return {
-                "reply": (
+                "reply": _(
                     "That's everything I need. Open the form below — it's filled "
                     "in with your answers. Change anything that isn't right by "
                     "clicking straight into it, then press save."
@@ -219,7 +220,7 @@ def _speak(conversation: Conversation, system: str, instruction: str) -> str:
     return reply.text or _FALLBACK
 
 
-_FALLBACK = "Sorry, I didn't catch that — could you say it another way?"
+_FALLBACK = _("Sorry, I didn't catch that — could you say it another way?")
 
 
 @login_required

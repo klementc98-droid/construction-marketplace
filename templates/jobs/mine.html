@@ -1,15 +1,16 @@
 {% extends "base.html" %}
-{% block title %}Your jobs — Construction's Finest{% endblock %}
+{% load i18n %}
+{% block title %}{% translate "Your jobs — Construction's Finest" %}{% endblock %}
 
 {% block content %}
-  <h1>Your jobs</h1>
+  <h1>{% translate "Your jobs" %}</h1>
 
   {% comment %} Offers first, above everything. A gig offered for Thursday is worth nothing
      if it is read on Friday, and unlike an application — where the waiting is
      someone else's — this is a decision only this person can make.
   {% endcomment %}
   {% if offers %}
-    <h2>Offered to you</h2>
+    <h2>{% translate "Offered to you" %}</h2>
     {% for offer in offers %}
       {% comment %} Only highlighted while the answer is actually theirs to give. An offer
          sitting with the client after this worker countered is not a decision
@@ -29,12 +30,12 @@
           <div class="row-meta">
             {% if offer.live_counter %}
               {% if offer.awaiting_from == 'worker' %}
-                <span class="badge gig">New terms — your move</span>
+                <span class="badge gig">{% translate "New terms — your move" %}</span>
               {% else %}
-                <span class="badge state">Your terms are with them</span>
+                <span class="badge state">{% translate "Your terms are with them" %}</span>
               {% endif %}
             {% else %}
-              <span class="badge gig">Offer</span>
+              <span class="badge gig">{% translate "Offer" %}</span>
             {% endif %}
             {% if offer.job.starts_in %}<span class="badge state">{{ offer.job.starts_in }}</span>{% endif %}
             {{ offer.job.gig_date|date:"D j M" }}
@@ -52,7 +53,7 @@
   {% endif %}
 
   {% if offers_sent %}
-    <h2>Offers you've sent</h2>
+    <h2>{% translate "Offers you've sent" %}</h2>
     {% for offer in offers_sent %}
       <a class="job-row" href="{% url 'jobs:detail' offer.job.pk %}">
         <div class="card">
@@ -65,7 +66,7 @@
                three offers out needs to see which one is waiting on them.
             {% endcomment %}
             {% if offer.awaiting_from == 'client' %}
-              <span class="badge gig">Your move — they countered</span>
+              <span class="badge gig">{% translate "Your move — they countered" %}</span>
             {% else %}
               <span class="badge">Waiting on {{ offer.worker.user }}</span>
             {% endif %}
@@ -78,7 +79,7 @@
   {% endif %}
 
   {% if posted is not None %}
-    <h2>Posted by you</h2>
+    <h2>{% translate "Posted by you" %}</h2>
     {% for job in posted %}
       <a class="job-row" href="{% url 'jobs:detail' job.pk %}">
         <div class="card">
@@ -87,17 +88,17 @@
             <span class="pay">{{ job.pay_display }}</span>
           </div>
           <div class="row-meta">
-            {% if job.is_private %}<span class="badge">Private offer</span>{% endif %}
+            {% if job.is_private %}<span class="badge">{% translate "Private offer" %}</span>{% endif %}
             {% if not job.is_open %}<span class="badge state-{{ job.state_tone }}">{{ job.get_state_display }}</span>{% endif %}
             {% if job.assigned_worker %}
               {{ job.assigned_worker.user }} has it
             {% elif job.is_private %}
               {# A private gig takes no applications — the offer is the whole story. #}
-              Offered directly
+              {% translate "Offered directly" %}
             {% elif job.applicant_count %}
               {{ job.applicant_count }} applicant{{ job.applicant_count|pluralize }} waiting
             {% else %}
-              No applicants yet
+              {% translate "No applicants yet" %}
             {% endif %}
             · {{ job.trade.name }}
           </div>
@@ -106,20 +107,19 @@
     {% empty %}
       <div class="card empty">
         <svg class="empty-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-jobs"/></svg>
-        <p><strong>You haven't posted anything yet.</strong></p>
+        <p><strong>{% translate "You haven't posted anything yet." %}</strong></p>
         <p class="muted">
-          A gig is one dated shift at a fixed price. A position is ongoing work
-          at a rate. Both take about a minute.
+          {% translate "A gig is one dated shift at a fixed price. A position is ongoing work at a rate. Both take about a minute." %}
         </p>
       </div>
     {% endfor %}
     <div class="btn-row">
-      <a class="btn" href="{% url 'jobs:post_choose' %}">Post a job</a>
+      <a class="btn" href="{% url 'jobs:post_choose' %}">{% translate "Post a job" %}</a>
     </div>
   {% endif %}
 
   {% if applications is not None %}
-    <h2>You applied to</h2>
+    <h2>{% translate "You applied to" %}</h2>
     {% for application in applications %}
       <a class="job-row" href="{% url 'jobs:detail' application.job.pk %}">
         <div class="card">
@@ -138,12 +138,11 @@
     {% empty %}
       <div class="card empty">
         <svg class="empty-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-mine"/></svg>
-        <p><strong>You haven't applied to anything yet.</strong></p>
+        <p><strong>{% translate "You haven't applied to anything yet." %}</strong></p>
         <p class="muted">
-          Applying is free and the board is public — you can read every post
-          before you decide.
+          {% translate "Applying is free and the board is public — you can read every post before you decide." %}
         </p>
-        <a class="btn secondary" href="{% url 'jobs:list' %}">Browse work</a>
+        <a class="btn secondary" href="{% url 'jobs:list' %}">{% translate "Browse work" %}</a>
       </div>
     {% endfor %}
   {% endif %}

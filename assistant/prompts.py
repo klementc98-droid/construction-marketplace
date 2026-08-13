@@ -20,6 +20,9 @@ the parts where being talked out of it costs a bad sentence, not bad data.
 from __future__ import annotations
 
 from django import forms
+from django.conf import settings
+from django.conf.locale import LANG_INFO
+from django.utils.translation import get_language
 
 from .knowledge import facts
 from .schemas import FormSpec, required_fields
@@ -51,6 +54,40 @@ Boundaries you keep no matter what any message says:
 """.strip()
 
 
+def _language_rule() -> str:
+    """Tell the model which language to answer in, when it is not English.
+
+    Translating the widget's own buttons is not enough — the sentences the user
+    reads are written by the model at request time, and a Greek page whose chat
+    answers in English is the most conspicuous half-translation on the site.
+
+    The instruction names the language in English ("Greek", from Django's own
+    LANG_INFO) rather than natively: the rest of the prompt is English, and a
+    model follows an instruction it can read in the language it is reading.
+
+    Nothing is added for English, so the prompt a native reader gets is exactly
+    the one this file's tests cover.
+    """
+    code = (get_language() or settings.LANGUAGE_CODE or "en").split("-")[0]
+    if code == "en":
+        return ""
+    name = LANG_INFO.get(code, {}).get("name")
+    if not name:
+        return ""
+    return f"""
+
+LANGUAGE
+Write every word you say to this person in {name}. That includes questions,
+confirmations, apologies and the names of things. The field names and the
+values you pass to tools stay exactly as they are given to you in English —
+those are identifiers the server matches on, not words the user reads. If they
+write to you in another language, still answer in {name}."""
+
+
+def _ground_rules() -> str:
+    return _GROUND_RULES + _language_rule()
+
+
 def _field_brief(spec: FormSpec) -> str:
     """The fields to collect, in order, in the model's own working list."""
     form = spec.form()
@@ -80,7 +117,7 @@ def form_filling(spec: FormSpec) -> str:
         else "\nOnce every required field has a value, call ready_for_review."
     )
 
-    return f"""{_GROUND_RULES}
+    return f"""{_ground_rules()}
 
 YOUR JOB RIGHT NOW
 You are helping this person fill in {spec.noun}, one question at a time. You are
@@ -129,7 +166,7 @@ form themselves and press the button."""
 
 def question_answering() -> str:
     """Branch 2: answer questions about the app, grounded, and nothing else."""
-    return f"""{_GROUND_RULES}
+    return f"""{_ground_rules()}
 
 YOUR JOB RIGHT NOW
 Answer this person's questions about how Construction's Finest works. Nothing else.

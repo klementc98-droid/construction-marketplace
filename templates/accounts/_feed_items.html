@@ -1,4 +1,4 @@
-{% comment %}
+{% load i18n %}{% comment %}
 One page of feed cards. Rendered on its own for `?partial=1`, which is what
 the scroll loader fetches and appends — so a card looks identical whether it
 arrived with the page or afterwards.
@@ -21,7 +21,7 @@ arrived with the page or afterwards.
           {% if job.starts_in %}
             <span class="badge {% if job.is_urgent %}state{% else %}gig{% endif %}">{{ job.starts_in }}</span>
           {% else %}
-            <span class="badge gig">Gig</span>
+            <span class="badge gig">{% translate "Gig" %}</span>
           {% endif %}
           <span class="badge">{{ job.gig_date|date:"D j M" }}</span>
           <span class="badge">{{ job.gig_hours|floatformat:"-1" }} hrs</span>
@@ -38,14 +38,14 @@ arrived with the page or afterwards.
         {{ job.location|default:job.region.name }}
         <span class="sep">·</span>
         {% if job.client.average_rating %}{{ job.client.average_rating }}★ client
-        {% else %}New client{% endif %}
+        {% else %}{% translate "New client" %}{% endif %}
       </p>
     </a>
 
     <footer class="feed-actions">
-      <a class="btn secondary" href="{% url 'jobs:detail' job.pk %}">See the job</a>
+      <a class="btn secondary" href="{% url 'jobs:detail' job.pk %}">{% translate "See the job" %}</a>
       {% if user.is_authenticated and user.is_worker and job.is_open %}
-        <a class="btn" href="{% url 'jobs:apply' job.pk %}">Apply</a>
+        <a class="btn" href="{% url 'jobs:apply' job.pk %}">{% translate "Apply" %}</a>
       {% endif %}
     </footer>
   </article>
@@ -72,7 +72,7 @@ arrived with the page or afterwards.
         <div class="sk w-60"></div>
       </div>
     {% endfor %}
-    <span class="sr-only" role="status">Loading more work…</span>
+    <span class="sr-only" role="status">{% translate "Loading more work…" %}</span>
   </div>
 {% else %}
   {% comment %} Past the live jobs. Everything from here is explicitly not available —
@@ -80,10 +80,9 @@ arrived with the page or afterwards.
      applicable would waste somebody's afternoon.
   {% endcomment %}
   {% if filler_workers %}
-    <h2>People on Construction's Finest</h2>
+    <h2>{% translate "People on Construction's Finest" %}</h2>
     <p class="muted" style="margin:-4px 0 12px; font-size:13.5px">
-      Available now or free soon. Tap someone to see their full profile and
-      offer them a job.
+      {% translate "Available now or free soon. Tap someone to see their full profile and offer them a job." %}
     </p>
     {% for worker in filler_workers %}
       {% include "accounts/_worker_card.html" %}
@@ -91,9 +90,9 @@ arrived with the page or afterwards.
   {% endif %}
 
   {% if filler_jobs %}
-    <h2>Recently filled</h2>
+    <h2>{% translate "Recently filled" %}</h2>
     <p class="muted" style="margin:-4px 0 12px; font-size:13.5px">
-      Closed already — here to show the kind of work that goes up.
+      {% translate "Closed already — here to show the kind of work that goes up." %}
     </p>
     {% for job in filler_jobs %}
       <a class="job-row faded" href="{% url 'jobs:detail' job.pk %}">
@@ -115,9 +114,9 @@ arrived with the page or afterwards.
 
   {% if page.number > 1 or filler_jobs or filler_workers %}
     <p class="empty" style="padding:30px 16px">
-      That's everything for now.
+      {% translate "That's everything for now." %}
       {% if user.is_authenticated and user.is_client %}
-        <br><a href="{% url 'jobs:post_choose' %}">Post a job</a>
+        <br><a href="{% url 'jobs:post_choose' %}">{% translate "Post a job" %}</a>
       {% endif %}
     </p>
   {% endif %}

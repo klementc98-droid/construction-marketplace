@@ -113,7 +113,7 @@ correct answer anyway.
 {% endcomment %}
 <header class="top{% if user.is_authenticated %} signed-in{% endif %}">
   <div class="wrap">
-    <a class="brand" href="{% url 'accounts:home' %}" aria-label="Construction's Finest, home">
+    <a class="brand" href="{% url 'accounts:home' %}" aria-label="{% translate "Construction's Finest, home" %}">
       {% comment %} Two angled bars — a roofline. Small enough to read at 20px. The
          roof takes the heat gradient; the ground line under it stays neutral so
          the mark still has a light and a dark half at 20px, which is what stops
@@ -141,7 +141,7 @@ correct answer anyway.
        has to think about for no gain. The tab bar at the bottom still carries Home
        — it has no brand mark, so there it is the only way back.
     {% endcomment %}
-    <nav class="desktop-nav" aria-label="Sections">
+    <nav class="desktop-nav" aria-label="{% translate "Sections" %}">
       <a class="nav-link{% if nav == 'jobs' %} on{% endif %}" href="{% url 'jobs:list' %}"
          {% if nav == 'jobs' %}aria-current="page"{% endif %}>
         <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-jobs"/></svg>{% translate "Jobs" %}</a>
@@ -254,7 +254,7 @@ correct answer anyway.
 {% comment %} Thumb-reach navigation. Only rendered small — the header carries the same
    links from 780px up, and only one bar is ever on screen.
 {% endcomment %}
-<nav class="tabbar" aria-label="Sections">
+<nav class="tabbar" aria-label="{% translate "Sections" %}">
   <a href="{% url 'accounts:home' %}" class="{% if nav == 'home' %}on{% endif %}"
      {% if nav == 'home' %}aria-current="page"{% endif %}>
     <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-home"/></svg>

@@ -1,10 +1,11 @@
 {% extends "base.html" %}
+{% load i18n %}
 {% block title %}Applicants — {{ job.title }}{% endblock %}
 
 {% block content %}
   {% include "_back.html" with href=job.get_absolute_url label="Back to the job" %}
 
-  <h1>Applicants</h1>
+  <h1>{% translate "Applicants" %}</h1>
   <p class="lede">
     <a href="{% url 'jobs:detail' job.pk %}">{{ job.title }}</a> · {{ job.pay_display }}
   </p>
@@ -24,11 +25,11 @@
           <div class="row-meta">
             {% if job.gig_date %}
               {% if application.free_on_date %}
-                <span class="badge" style="border-color:var(--ok); color:var(--ok)">Free that day</span>
+                <span class="badge" style="border-color:var(--ok); color:var(--ok)">{% translate "Free that day" %}</span>
               {% elif application.free_on_date is False %}
-                <span class="badge state">Booked that day</span>
+                <span class="badge state">{% translate "Booked that day" %}</span>
               {% else %}
-                <span class="badge">Availability not stated</span>
+                <span class="badge">{% translate "Availability not stated" %}</span>
               {% endif %}
             {% endif %}
             {% if application.worker.user.headline %}<br>{{ application.worker.user.headline }}{% endif %}
@@ -43,25 +44,25 @@
 
       <div class="stat-row" style="margin-top:10px">
         <div class="stat">
-          <div class="k">Rating</div>
+          <div class="k">{% translate "Rating" %}</div>
           {% if application.worker.average_rating %}
             <div class="v">{{ application.worker.average_rating }}★</div>
-          {% else %}<div class="v new">New</div>{% endif %}
+          {% else %}<div class="v new">{% translate "New" %}</div>{% endif %}
         </div>
         <div class="stat">
-          <div class="k">Jobs done</div>
+          <div class="k">{% translate "Jobs done" %}</div>
           <div class="v {% if not application.worker.jobs_completed %}new{% endif %}">
             {% if application.worker.jobs_completed %}{{ application.worker.jobs_completed }}
-            {% else %}None yet{% endif %}</div>
+            {% else %}{% translate "None yet" %}{% endif %}</div>
         </div>
         <div class="stat">
-          <div class="k">Completion</div>
+          <div class="k">{% translate "Completion" %}</div>
           {% if application.worker.completion_rate %}
             <div class="v">{{ application.worker.completion_rate|floatformat:0 }}%</div>
-          {% else %}<div class="v new">New</div>{% endif %}
+          {% else %}<div class="v new">{% translate "New" %}</div>{% endif %}
         </div>
         <div class="stat">
-          <div class="k">Rate</div>
+          <div class="k">{% translate "Rate" %}</div>
           <div class="v" style="font-size:15px">{{ application.worker.rate_display }}</div>
         </div>
       </div>
@@ -128,13 +129,13 @@
               </button>
             </form>
             <a class="btn secondary" href="{% url 'jobs:counter_to' job.pk application.worker.pk %}">
-              Counter
+              {% translate "Counter" %}
             </a>
             <form method="post" action="{% url 'jobs:counter_respond' application.live_counter.pk %}">
               {% csrf_token %}
               <button class="btn danger" type="submit" name="answer" value="decline"
                       data-confirm="Turn down their price? Their application stays in at the posted terms.">
-                Not at that price
+                {% translate "Not at that price" %}
               </button>
             </form>
           {% elif application.live_counter %}
@@ -154,10 +155,9 @@
   {% empty %}
     <div class="card empty">
       <svg class="empty-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-workers"/></svg>
-      <p><strong>Nobody has applied yet.</strong></p>
+      <p><strong>{% translate "Nobody has applied yet." %}</strong></p>
       <p class="muted">
-        Posts with a clear title and a real rate get picked up fastest — and you
-        don't have to wait. Find someone in this trade and offer it to them by name.
+        {% translate "Posts with a clear title and a real rate get picked up fastest — and you don't have to wait. Find someone in this trade and offer it to them by name." %}
       </p>
       <a class="btn secondary" href="{% url 'jobs:worker_list' %}?trade={{ job.trade.slug }}">
         Browse {{ job.trade.name|lower }} workers</a>

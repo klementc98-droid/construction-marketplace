@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load i18n %}
 {% block title %}{{ job.title }} — Construction's Finest{% endblock %}
 {% block description %}{{ job.description|truncatewords:24 }}{% endblock %}
 
@@ -8,8 +9,8 @@
 
   <h1>{{ job.title }}</h1>
   <p class="lede">
-    {% if job.is_gig %}<span class="badge gig">Gig</span>{% else %}<span class="badge">{{ job.get_position_type_display }}</span>{% endif %}
-    {% if job.is_private %}<span class="badge">Private offer</span>{% endif %}
+    {% if job.is_gig %}<span class="badge gig">{% translate "Gig" %}</span>{% else %}<span class="badge">{{ job.get_position_type_display }}</span>{% endif %}
+    {% if job.is_private %}<span class="badge">{% translate "Private offer" %}</span>{% endif %}
     {% if not job.is_open %}<span class="badge state-{{ job.state_tone }}">{{ job.get_state_display }}</span>{% endif %}
     {{ job.trade.name }}{% if job.location %} · {{ job.location }}{% else %} · {{ job.region.name }}{% endif %}
   </p>
@@ -32,7 +33,7 @@
         {% if my_offer.note %}
           <p class="pre prose">{{ my_offer.note }}</p>
         {% else %}
-          <p class="muted flush">They didn't leave a note — the job is below.</p>
+          <p class="muted flush">{% translate "They didn't leave a note — the job is below." %}</p>
         {% endif %}
         <p class="note">
           Offered {{ my_offer.created_at|timesince }} ago. Accepting books you in
@@ -51,7 +52,7 @@
               Accept — {{ job.pay_display }}
             </button>
             <button class="btn secondary" type="submit" name="answer" value="decline">
-              Decline
+              {% translate "Decline" %}
             </button>
           </div>
         </form>
@@ -62,7 +63,7 @@
         {% endcomment %}
         <div class="btn-row counter-row">
           <a class="btn secondary" href="{% url 'jobs:counter' my_offer.pk %}">
-            Ask for different terms
+            {% translate "Ask for different terms" %}
           </a>
         </div>
       </div>
@@ -87,13 +88,13 @@
     <div class="card {% if pending_offer %}action-panel{% endif %}">
       <h2>
         {% if pending_offer %}Offered to {{ pending_offer.worker.user }}
-        {% else %}This offer is closed{% endif %}
+        {% else %}{% translate "This offer is closed" %}{% endif %}
       </h2>
       {% if pending_offer %}
         <p class="flush">
           {% if live_counter and my_turn %}
             {# They have answered — with a price. The panel above is the decision. #}
-            They've answered with different terms — see above.
+            {% translate "They've answered with different terms — see above." %}
           {% elif live_counter %}
             Your revised terms are with them — sent
             {{ live_counter.created_at|timesince }} ago.
@@ -110,26 +111,25 @@
         {% endif %}
         <div class="btn-row">
           <a class="btn secondary" href="{% url 'accounts:worker_detail' pending_offer.worker.pk %}">
-            View their profile
+            {% translate "View their profile" %}
           </a>
           <form method="post" action="{% url 'jobs:offer_withdraw' pending_offer.pk %}">
             {% csrf_token %}
             <button class="btn danger" type="submit"
                     data-confirm="Withdraw this offer? {{ pending_offer.worker.user }} will be told it's off.">
-              Withdraw the offer
+              {% translate "Withdraw the offer" %}
             </button>
           </form>
         </div>
       {% else %}
         <p class="flush muted">
-          Nobody is holding an answer to this. It's still private, so it isn't
-          on the board — post it publicly and anyone can apply.
+          {% translate "Nobody is holding an answer to this. It's still private, so it isn't on the board — post it publicly and anyone can apply." %}
         </p>
         {% if job.is_open %}
           <div class="btn-row">
             <form method="post" action="{% url 'jobs:offer_publish' job.pk %}">
               {% csrf_token %}
-              <button class="btn" type="submit">Post it on the board</button>
+              <button class="btn" type="submit">{% translate "Post it on the board" %}</button>
             </form>
           </div>
         {% endif %}
@@ -151,35 +151,35 @@
   <div class="card">
     <div class="stat-row">
       <div class="stat">
-        <div class="k">{% if job.is_gig %}Total pay{% else %}Rate{% endif %}</div>
+        <div class="k">{% if job.is_gig %}{% translate "Total pay" %}{% else %}{% translate "Rate" %}{% endif %}</div>
         <div class="v">{{ job.pay_display }}</div>
       </div>
       {% if job.is_gig %}
         <div class="stat">
-          <div class="k">Date</div>
+          <div class="k">{% translate "Date" %}</div>
           <div class="v">{{ job.gig_date|date:"D j M" }}</div>
         </div>
         <div class="stat">
-          <div class="k">Hours</div>
+          <div class="k">{% translate "Hours" %}</div>
           <div class="v">{{ job.gig_hours|floatformat:"-1" }}</div>
         </div>
         {% if job.implied_hourly %}
           <div class="stat">
-            <div class="k">Works out to</div>
+            <div class="k">{% translate "Works out to" %}</div>
             <div class="v">${{ job.implied_hourly }}/hr</div>
           </div>
         {% endif %}
       {% endif %}
     </div>
     {% if job.is_past_gig %}
-      <p class="note">This date has passed. It is still open, but nothing sweeps old gigs yet.</p>
+      <p class="note">{% translate "This date has passed. It is still open, but nothing sweeps old gigs yet." %}</p>
     {% endif %}
   </div>
 
-  <h2>The work</h2>
+  <h2>{% translate "The work" %}</h2>
   <div class="card"><p class="pre prose flush">{{ job.description }}</p></div>
 
-  <h2>Posted by</h2>
+  <h2>{% translate "Posted by" %}</h2>
   <div class="card">
     <div class="media" style="align-items:center">
       {% include "_avatar.html" with person=job.client.user size="md" %}
@@ -190,7 +190,7 @@
         </p>
         <p class="row-meta" style="margin:2px 0 0">
           {% if job.client.average_rating %}{{ job.client.average_rating }}★ from workers
-          {% else %}<span class="badge">New</span>{% endif %}
+          {% else %}<span class="badge">{% translate "New" %}</span>{% endif %}
           · {{ job.client.jobs_completed }} job{{ job.client.jobs_completed|pluralize }} completed
           {% if job.client.average_approval_hours %}
             · approves in {{ job.client.average_approval_hours }} hr
@@ -202,13 +202,13 @@
   </div>
 
   {% if job.assigned_worker %}
-    <h2>Assigned to</h2>
+    <h2>{% translate "Assigned to" %}</h2>
     <div class="card">
       {% include "_person.html" with person=job.assigned_worker.user size="md" sub="Working this job" %}
       <div class="btn-row">
         {% if job.is_gig %}
-          <a class="btn" href="{% url 'worklog:workspace' job.pk %}">Open the job</a>
-          <a class="btn secondary" href="{% url 'payments:escrow' job.pk %}">Payment detail</a>
+          <a class="btn" href="{% url 'worklog:workspace' job.pk %}">{% translate "Open the job" %}</a>
+          <a class="btn secondary" href="{% url 'payments:escrow' job.pk %}">{% translate "Payment detail" %}</a>
         {% endif %}
         {% if is_owner %}
           <form method="post" action="{% url 'messaging:start' job.pk job.assigned_worker.pk %}">
@@ -219,14 +219,14 @@
       </div>
       {% if job.is_gig %}
         <p class="note">
-          Check-in, finishing up and the approval window all live on the job page.
+          {% translate "Check-in, finishing up and the approval window all live on the job page." %}
         </p>
       {% endif %}
     </div>
   {% endif %}
 
   {% if is_owner %}
-    <h2>Yours</h2>
+    <h2>{% translate "Yours" %}</h2>
     <div class="card">
       <div class="btn-row" style="margin-top:0">
         {% comment %} A private gig takes no applications, so a link to an empty list would
@@ -234,11 +234,11 @@
         {% endcomment %}
         {% if not job.is_private %}
           <a class="btn secondary" href="{% url 'jobs:applicants' job.pk %}">
-            Applicants{% if applicant_count %} ({{ applicant_count }}){% endif %}
+            {% translate "Applicants" %}{% if applicant_count %} ({{ applicant_count }}){% endif %}
           </a>
         {% endif %}
         {% if job.is_open %}
-          <a class="btn secondary" href="{% url 'jobs:edit' job.pk %}">Edit</a>
+          <a class="btn secondary" href="{% url 'jobs:edit' job.pk %}">{% translate "Edit" %}</a>
         {% endif %}
       </div>
       {% if job.is_open %}
@@ -246,14 +246,14 @@
           {% csrf_token %}
           <button class="btn danger" type="submit"
                   data-confirm="Cancel this job? Anyone who applied will be told it's off.">
-            Cancel job
+            {% translate "Cancel job" %}
           </button>
         </form>
       {% endif %}
     </div>
 
   {% elif my_application %}
-    <h2>Your application</h2>
+    <h2>{% translate "Your application" %}</h2>
     <div class="card">
       <p style="margin:0 0 8px"><span class="badge {% if my_application.status == 'selected' %}gig{% endif %}">{{ my_application.get_status_display }}</span></p>
       {% if my_application.message %}
@@ -263,16 +263,16 @@
       <div class="btn-row">
         <form method="post" action="{% url 'messaging:start' job.pk my_application.worker.pk %}">
           {% csrf_token %}
-          <button class="btn secondary" type="submit">Message the client</button>
+          <button class="btn secondary" type="submit">{% translate "Message the client" %}</button>
         </form>
         {% if my_application.is_active %}
-          <a class="btn secondary" href="{% url 'jobs:apply' job.pk %}">Edit application</a>
+          <a class="btn secondary" href="{% url 'jobs:apply' job.pk %}">{% translate "Edit application" %}</a>
         {% elif job.is_open %}
-          <a class="btn secondary" href="{% url 'jobs:apply' job.pk %}">Apply again</a>
+          <a class="btn secondary" href="{% url 'jobs:apply' job.pk %}">{% translate "Apply again" %}</a>
         {% endif %}
         {% if can_negotiate %}
           <a class="btn secondary" href="{% url 'jobs:counter' job.pk %}">
-            Ask for different terms
+            {% translate "Ask for different terms" %}
           </a>
         {% endif %}
       </div>
@@ -282,14 +282,14 @@
               style="margin-top:12px">
           {% csrf_token %}
           <button class="btn danger" type="submit"
-                  data-confirm="Withdraw your application for this job?">Withdraw</button>
+                  data-confirm="Withdraw your application for this job?">{% translate "Withdraw" %}</button>
         </form>
       {% endif %}
     </div>
 
   {% elif can_apply %}
     <div class="btn-row">
-      <a class="btn" href="{% url 'jobs:apply' job.pk %}">Apply for this</a>
+      <a class="btn" href="{% url 'jobs:apply' job.pk %}">{% translate "Apply for this" %}</a>
       {% comment %} The third answer, on every open gig — not only on direct offers. A
          worker who would take the job at a different price currently has to
          either apply at a number they don't want or walk away, and the client
@@ -297,13 +297,13 @@
       {% endcomment %}
       {% if can_negotiate %}
         <a class="btn secondary" href="{% url 'jobs:counter' job.pk %}">
-          Apply at a different price
+          {% translate "Apply at a different price" %}
         </a>
       {% endif %}
     </div>
   {% elif not user.is_authenticated %}
     <div class="btn-row">
-      <a class="btn" href="{% url 'account_login' %}">Sign in to apply</a>
+      <a class="btn" href="{% url 'account_login' %}">{% translate "Sign in to apply" %}</a>
     </div>
   {% endif %}
 {% endblock %}

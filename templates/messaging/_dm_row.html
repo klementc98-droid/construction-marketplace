@@ -1,4 +1,4 @@
-{% comment %}
+{% load i18n %}{% comment %}
 One inbox row. Expects `conversation`, plus `other` (the person on the far end)
 and `name` (what to print for them — a client shows their company where they
 have one) resolved by the caller, which is the only place that knows which
@@ -27,10 +27,10 @@ this way.
     {% endcomment %}
     <p class="dm-preview">
       {% if conversation.last_body %}
-        {% if conversation.last_sender == user.pk %}<span class="dm-you">You:</span> {% endif %}
+        {% if conversation.last_sender == user.pk %}<span class="dm-you">{% translate "You:" %}</span> {% endif %}
         {{ conversation.last_body|truncatechars:64 }}
       {% else %}
-        <span class="muted">No messages yet</span>
+        <span class="muted">{% translate "No messages yet" %}</span>
       {% endif %}
     </p>
 
