@@ -30,6 +30,29 @@ SECRET_KEY = os.getenv(
 DEBUG = _env_bool("DJANGO_DEBUG", True)
 ALLOWED_HOSTS = [h for h in os.getenv("DJANGO_ALLOWED_HOSTS", "*").split(",") if h]
 
+# Tunnelling the dev server — ngrok, to open the site on a real phone — puts an
+# HTTPS origin in front of a plain-HTTP runserver, and three things break:
+#
+#   1. ALLOWED_HOSTS. The request arrives with the tunnel's Host, not localhost.
+#   2. CSRF. Django checks Origin against CSRF_TRUSTED_ORIGINS for any HTTPS
+#      request, and a permissive ALLOWED_HOSTS does not cover it — every POST
+#      fails with "does not match any trusted origins" until the scheme+host is
+#      named here.
+#   3. request.is_secure(). The tunnel terminates TLS and forwards HTTP, so
+#      Django builds http:// absolute URLs — including the Google OAuth
+#      callback, which Google then rejects for not matching the registered
+#      redirect URI. The forwarded-proto header is what tells it otherwise.
+#
+# One switch, because these are never wanted individually. Unset — the normal
+# case — none of it applies and a localhost run is untouched.
+TUNNEL_HOST = os.getenv("DJANGO_TUNNEL_HOST", "").strip()
+
+if TUNNEL_HOST:
+    ALLOWED_HOSTS = [*ALLOWED_HOSTS, TUNNEL_HOST]
+    CSRF_TRUSTED_ORIGINS = [f"https://{TUNNEL_HOST}"]
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    USE_X_FORWARDED_HOST = True
+
 
 # ---------------------------------------------------------------------------
 # Applications

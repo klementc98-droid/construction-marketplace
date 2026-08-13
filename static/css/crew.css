@@ -243,6 +243,15 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 
+/* The browser hides [hidden] with `display: none`, but that lives in the UA
+   stylesheet, so any author rule setting `display` outranks it and the element
+   stays on screen with its attribute quietly ignored. Every panel toggled from
+   JavaScript is exposed to this — the assistant sets `display: flex` on the
+   panel and its footer, so `hidden` there was inert and the widget rendered
+   open on load. Restated here, where it wins, and !important so a component's
+   own `display` cannot take the fight back. */
+[hidden] { display: none !important; }
+
 html {
   -webkit-text-size-adjust: 100%;
   scroll-behavior: smooth;
