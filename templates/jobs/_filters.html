@@ -3,23 +3,71 @@ The filter bar, shared by the job board and the workers board.
 
 GET, not POST: a filtered list should be a URL you can send someone.
 
-Checkboxes are rendered inline with their label rather than under it — a tick
-box below a caption reads as an unanswered question, and the generic
-label-then-widget loop the text fields use gets it wrong for exactly this one
-widget type.
+One line. The search box is the thing people actually use, so it gets the row
+to itself and everything else folds into a panel behind the button — a board
+that opens with six controls already unfolded spends the top of a phone screen
+on questions nobody asked.
+
+<details> rather than a class toggled by script: it opens and closes on its own
+with no JavaScript, carries its own expanded state for a screen reader, and
+closes on Escape. The panel is positioned over the list rather than pushing it
+down, so opening the filters does not move the results out from under a thumb.
+
+The panel starts open when a filter is already set. Hiding controls is what
+makes the bar small; hiding a control that is *doing something* is how someone
+ends up staring at three results wondering where the rest went.
 {% endcomment %}
-<form class="card filters" method="get">
-  {% for field in form %}
-    {% if field.field.widget.input_type == "checkbox" %}
-      <label class="check-inline" for="{{ field.id_for_label }}">
-        {{ field }}<span>{{ field.label }}</span>
-      </label>
-    {% else %}
-      <div>
-        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-        {{ field }}
+{% load i18n %}
+<form class="filterbar" method="get" role="search">
+  <div class="filterbar-row">
+    <label class="sr-only" for="{{ form.q.id_for_label }}">{{ form.q.label }}</label>
+    {{ form.q }}
+
+    <button class="btn filterbar-go" type="submit" aria-label="{{ form.q.label }}">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>
+      </svg>
+    </button>
+
+    <details class="filterbar-drop"{% if form.active_count %} open{% endif %}>
+      <summary class="filterbar-toggle">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <path d="M4 6h16M7 12h10M10 18h4"/>
+        </svg>
+        <span class="filterbar-toggle-t">{% translate "Filters" %}</span>
+        {% if form.active_count %}
+          <span class="filterbar-count">{{ form.active_count }}</span>
+        {% endif %}
+      </summary>
+
+      <div class="filterbar-panel">
+        {% comment %}
+        Checkboxes render inline with their label — a tick box below a caption
+        reads as an unanswered question, and the generic label-then-widget loop
+        the text fields use gets it wrong for exactly this one widget type.
+        {% endcomment %}
+        {% for field in form.panel_fields %}
+          {% if field.field.widget.input_type == "checkbox" %}
+            <label class="check-inline" for="{{ field.id_for_label }}">
+              {{ field }}<span>{{ field.label }}</span>
+            </label>
+          {% else %}
+            <div class="filterbar-field">
+              <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+              {{ field }}
+            </div>
+          {% endif %}
+        {% endfor %}
+
+        <div class="filterbar-actions">
+          <button class="btn" type="submit">{% translate "Apply" %}</button>
+          {% if request.GET %}
+            <a class="btn secondary" href="{{ request.path }}">{% translate "Clear" %}</a>
+          {% endif %}
+        </div>
       </div>
-    {% endif %}
-  {% endfor %}
-  <button class="btn" type="submit">Filter</button>
+    </details>
+  </div>
 </form>

@@ -1,9 +1,15 @@
 {% extends "base.html" %}
-{% block title %}Find work — Construction's Finest{% endblock %}
+{% load i18n %}
+{% block title %}{% translate "Find work" %} — Construction's Finest{% endblock %}
 
 {% block content %}
-  <h1>Find work</h1>
-  <p class="lede">{{ total }} open post{{ total|pluralize }}.</p>
+  <h1>{% translate "Find work" %}</h1>
+  {% comment %} blocktranslate with a plural: Greek pluralises differently from
+     English, and |pluralize appends an English "s" a catalogue cannot reach.
+  {% endcomment %}
+  <p class="lede">
+    {% blocktranslate count counter=total %}{{ counter }} open post.{% plural %}{{ counter }} open posts.{% endblocktranslate %}
+  </p>
 
   {% include "jobs/_filters.html" %}
 

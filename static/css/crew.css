@@ -599,6 +599,42 @@ header.top .wrap {
 .nav-me .pic { transition: border-color var(--t-fast) var(--ease); }
 .nav-me:hover .pic { border-color: var(--line-strong); }
 
+/* Language. Two short codes in a segmented control rather than a dropdown:
+   at two languages a <select> costs a tap to find out what the options even
+   are, and this shows the alternative without opening anything. Sits next to
+   the theme switch because both are "how the site looks to me", not places to
+   go. */
+.langswitch {
+  display: inline-flex;
+  flex: none;
+  gap: 1px;
+  margin: 0;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-full);
+  background: var(--panel-2);
+}
+.langswitch-opt {
+  padding: 4px 9px;
+  border: 0;
+  border-radius: var(--r-full);
+  background: transparent;
+  color: var(--dim);
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  cursor: pointer;
+  transition: background var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+.langswitch-opt:hover { color: var(--fg); }
+.langswitch-opt:focus-visible { outline: none; box-shadow: var(--ring); }
+.langswitch-opt.on {
+  background: var(--panel);
+  color: var(--fg);
+  box-shadow: var(--shadow-sm);
+}
+
 /* Icon-only control — the theme switch. */
 .icon-btn {
   display: inline-flex;
@@ -1164,30 +1200,112 @@ ul.checks input { width: 18px; height: 18px; flex: none; accent-color: var(--acc
 
 /* --- filter bar ---------------------------------------------------------- */
 
-/* Auto-fit rather than a fixed column count: the two boards ask for a
-   different number of filters, and hardcoding "2fr 1fr 1fr auto" left the
-   workers board with a full-width Filter button stranded on its own row. */
-.filters {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px 14px;
-  align-items: end;
-  padding: 16px;
+/* One row, always: search, submit, and the button that unfolds the rest. The
+   board is the page people scroll, so the controls above it are kept to the
+   height of a single input on every screen size. */
+.filterbar { margin: 0 0 18px; }
+
+.filterbar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
-@media (min-width: 640px) {
-  .filters { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
-  /* The search box earns twice the room — it is the one people actually type
-     in, and a 170px input truncates most of what they type. */
-  .filters > div:first-child { grid-column: span 2; }
+
+/* The search box takes whatever is left. min-width:0 because a flex item will
+   not shrink below its intrinsic width without it, and an input's is wide
+   enough to push the buttons off a phone. */
+.filterbar-row input[type="text"],
+.filterbar-row input[type="search"] {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
 }
-.filters label { margin: 0 0 6px; font-size: 12px; }
-.filters .btn {
-  min-height: 43px;
-  width: auto;
-  justify-self: start;
-  align-self: end;
-  padding-inline: 26px;
+
+.filterbar-go {
+  flex: none;
+  width: 46px;
+  padding: 0;
+  justify-content: center;
 }
+
+/* --- the filters panel --- */
+
+.filterbar-drop { position: relative; flex: none; }
+
+.filterbar-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 46px;
+  padding: 0 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-md);
+  background: var(--panel);
+  color: var(--fg);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  list-style: none;          /* Firefox */
+}
+.filterbar-toggle::-webkit-details-marker { display: none; }   /* Safari */
+.filterbar-toggle:hover { border-color: var(--accent); color: var(--accent); }
+.filterbar-toggle:focus-visible { outline: none; box-shadow: var(--ring); }
+.filterbar-drop[open] .filterbar-toggle { border-color: var(--accent); color: var(--accent); }
+
+/* The word goes on a phone; the icon and the count carry it. */
+@media (max-width: 559px) {
+  .filterbar-toggle-t { display: none; }
+  .filterbar-toggle { padding: 0 12px; }
+}
+
+.filterbar-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+  border-radius: var(--r-full);
+  background: var(--accent);
+  color: var(--accent-fg);
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+/* Over the list, not above it: opening the filters must not shove the results
+   down the page while a thumb is already on its way to one. */
+.filterbar-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 7px);
+  z-index: 40;
+  width: min(300px, calc(100vw - 32px));
+  padding: 15px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--panel);
+  box-shadow: var(--shadow-lg);
+}
+.filterbar-field + .filterbar-field,
+.check-inline + .filterbar-field,
+.filterbar-field + .check-inline,
+.check-inline + .check-inline { margin-top: 11px; }
+/* Scoped to the stacked fields, not every label: .check-inline is itself a
+   label and wants its box beside the words, not a gap under them. */
+.filterbar-field label { display: block; margin: 0 0 6px; font-size: 12px; }
+.filterbar-panel select,
+.filterbar-panel input[type="text"] { width: 100%; margin: 0; }
+
+.filterbar-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 13px;
+  border-top: 1px solid var(--line);
+}
+.filterbar-actions .btn { flex: 1; min-height: 40px; padding-inline: 12px; }
 
 /* A tick box belongs beside its question, not under it. */
 .check-inline {

@@ -1,0 +1,130 @@
+# Greek translation for Construction's Finest.
+#
+# Compile with `python manage.py compilepo` — not `compilemessages`, which
+# needs GNU gettext installed. See core/management/commands/compilepo.py.
+#
+# Coverage is the site chrome and the two browse boards. Anything not listed
+# here still renders in English; an entry with an empty msgstr does the same,
+# so a half-finished line is safe to leave in place.
+msgid ""
+msgstr ""
+"Project-Id-Version: constructions-finest\n"
+"Report-Msgid-Bugs-To: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: el\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+# --- site chrome -----------------------------------------------------------
+
+msgid "Skip to content"
+msgstr "Μετάβαση στο περιεχόμενο"
+
+msgid "Jobs"
+msgstr "Δουλειές"
+
+msgid "Workers"
+msgstr "Τεχνίτες"
+
+msgid "Mine"
+msgstr "Τα δικά μου"
+
+msgid "Messages"
+msgstr "Μηνύματα"
+
+msgid "unread"
+msgstr "μη αναγνωσμένα"
+
+msgid "Whitepaper"
+msgstr "Λευκή βίβλος"
+
+msgid "Switch theme"
+msgstr "Αλλαγή θέματος"
+
+msgid "Account"
+msgstr "Λογαριασμός"
+
+msgid "Sign out"
+msgstr "Αποσύνδεση"
+
+msgid "Sign in"
+msgstr "Σύνδεση"
+
+msgid "My profile"
+msgstr "Το προφίλ μου"
+
+msgid "Home"
+msgstr "Αρχική"
+
+msgid "Profile"
+msgstr "Προφίλ"
+
+msgid "Find work"
+msgstr "Βρες δουλειά"
+
+msgid "Find workers"
+msgstr "Βρες τεχνίτες"
+
+msgid "How it works"
+msgstr "Πώς λειτουργεί"
+
+msgid "Gig pay is held in escrow until the job is signed off."
+msgstr "Η πληρωμή του μεροκάματου κρατείται σε μεσεγγύηση μέχρι να εγκριθεί η δουλειά."
+
+msgid ""
+"Day gigs and standing positions for the trades. Gig pay is held in escrow "
+"until the job is signed off."
+msgstr ""
+"Μεροκάματα και μόνιμες θέσεις για τα τεχνικά επαγγέλματα. Η πληρωμή του "
+"μεροκάματου κρατείται σε μεσεγγύηση μέχρι να εγκριθεί η δουλειά."
+
+# --- the browse boards -----------------------------------------------------
+
+msgid "%(counter)s open post."
+msgid_plural "%(counter)s open posts."
+msgstr[0] "%(counter)s ανοιχτή αγγελία."
+msgstr[1] "%(counter)s ανοιχτές αγγελίες."
+
+msgid "%(counter)s worker."
+msgid_plural "%(counter)s workers."
+msgstr[0] "%(counter)s τεχνίτης."
+msgstr[1] "%(counter)s τεχνίτες."
+
+# --- the filter bar --------------------------------------------------------
+
+msgid "Filters"
+msgstr "Φίλτρα"
+
+msgid "Apply"
+msgstr "Εφαρμογή"
+
+msgid "Clear"
+msgstr "Καθαρισμός"
+
+msgid "Search"
+msgstr "Αναζήτηση"
+
+msgid "Title, description, or area"
+msgstr "Τίτλος, περιγραφή ή περιοχή"
+
+msgid "Name, bio, or service area"
+msgstr "Όνομα, βιογραφικό ή περιοχή εξυπηρέτησης"
+
+msgid "All trades"
+msgstr "Όλες οι ειδικότητες"
+
+msgid "Type"
+msgstr "Τύπος"
+
+msgid "Standing and gigs"
+msgstr "Μόνιμες θέσεις και μεροκάματα"
+
+msgid "Available now only"
+msgstr "Μόνο διαθέσιμοι τώρα"
+
+msgid "Open to full-time"
+msgstr "Ανοιχτοί σε πλήρη απασχόληση"
+
+msgid "Workers who said they'd take a permanent position."
+msgstr "Τεχνίτες που δήλωσαν ότι θα δέχονταν μόνιμη θέση."

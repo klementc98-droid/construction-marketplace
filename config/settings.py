@@ -84,6 +84,10 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    # Between session and common, which is where Django requires it: it reads
+    # the language out of the session (set by the switcher in the header) and
+    # falls back to the browser's Accept-Language before anything renders.
+    "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -103,6 +107,8 @@ TEMPLATES = [
         "OPTIONS": {
             "context_processors": [
                 "django.template.context_processors.request",
+                # LANGUAGE_CODE and LANGUAGES, for the switcher and <html lang>.
+                "django.template.context_processors.i18n",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 # Unread-message badge in the header. Cheap enough to run on
@@ -269,7 +275,17 @@ AUTH_PASSWORD_VALIDATORS = [
 # I18n / time
 # ---------------------------------------------------------------------------
 
-LANGUAGE_CODE = "en-us"
+LANGUAGE_CODE = "en"
+
+#: The languages offered in the header switcher. Each needs a catalogue under
+#: LOCALE_PATHS; a language listed here without one silently falls back to
+#: English, which looks like a broken switcher rather than a missing file.
+LANGUAGES = [
+    ("en", "English"),
+    ("el", "Ελληνικά"),
+]
+
+LOCALE_PATHS = [BASE_DIR / "locale"]
 
 # Store everything in UTC; render in the region's local timezone. Dispute and
 # approval windows are measured in real elapsed time, so the storage timezone

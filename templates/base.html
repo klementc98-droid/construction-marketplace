@@ -1,5 +1,5 @@
-{% load static %}<!doctype html>
-<html lang="en">
+{% load static i18n %}<!doctype html>
+<html lang="{{ LANGUAGE_CODE }}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -10,7 +10,7 @@
 {% endcomment %}
 <meta name="theme-color" content="#faf5ee" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#140f0c" media="(prefers-color-scheme: dark)">
-<meta name="description" content="{% block description %}Day gigs and standing positions for the trades. Gig pay is held in escrow until the job is signed off.{% endblock %}">
+<meta name="description" content="{% block description %}{% translate "Day gigs and standing positions for the trades. Gig pay is held in escrow until the job is signed off." %}{% endblock %}">
 <title>{% block title %}Construction's Finest{% endblock %}</title>
 
 {% comment %}
@@ -48,7 +48,7 @@ correct answer anyway.
 </head>
 <body>
 
-<a class="skip-link" href="#main">Skip to content</a>
+<a class="skip-link" href="#main">{% translate "Skip to content" %}</a>
 
 {% comment %} One icon set, drawn once and referenced by both navigation bars. {% endcomment %}
 <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
@@ -144,20 +144,20 @@ correct answer anyway.
     <nav class="desktop-nav" aria-label="Sections">
       <a class="nav-link{% if nav == 'jobs' %} on{% endif %}" href="{% url 'jobs:list' %}"
          {% if nav == 'jobs' %}aria-current="page"{% endif %}>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-jobs"/></svg>Jobs</a>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-jobs"/></svg>{% translate "Jobs" %}</a>
       <a class="nav-link{% if nav == 'workers' %} on{% endif %}" href="{% url 'jobs:worker_list' %}"
          {% if nav == 'workers' %}aria-current="page"{% endif %}>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-workers"/></svg>Workers</a>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-workers"/></svg>{% translate "Workers" %}</a>
       {% if user.is_authenticated %}
         <a class="nav-link{% if nav == 'mine' %} on{% endif %}" href="{% url 'jobs:mine' %}"
            {% if nav == 'mine' %}aria-current="page"{% endif %}>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-mine"/></svg>Mine</a>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-mine"/></svg>{% translate "Mine" %}</a>
         <a class="nav-link{% if nav == 'messages' %} on{% endif %}" href="{% url 'messaging:inbox' %}"
            {% if nav == 'messages' %}aria-current="page"{% endif %}>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-messages"/></svg>Messages
+          <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-messages"/></svg>{% translate "Messages" %}
           {% if unread_messages %}
             <span class="pip">{{ unread_messages }}</span>
-            <span class="sr-only">unread</span>
+            <span class="sr-only">{% translate "unread" %}</span>
           {% endif %}</a>
       {% endif %}
       {% comment %} Last in the row on purpose: it is the thing you read once, not one of the
@@ -168,14 +168,32 @@ correct answer anyway.
       <a class="nav-link nav-doc{% if nav == 'whitepaper' %} on{% endif %}"
          href="{% url 'core:whitepaper' %}"
          {% if nav == 'whitepaper' %}aria-current="page"{% endif %}>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-doc"/></svg>Whitepaper</a>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-doc"/></svg>{% translate "Whitepaper" %}</a>
     </nav>
 
     <span class="spacer"></span>
 
+    {% comment %}
+    Language. A submit button per language rather than a <select> that needs
+    script to fire on change — two languages fit, it works with JavaScript off,
+    and `next` sends the reader back to the page they were reading rather than
+    to the home page. The choice is stored in the session by set_language, so
+    it survives the rest of the visit.
+    {% endcomment %}
+    {% get_current_language as CURRENT_LANGUAGE %}
+    <form class="langswitch" action="{% url 'set_language' %}" method="post">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ request.get_full_path }}">
+      {% for code, name in LANGUAGES %}
+        <button class="langswitch-opt{% if code == CURRENT_LANGUAGE %} on{% endif %}"
+                type="submit" name="language" value="{{ code }}" title="{{ name }}"
+                {% if code == CURRENT_LANGUAGE %}aria-current="true"{% endif %}>{{ code|upper }}</button>
+      {% endfor %}
+    </form>
+
     {# Sun in light, moon in dark; the stylesheet shows exactly one. #}
     <button class="icon-btn" type="button" data-theme-toggle
-            aria-label="Switch theme" title="Switch theme">
+            aria-label="{% translate "Switch theme" %}" title="{% translate "Switch theme" %}">
       <svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor"
            stroke-width="1.9" stroke-linecap="round" aria-hidden="true">
         <circle cx="12" cy="12" r="4.2"/>
@@ -192,16 +210,16 @@ correct answer anyway.
        a phone would leave someone with no way out of their own account.
     {% endcomment %}
     {% if user.is_authenticated %}
-      <a class="nav-link" href="{% url 'accounts:dashboard' %}">Account</a>
-      <a class="nav-link" href="{% url 'account_logout' %}">Sign out</a>
+      <a class="nav-link" href="{% url 'accounts:dashboard' %}">{% translate "Account" %}</a>
+      <a class="nav-link" href="{% url 'account_logout' %}">{% translate "Sign out" %}</a>
       {# Straight to the public profile — the version everyone else sees. #}
       <a class="nav-me"
          href="{% if user.profile_url %}{{ user.profile_url }}{% else %}{% url 'accounts:details' %}{% endif %}"
-         title="My profile" aria-label="My profile">
+         title="{% translate "My profile" %}" aria-label="{% translate "My profile" %}">
         {% include "_avatar.html" with person=user size="sm" %}
       </a>
     {% else %}
-      <a class="nav-link" href="{% url 'account_login' %}">Sign in</a>
+      <a class="nav-link" href="{% url 'account_login' %}">{% translate "Sign in" %}</a>
     {% endif %}
   </div>
 </header>
@@ -221,14 +239,14 @@ correct answer anyway.
   <div class="wrap">
     {% block footer %}
       <span class="foot-brand">Construction's Finest</span>
-      <a href="{% url 'jobs:list' %}">Find work</a>
-      <a href="{% url 'jobs:worker_list' %}">Find workers</a>
+      <a href="{% url 'jobs:list' %}">{% translate "Find work" %}</a>
+      <a href="{% url 'jobs:worker_list' %}">{% translate "Find workers" %}</a>
       <a href="{% url 'core:about' %}"
-         {% if nav == 'about' %}aria-current="page"{% endif %}>How it works</a>
+         {% if nav == 'about' %}aria-current="page"{% endif %}>{% translate "How it works" %}</a>
       <a href="{% url 'core:whitepaper' %}"
-         {% if nav == 'whitepaper' %}aria-current="page"{% endif %}>Whitepaper</a>
+         {% if nav == 'whitepaper' %}aria-current="page"{% endif %}>{% translate "Whitepaper" %}</a>
       <span class="spacer"></span>
-      <span>Gig pay is held in escrow until the job is signed off.</span>
+      <span>{% translate "Gig pay is held in escrow until the job is signed off." %}</span>
     {% endblock %}
   </div>
 </footer>
@@ -240,33 +258,33 @@ correct answer anyway.
   <a href="{% url 'accounts:home' %}" class="{% if nav == 'home' %}on{% endif %}"
      {% if nav == 'home' %}aria-current="page"{% endif %}>
     <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-home"/></svg>
-    <span class="label">Home</span></a>
+    <span class="label">{% translate "Home" %}</span></a>
   <a href="{% url 'jobs:list' %}" class="{% if nav == 'jobs' %}on{% endif %}"
      {% if nav == 'jobs' %}aria-current="page"{% endif %}>
     <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-jobs"/></svg>
-    <span class="label">Jobs</span></a>
+    <span class="label">{% translate "Jobs" %}</span></a>
   <a href="{% url 'jobs:worker_list' %}" class="{% if nav == 'workers' %}on{% endif %}"
      {% if nav == 'workers' %}aria-current="page"{% endif %}>
     <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-workers"/></svg>
-    <span class="label">Workers</span></a>
+    <span class="label">{% translate "Workers" %}</span></a>
   {% if user.is_authenticated %}
     <a href="{% url 'messaging:inbox' %}" class="{% if nav == 'messages' %}on{% endif %}"
        {% if nav == 'messages' %}aria-current="page"{% endif %}>
       <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-messages"/></svg>
-      <span class="label">Messages</span>
+      <span class="label">{% translate "Messages" %}</span>
       {% if unread_messages %}
         <span class="pip">{{ unread_messages }}</span>
-        <span class="sr-only">unread</span>
+        <span class="sr-only">{% translate "unread" %}</span>
       {% endif %}</a>
     <a href="{% if user.profile_url %}{{ user.profile_url }}{% else %}{% url 'accounts:details' %}{% endif %}"
        class="{% if nav == 'profile' %}on{% endif %}"
        {% if nav == 'profile' %}aria-current="page"{% endif %}>
       {% include "_avatar.html" with person=user size="sm" %}
-      <span class="label">Profile</span></a>
+      <span class="label">{% translate "Profile" %}</span></a>
   {% else %}
     <a href="{% url 'account_login' %}">
       <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-workers"/></svg>
-      <span class="label">Sign in</span></a>
+      <span class="label">{% translate "Sign in" %}</span></a>
   {% endif %}
 </nav>
 

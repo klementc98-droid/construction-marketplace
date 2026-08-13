@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from django import forms
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 
 from core.models import Region, Trade
 
@@ -294,21 +295,48 @@ class ApplicationForm(forms.ModelForm):
         }
 
 
-class JobFilterForm(forms.Form):
+class BrowseFilterForm(forms.Form):
+    """Shared shape for the two browse filters.
+
+    The search box is rendered on its own in the bar and everything else lives
+    behind the Filters button, so the template needs to walk "the rest" without
+    a hardcoded list of names that would go stale the day a filter is added.
+    """
+
+    #: Rendered in the search bar rather than the panel.
+    SEARCH_FIELD = "q"
+
+    def panel_fields(self):
+        return [f for f in self if f.name != self.SEARCH_FIELD]
+
+    def active_count(self) -> int:
+        """How many panel filters are set.
+
+        Shown on the button, and the reason the panel opens itself when it is
+        non-zero. Collapsing the filters is what makes the bar small; it also
+        makes an applied filter invisible, and "why are there only three jobs"
+        is a bad way to find out you left a trade selected last week.
+        """
+        return sum(1 for field in self.panel_fields() if self.data.get(field.html_name))
+
+
+class JobFilterForm(BrowseFilterForm):
     """Browse filters. Bound to GET so a filtered list is a shareable URL."""
 
     q = forms.CharField(
         required=False,
-        label="Search",
-        widget=forms.TextInput(attrs={"placeholder": "Title, description, or area"}),
+        label=_("Search"),
+        widget=forms.TextInput(
+            attrs={"placeholder": _("Title, description, or area")}
+        ),
     )
     trade = forms.ModelChoiceField(
-        queryset=Trade.objects.all(), required=False, empty_label="All trades"
+        queryset=Trade.objects.all(), required=False, empty_label=_("All trades")
     )
     job_type = forms.ChoiceField(
         required=False,
-        label="Type",
-        choices=[("", "Standing and gigs")] + list(JobType.choices),
+        label=_("Type"),
+        choices=[("", _("Standing and gigs"))] + list(JobType.choices),
     )
 
     def filtered(self, queryset):
@@ -321,20 +349,22 @@ class JobFilterForm(forms.Form):
         )
 
 
-class WorkerFilterForm(forms.Form):
+class WorkerFilterForm(BrowseFilterForm):
     """The mirror of :class:`JobFilterForm`, for clients looking for people."""
 
     q = forms.CharField(
         required=False,
-        label="Search",
-        widget=forms.TextInput(attrs={"placeholder": "Name, bio, or service area"}),
+        label=_("Search"),
+        widget=forms.TextInput(
+            attrs={"placeholder": _("Name, bio, or service area")}
+        ),
     )
     trade = forms.ModelChoiceField(
-        queryset=Trade.objects.all(), required=False, empty_label="All trades"
+        queryset=Trade.objects.all(), required=False, empty_label=_("All trades")
     )
-    available_now = forms.BooleanField(required=False, label="Available now only")
+    available_now = forms.BooleanField(required=False, label=_("Available now only"))
     full_time = forms.BooleanField(
         required=False,
-        label="Open to full-time",
-        help_text="Workers who said they'd take a permanent position.",
+        label=_("Open to full-time"),
+        help_text=_("Workers who said they'd take a permanent position."),
     )

@@ -1,9 +1,12 @@
 {% extends "base.html" %}
-{% block title %}Find workers — Construction's Finest{% endblock %}
+{% load i18n %}
+{% block title %}{% translate "Find workers" %} — Construction's Finest{% endblock %}
 
 {% block content %}
-  <h1>Find workers</h1>
-  <p class="lede">{{ total }} worker{{ total|pluralize }}.</p>
+  <h1>{% translate "Find workers" %}</h1>
+  <p class="lede">
+    {% blocktranslate count counter=total %}{{ counter }} worker.{% plural %}{{ counter }} workers.{% endblocktranslate %}
+  </p>
 
   {% include "jobs/_filters.html" %}
 
