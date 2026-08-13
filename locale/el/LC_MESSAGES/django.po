@@ -21,6 +21,12 @@ msgid_plural "%(counter)s workers."
 msgstr[0] "%(counter)s τεχνίτης."
 msgstr[1] "%(counter)s τεχνίτες."
 
+#: templates/accounts/_worker_card.html
+msgid "%(years)s yr"
+msgid_plural "%(years)s yrs"
+msgstr[0] "%(years)s χρόνος"
+msgstr[1] "%(years)s χρόνια"
+
 #: templates/_field.html
 #: templates/accounts/worker_edit.html
 msgid "(required)"
@@ -237,6 +243,14 @@ msgstr "Δες ολόκληρο τον πίνακα χωρίς λογαριασ�
 #: templates/messaging/inbox.html
 msgid "Browse work"
 msgstr "Δες δουλειές"
+
+#: accounts/models.py
+msgid "Busy today, free from tomorrow"
+msgstr "Απασχολημένος σήμερα, ελεύθερος από αύριο"
+
+#: accounts/models.py
+msgid "Busy until %(from_date)s — free from %(to_date)s"
+msgstr "Απασχολημένος έως %(from_date)s — ελεύθερος από %(to_date)s"
 
 #: core/test_i18n.py
 msgid "Bye"
@@ -580,6 +594,18 @@ msgstr "Τελείωσες μια κανονική μέρα; Σήμανέ την
 #: templates/worklog/workspace.html
 msgid "Flag as ended early"
 msgstr "Σήμανση ως πρόωρα ολοκληρωμένο"
+
+#: accounts/models.py
+msgid "Free %(days)s"
+msgstr "Ελεύθερος %(days)s"
+
+#: accounts/models.py
+msgid "Free %(days)s +%(count)s more"
+msgstr "Ελεύθερος %(days)s +%(count)s ακόμη"
+
+#: accounts/models.py
+msgid "Free on selected days"
+msgstr "Ελεύθερος σε επιλεγμένες ημέρες"
 
 #: templates/jobs/job_applicants.html
 msgid "Free that day"
@@ -1017,6 +1043,10 @@ msgstr "Δεν δηλώθηκε"
 msgid "Not taking work at the moment, so offers are turned off. Their profile stays up — worth checking back."
 msgstr "Δεν δέχεται δουλειές αυτή τη στιγμή, οπότε οι προσφορές είναι κλειστές. Το προφίλ παραμένει — αξίζει να ξαναδείς."
 
+#: accounts/models.py
+msgid "Not taking work right now"
+msgstr "Δεν δέχεται δουλειές αυτή τη στιγμή"
+
 #: templates/payments/payouts.html
 msgid "Not yet"
 msgstr "Όχι ακόμη"
@@ -1064,6 +1094,10 @@ msgstr "Προσφέρθηκε σε σένα"
 #: templates/jobs/mine.html
 msgid "Offers you've sent"
 msgstr "Προσφορές που έστειλες"
+
+#: accounts/models.py
+msgid "On a longer-term placement"
+msgstr "Σε πιο μακροχρόνια τοποθέτηση"
 
 #: templates/accounts/worker_detail.html
 msgid "On a longer-term placement with no set finish date. Worth asking if you're planning ahead."
@@ -1294,6 +1328,10 @@ msgstr "Ερωτήσεις που δεν απαντώνται εδώ; Η"
 #: templates/jobs/job_detail.html
 msgid "Rate"
 msgstr "Αμοιβή"
+
+#: accounts/models.py
+msgid "Rate on request"
+msgstr "Αμοιβή κατόπιν αιτήματος"
 
 #: templates/assistant/_form_offer.html
 msgid "Rather just answer a few questions?"
@@ -1981,6 +2019,14 @@ msgstr "είναι υποχρεωτικά."
 #: templates/jobs/_negotiation.html
 msgid "asked for"
 msgstr "ζήτησε"
+
+#: accounts/models.py
+msgid "day"
+msgstr "ημέρα"
+
+#: accounts/models.py
+msgid "hr"
+msgstr "ώρα"
 
 #: templates/core/about.html
 msgid "is an open role paid at a rate rather than a total: full-time, part-time, ongoing. We introduce the two sides and step out of it. There is no escrow here, because there is no single day to sign off."

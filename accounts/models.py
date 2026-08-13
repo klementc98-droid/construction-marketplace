@@ -397,8 +397,11 @@ class WorkerProfile(ReputationMixin, TimestampedModel):
     @property
     def rate_display(self) -> str:
         if self.rate_min is None:
-            return "Rate on request"
-        unit = "hr" if self.rate_type == RateType.HOURLY else "day"
+            return _("Rate on request")
+        # The unit is translated on its own because it is a unit, not a
+        # fragment of a sentence — "/hr" carries its whole meaning alone, and
+        # the surrounding string is only digits and punctuation.
+        unit = _("hr") if self.rate_type == RateType.HOURLY else _("day")
         if self.rate_max and self.rate_max != self.rate_min:
             return f"${self.rate_min:,.0f}-${self.rate_max:,.0f}/{unit}"
         return f"${self.rate_min:,.0f}/{unit}"
@@ -498,10 +501,10 @@ class WorkerProfile(ReputationMixin, TimestampedModel):
         would otherwise read as free.
         """
         if self.availability_status == AvailabilityStatus.UNAVAILABLE:
-            return "Not taking work right now"
+            return _("Not taking work right now")
 
         if self.has_open_ended_commitment:
-            return "On a longer-term placement"
+            return _("On a longer-term placement")
 
         end = self.busy_until
         if end is not None:
@@ -509,15 +512,19 @@ class WorkerProfile(ReputationMixin, TimestampedModel):
             if end < today:
                 pass  # commitment has run its course; fall through to normal
             elif end == today:
-                return "Busy today, free from tomorrow"
+                return _("Busy today, free from tomorrow")
             else:
-                return (
-                    f"Busy until {formats.date_format(end, 'D j M')}"
-                    f" — free from {formats.date_format(self.available_from, 'D j M')}"
-                )
+                # One string with both dates in it, not "Busy until" + a date +
+                # "free from" + a date. Greek does not order those words the way
+                # English does, and a translator handed " — free from" on its own
+                # has nothing to work with.
+                return _("Busy until %(from_date)s — free from %(to_date)s") % {
+                    "from_date": formats.date_format(end, "D j M"),
+                    "to_date": formats.date_format(self.available_from, "D j M"),
+                }
 
         if self.availability_status == AvailabilityStatus.AVAILABLE_NOW:
-            return "Available now"
+            return _("Available now")
         if self.availability_status == AvailabilityStatus.SPECIFIC_DAYS:
             upcoming = self.upcoming_dates
             if upcoming:
@@ -527,9 +534,14 @@ class WorkerProfile(ReputationMixin, TimestampedModel):
                     formats.date_format(entry.date, "D j M") for entry in upcoming[:3]
                 )
                 more = len(upcoming) - 3
-                return f"Free {shown}" + (f" +{more} more" if more > 0 else "")
-            return "Free on selected days"
-        return "Open to ongoing work"
+                if more > 0:
+                    return _("Free %(days)s +%(count)s more") % {
+                        "days": shown,
+                        "count": more,
+                    }
+                return _("Free %(days)s") % {"days": shown}
+            return _("Free on selected days")
+        return _("Open to ongoing work")
 
     def is_free_on(self, day) -> bool | None:
         """Is this worker free on ``day``?

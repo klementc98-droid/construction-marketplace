@@ -42,7 +42,7 @@
       {% with p=user.worker_profile %}
         <p class="muted" style="margin-top:0">
           {% if p.trades.exists %}
-            {% for t in p.trades.all %}<span class="pill">{{ t.name }}</span>{% endfor %}
+            {% for t in p.trades.all %}<span class="pill">{{ t }}</span>{% endfor %}
           {% else %}
             {% translate "No trades selected yet — clients search by trade, so this is the one to fill in first." %}
           {% endif %}

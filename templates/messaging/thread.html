@@ -43,7 +43,7 @@
           <span class="badge">{{ job.get_position_type_display }}</span>
         {% endif %}
         {% if not job.is_open %}<span class="badge state-{{ job.state_tone }}">{{ job.get_state_display }}</span>{% endif %}
-        · {{ job.trade.name }}
+        · {{ job.trade }}
       </div>
     </div>
   </a>

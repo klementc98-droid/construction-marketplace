@@ -30,7 +30,7 @@
 
     <p style="margin:16px 0 0">
       {% for trade in profile.trades.all %}
-        <span class="pill {% if trade.requires_license %}regulated{% endif %}">{{ trade.name }}</span>
+        <span class="pill {% if trade.requires_license %}regulated{% endif %}">{{ trade }}</span>
       {% empty %}
         <span class="muted">{% translate "No trades listed." %}</span>
       {% endfor %}
@@ -171,7 +171,7 @@
     <div class="card">
       {% for lic in profile.licenses.all %}
         <p style="margin:0 0 8px">
-          <strong>{{ lic.trade.name }}</strong> — {{ lic.number }}
+          <strong>{{ lic.trade }}</strong> — {{ lic.number }}
           {% if lic.is_verified %}
             <span class="pill" style="border-color:var(--ok);color:var(--ok)">{% translate "Verified" %}</span>
           {% else %}

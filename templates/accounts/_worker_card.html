@@ -42,7 +42,10 @@ ranking, not information.
         {% if worker.trades.all %}
           <p class="worker-trades">
             {% for t in worker.trades.all %}
-              <span class="pill {% if t.requires_license %}regulated{% endif %}">{{ t.name }}</span>
+              {% comment %} The trade object, not its name field: __str__ is what
+                 translates it, and reaching past it to .name renders the English
+                 value stored in the row. {% endcomment %}
+              <span class="pill {% if t.requires_license %}regulated{% endif %}">{{ t }}</span>
             {% endfor %}
           </p>
         {% endif %}
@@ -66,7 +69,7 @@ ranking, not information.
           <svg class="stat-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-clock"/></svg>{% translate "Experience" %}</div>
         <div class="v {% if not worker.years_experience %}new{% endif %}">
           {% if worker.years_experience %}
-            {{ worker.years_experience }} yr{{ worker.years_experience|pluralize }}
+            {% blocktranslate count years=worker.years_experience %}{{ years }} yr{% plural %}{{ years }} yrs{% endblocktranslate %}
           {% else %}{% translate "Not stated" %}{% endif %}
         </div>
       </div>

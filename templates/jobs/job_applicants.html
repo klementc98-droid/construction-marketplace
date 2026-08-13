@@ -37,7 +37,7 @@
             {% if application.worker.user.age %} · {{ application.worker.user.age }}{% endif %}
             · applied {{ application.created_at|timesince }} ago
             <br>
-            {% for t in application.worker.trades.all %}<span class="pill">{{ t.name }}</span>{% endfor %}
+            {% for t in application.worker.trades.all %}<span class="pill">{{ t }}</span>{% endfor %}
           </div>
         </div>
       </div>

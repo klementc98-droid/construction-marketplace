@@ -12,7 +12,7 @@
     {% if job.is_gig %}<span class="badge gig">{% translate "Gig" %}</span>{% else %}<span class="badge">{{ job.get_position_type_display }}</span>{% endif %}
     {% if job.is_private %}<span class="badge">{% translate "Private offer" %}</span>{% endif %}
     {% if not job.is_open %}<span class="badge state-{{ job.state_tone }}">{{ job.get_state_display }}</span>{% endif %}
-    {{ job.trade.name }}{% if job.location %} · {{ job.location }}{% else %} · {{ job.region.name }}{% endif %}
+    {{ job.trade }}{% if job.location %} · {{ job.location }}{% else %} · {{ job.region.name }}{% endif %}
   </p>
 
   {% comment %} The offer, answered or not, sits above everything. Somebody who followed a

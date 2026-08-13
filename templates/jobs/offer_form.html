@@ -33,7 +33,7 @@
         </p>
         {% if worker.trades.all %}
           <p class="worker-trades">
-            {% for t in worker.trades.all %}<span class="pill">{{ t.name }}</span>{% endfor %}
+            {% for t in worker.trades.all %}<span class="pill">{{ t }}</span>{% endfor %}
           </p>
         {% endif %}
       </div>

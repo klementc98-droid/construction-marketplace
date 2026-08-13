@@ -31,7 +31,7 @@
           {% translate "Optional. Only fill in the ones for trades you selected above." %}
         </p>
         {% for trade in regulated_trades %}
-          <label for="license_{{ trade.id }}">{{ trade.name }} licence #</label>
+          <label for="license_{{ trade.id }}">{{ trade }} licence #</label>
           <input type="text" id="license_{{ trade.id }}" name="license_{{ trade.id }}"
                  value="{{ licenses|dict_get:trade.id }}"
                  placeholder="{% translate "Licence number" %}">

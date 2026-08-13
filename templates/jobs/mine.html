@@ -43,7 +43,7 @@
             {% if offer.job.implied_hourly %} · ≈${{ offer.job.implied_hourly }}/hr{% endif %}
             <br>
             From {{ offer.job.client.company_name|default:offer.job.client.user }}
-            · {{ offer.job.trade.name }}
+            · {{ offer.job.trade }}
             {% if offer.job.location %} · {{ offer.job.location }}{% endif %}
             · sent {{ offer.created_at|timesince }} ago
           </div>
@@ -70,7 +70,7 @@
             {% else %}
               <span class="badge">Waiting on {{ offer.worker.user }}</span>
             {% endif %}
-            {{ offer.job.gig_date|date:"D j M" }} · {{ offer.job.trade.name }}
+            {{ offer.job.gig_date|date:"D j M" }} · {{ offer.job.trade }}
             · sent {{ offer.created_at|timesince }} ago
           </div>
         </div>
@@ -100,7 +100,7 @@
             {% else %}
               {% translate "No applicants yet" %}
             {% endif %}
-            · {{ job.trade.name }}
+            · {{ job.trade }}
           </div>
         </div>
       </a>
@@ -130,7 +130,7 @@
           <div class="row-meta">
             <span class="badge {% if application.status == 'selected' %}gig{% endif %}">
               {{ application.get_status_display }}</span>
-            {{ application.job.trade.name }} ·
+            {{ application.job.trade }} ·
             {{ application.job.client.company_name|default:application.job.client.user }}
           </div>
         </div>

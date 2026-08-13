@@ -18,7 +18,7 @@ so a job looks the same everywhere it appears.
       {% endif %}
       {% if not job.is_open %}<span class="badge state-{{ job.state_tone }}">{{ job.get_state_display }}</span>{% endif %}
       <br>
-      {{ job.trade.name }}{% if job.location %} · {{ job.location }}{% endif %}
+      {{ job.trade }}{% if job.location %} · {{ job.location }}{% endif %}
     </div>
   </div>
 </a>
