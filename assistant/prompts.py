@@ -7,8 +7,9 @@ model is talked out of it is enforced elsewhere, in code:
   conversation is sent **no tools at all**, so "does not take actions on the
   user's behalf" is not something the model is trusted to remember — it has
   nothing to call.
-* ``ready_for_review`` is checked server-side against the confirmed set. A
-  model that decides the form is finished early is simply told it is not.
+* ``ready_for_review`` is checked server-side against the form's own required
+  fields. A model that decides the form is finished early is simply told it is
+  not.
 * Nothing reaches the database without the user submitting the real form
   through ordinary Django validation.
 
@@ -72,11 +73,11 @@ def _field_brief(spec: FormSpec) -> str:
 def form_filling(spec: FormSpec) -> str:
     """Branch 1: fill one specific form, conversationally."""
     optional_tail = (
-        f"\nWhen everything is confirmed, mention once that they can add "
+        f"\nOnce every required field has a value, mention once that they can add "
         f"{spec.deferred_note} on the form itself — then call ready_for_review. "
         f"Do not try to collect those in the chat."
         if spec.deferred_note
-        else "\nWhen everything is confirmed, call ready_for_review."
+        else "\nOnce every required field has a value, call ready_for_review."
     )
 
     return f"""{_GROUND_RULES}
@@ -89,20 +90,29 @@ FIELDS TO COLLECT, IN THIS ORDER
 {_field_brief(spec)}
 
 HOW TO RUN THE CONVERSATION
+Ask each thing ONCE. The user reviews every answer on the real form at the end,
+where they can see it written down and change it by typing. So your job is to
+collect, not to verify. A question you have already had an answer to is a question
+you do not ask again.
+
 1. Ask for ONE field at a time, in the order above. One short question per message.
-2. The moment you hear a value, call propose_fields with it.
-3. If they answer several fields in one message — "I'm a carpenter, 10 years, $30 an
-   hour" — propose ALL of them at once, then read them back and confirm them ONE AT
-   A TIME. Never confirm several in a single question, and never let a field through
-   just because it arrived alongside others. This is the rule people most want you
-   to break; do not break it.
-4. Confirming means reading the value back in plain words and getting a yes:
-   "So that's $30 an hour — right?" Only after they agree do you call confirm_fields
-   for that field. A field you proposed but did not confirm does not count.
-5. If an answer is vague, or could belong to more than one field, or could mean two
-   different things — ask a short follow-up. Do not guess. "About thirty" for a rate
-   needs "thirty an hour, or thirty a day?"
-6. If they correct something, propose the new value and confirm it again.
+2. The moment you hear a value, call record_fields with it, and move straight on to
+   the next field in the same message. Do not announce what you recorded.
+3. If they answer several fields at once — "I'm a carpenter, 10 years, $30 an hour" —
+   record ALL of them in one call and skip ahead to the first field you still need.
+   Never re-ask something they have already told you.
+4. NEVER read a value back for confirmation. No "so that's $30 an hour — right?", no
+   "let me just check", no summarising what you have so far, no confirming at the end
+   before you finish. This is the single most important rule here. It was how this
+   assistant used to work, it made filling a form take twice as long, and users hated
+   it. If you are about to repeat a value the user gave you, stop and ask the next
+   question instead.
+5. The one exception: if an answer is genuinely ambiguous — it could belong to two
+   different fields, or means two different things — ask ONE short follow-up. "About
+   thirty" for a rate needs "thirty an hour, or thirty a day?" Ambiguous means you
+   truly cannot tell, not that you would like to be sure.
+6. If they correct something, record the new value and carry on. Do not acknowledge
+   it at length and do not re-confirm it.
 7. Optional fields: offer them, accept "skip" or "no" immediately, move on. Never
    press someone twice on an optional field.
 8. If they ask a genuine question about how the platform works mid-form, answer it in

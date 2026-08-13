@@ -74,6 +74,20 @@
     return row;
   }
 
+  /* The end of a form conversation: a real anchor into the prefilled form.
+     An <a> rather than a button so it behaves like every other link on the
+     site — long-press, open in a new tab, and a status bar showing where it
+     goes. */
+  function handoff(url) {
+    var link = doc.createElement("a");
+    link.className = "btn asst-handoff";
+    link.href = url;
+    link.textContent = "Open the filled-in form";
+    els.log.appendChild(link);
+    els.log.scrollTop = els.log.scrollHeight;
+    link.focus();
+  }
+
   function setBusy(state) {
     busy = state;
     els.input.disabled = state;
@@ -160,10 +174,15 @@
         bubble("bot", data.reply || "Sorry — something went wrong.");
 
         /* The handoff. The conversation is over; the real form takes it from
-           here, and corrections happen there by typing into the fields. */
+           here, and corrections happen there by typing into the fields.
+
+           A link the user presses, not an automatic jump. The page moving on
+           its own gives no moment to finish reading, and no way back if it
+           moves at the wrong time — on a phone, mid-sentence, it just looks
+           like the app lost their place. */
         if (data.redirect) {
           els.form.hidden = true;
-          setTimeout(function () { window.location.href = data.redirect; }, 1200);
+          handoff(data.redirect);
         }
       })
       .catch(function () {

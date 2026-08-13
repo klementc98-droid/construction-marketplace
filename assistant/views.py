@@ -40,8 +40,7 @@ def _state(conversation: Conversation) -> dict:
     return {
         "branch": conversation.branch,
         "form_key": conversation.form_key,
-        "confirmed": conversation.confirmed,
-        "awaiting": conversation.awaiting_confirmation(),
+        "collected": conversation.collected,
         "missing": conversation.missing(),
         "can_review": conversation.can_review(),
         "total_fields": len(spec.chat_fields) if spec else 0,
@@ -186,18 +185,16 @@ def _fill_form(request, conversation: Conversation) -> dict:
         tools=tool_definitions(spec),
     )
 
-    for call in reply.calls_named("propose_fields"):
-        conversation.propose(call.arguments)
-    for call in reply.calls_named("confirm_fields"):
-        conversation.confirm(call.arguments.get("names") or [])
+    for call in reply.calls_named("record_fields"):
+        conversation.collect(call.arguments)
 
     if reply.calls_named("ready_for_review"):
         if url := conversation.handoff(request):
             return {
                 "reply": (
-                    "That's everything. Here's the finished form — have a read "
-                    "through, change anything that isn't right by clicking "
-                    "straight into it, then press save."
+                    "That's everything I need. Open the form below — it's filled "
+                    "in with your answers. Change anything that isn't right by "
+                    "clicking straight into it, then press save."
                 ),
                 "redirect": url,
             }

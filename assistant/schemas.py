@@ -159,24 +159,24 @@ def required_fields(spec: FormSpec) -> tuple[str, ...]:
 def tool_definitions(spec: FormSpec) -> list[dict[str, Any]]:
     """The tools offered to the model while filling ``spec``.
 
-    Three verbs, and the split is the point. ``propose_fields`` is what the
-    model heard; ``confirm_fields`` is what the user has since agreed to. The
-    server keeps them apart, so "confirm every field individually" is a rule
-    the code enforces rather than a sentence in a prompt that a determined
-    conversation can talk its way around.
+    Two verbs. There was a third, ``confirm_fields``, which promoted a value
+    only once the model had read it back and got a "yes" — see the note in
+    :mod:`assistant.conversation` for why that step went. Removing the tool
+    matters as much as removing the instruction: a model handed a verb will
+    find occasions to use it.
     """
     properties = field_schema(spec)
     return [
         {
             "type": "function",
             "function": {
-                "name": "propose_fields",
+                "name": "record_fields",
                 "description": (
                     "Record field values you have just heard from the user. Call "
                     "this the moment you hear something, even mid-sentence, and "
-                    "even if the user answered several fields at once. Proposing "
-                    "a field does NOT fill it in — you must still read each one "
-                    "back and get a yes before it counts."
+                    "even if the user answered several fields at once. Calling it "
+                    "again for the same field replaces the value, which is how a "
+                    "correction is made."
                 ),
                 "parameters": {
                     "type": "object",
@@ -188,36 +188,11 @@ def tool_definitions(spec: FormSpec) -> list[dict[str, Any]]:
         {
             "type": "function",
             "function": {
-                "name": "confirm_fields",
-                "description": (
-                    "Mark fields the user has explicitly agreed are correct, after "
-                    "you read the value back to them. Only list a field here once "
-                    "the user has confirmed that specific field."
-                ),
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "names": {
-                            "type": "array",
-                            "items": {
-                                "type": "string",
-                                "enum": list(properties),
-                            },
-                        }
-                    },
-                    "required": ["names"],
-                    "additionalProperties": False,
-                },
-            },
-        },
-        {
-            "type": "function",
-            "function": {
                 "name": "ready_for_review",
                 "description": (
-                    "Call when every required field is confirmed and the user is "
-                    "ready to see the finished form. The server checks this and "
-                    "will refuse if anything is still missing or unconfirmed."
+                    "Call as soon as every required field has a value, to send the "
+                    "user to the finished form. The server checks this and will "
+                    "refuse if anything required is still missing."
                 ),
                 "parameters": {"type": "object", "properties": {}},
             },

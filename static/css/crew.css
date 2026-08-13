@@ -2974,6 +2974,17 @@ footer.foot .foot-brand { color: var(--fg-2); font-weight: 700; }
 .asst-bot  { align-self: flex-start; background: var(--panel-2); color: var(--fg-2); border-bottom-left-radius: var(--r-xs); }
 .asst-user { align-self: flex-end; background: var(--accent); color: var(--accent-fg); border-bottom-right-radius: var(--r-xs); }
 
+/* The handoff into the prefilled form. Full width and set apart from the
+   bubbles: it is the one thing left to do in the panel, and on a phone it has
+   to be an unmissable target rather than a link inside a sentence. */
+.asst-handoff {
+  align-self: stretch;
+  justify-content: center;
+  margin-top: 5px;
+  text-align: center;
+  text-decoration: none;
+}
+
 /* Three dots while the model thinks. Decoration on a state that is also
    expressed by the disabled input, so the reduced-motion rule can kill it. */
 .asst-wait { display: flex; gap: 4px; padding: 13px; }

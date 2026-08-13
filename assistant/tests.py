@@ -168,7 +168,7 @@ class BranchIsolationTests(AssistantFixture):
                 content_type="application/json",
             )
         names = {t["function"]["name"] for t in call.call_args.kwargs["tools"]}
-        self.assertEqual(names, {"propose_fields", "confirm_fields", "ready_for_review"})
+        self.assertEqual(names, {"record_fields", "ready_for_review"})
 
     def test_a_message_cannot_change_branch(self):
         """Branch is set by which button was pressed, never inferred from text."""
@@ -220,72 +220,82 @@ class BranchIsolationTests(AssistantFixture):
 # ---------------------------------------------------------------------------
 
 
-class ConfirmationTests(AssistantFixture):
+class CollectionTests(AssistantFixture):
+    """Answering once is enough.
+
+    The read-it-back-and-get-a-yes step is gone deliberately — see the note in
+    :mod:`assistant.conversation`. What still holds is that the server decides
+    when the form is finished, from the form's own required fields.
+    """
+
     def conversation(self, key="gig"):
         conversation = Conversation()
         conversation.start(BRANCH_FORM, key)
         return conversation
 
-    def test_proposing_is_not_confirming(self):
+    def test_a_value_counts_as_soon_as_it_is_heard(self):
         conversation = self.conversation()
-        conversation.propose({"title": "Framing help"})
-        self.assertEqual(conversation.confirmed, {})
-        self.assertEqual(conversation.awaiting_confirmation(), ["title"])
+        conversation.collect({"title": "Framing help"})
+        self.assertEqual(conversation.collected["title"], "Framing help")
 
-    def test_several_fields_at_once_still_need_individual_confirmation(self):
-        """The explicit requirement, and the one worth a test of its own.
-
-        A user saying "carpenter, 10 years, $30 an hour" in one breath must not
-        collapse into one blanket yes.
-        """
+    def test_several_fields_at_once_all_land(self):
+        """"Carpenter, 10 years, $30 an hour" is three answers, not one to check."""
         conversation = self.conversation("worker_profile")
-        conversation.propose(
+        conversation.collect(
             {"trades": ["Carpenter"], "years_experience": 10, "rate_min": 30}
         )
-        self.assertEqual(len(conversation.awaiting_confirmation()), 3)
+        self.assertEqual(len(conversation.collected), 3)
 
-        conversation.confirm(["trades"])
-        self.assertEqual(conversation.awaiting_confirmation(), ["years_experience", "rate_min"])
-        self.assertFalse(conversation.can_review())
-
-    def test_confirming_a_field_that_was_never_proposed_does_nothing(self):
-        """Otherwise the model could invent a rate and agree with itself."""
+    def test_a_field_not_on_this_form_is_ignored(self):
+        """Otherwise a typo in a tool call looks like it worked."""
         conversation = self.conversation()
-        accepted = conversation.confirm(["fixed_pay"])
-        self.assertEqual(accepted, [])
-        self.assertEqual(conversation.confirmed, {})
+        conversation.collect({"not_a_field": "x"})
+        self.assertEqual(conversation.collected, {})
 
-    def test_reproposing_a_field_withdraws_its_confirmation(self):
-        """A correction is a new value, and the old yes does not cover it."""
+    def test_an_empty_value_does_not_overwrite_a_real_one(self):
         conversation = self.conversation()
-        conversation.propose({"fixed_pay": 240})
-        conversation.confirm(["fixed_pay"])
-        conversation.propose({"fixed_pay": 260})
-        self.assertNotIn("fixed_pay", conversation.confirmed)
-        self.assertIn("fixed_pay", conversation.awaiting_confirmation())
+        conversation.collect({"fixed_pay": 240})
+        conversation.collect({"fixed_pay": ""})
+        self.assertEqual(conversation.collected["fixed_pay"], 240)
+
+    def test_recording_a_field_again_is_a_correction(self):
+        conversation = self.conversation()
+        conversation.collect({"fixed_pay": 240})
+        conversation.collect({"fixed_pay": 260})
+        self.assertEqual(conversation.collected["fixed_pay"], 260)
 
     def test_review_is_blocked_while_a_required_field_is_missing(self):
         conversation = self.conversation()
-        conversation.propose({"title": "Framing"})
-        conversation.confirm(["title"])
+        conversation.collect({"title": "Framing"})
         self.assertFalse(conversation.can_review())
         self.assertIn("required", conversation.blocking_reason())
 
-    def test_review_is_blocked_while_anything_is_unconfirmed(self):
+    def test_review_opens_once_everything_required_is_answered(self):
         conversation = self.conversation()
-        for name, value in self._full_gig().items():
-            conversation.propose({name: value})
-            conversation.confirm([name])
-        conversation.propose({"location": "North side"})
-        self.assertFalse(conversation.can_review())
-        self.assertIn("not confirmed", conversation.blocking_reason())
-
-    def test_review_opens_once_everything_required_is_confirmed(self):
-        conversation = self.conversation()
-        for name, value in self._full_gig().items():
-            conversation.propose({name: value})
-            conversation.confirm([name])
+        conversation.collect(self._full_gig())
         self.assertTrue(conversation.can_review())
+
+    def test_the_status_note_never_asks_the_model_to_read_values_back(self):
+        """The prompt says do not confirm; this is the per-turn note agreeing."""
+        conversation = self.conversation()
+        conversation.collect({"title": "Framing help"})
+        note = conversation.messages()[-1]["content"]
+        self.assertIn("Framing help", note)
+        self.assertNotIn("confirm", note.lower())
+
+    def test_the_status_note_tells_the_model_to_record_before_asking(self):
+        """A regression guard bought the hard way.
+
+        This note is the last thing the model reads each turn, so it decides
+        what the model does. An earlier version of it said only "ask about the
+        first missing field" — and the model dutifully asked, called no tool,
+        recorded nothing, and re-asked the same question forever. Naming the
+        tool here, ahead of the instruction to ask, is what stops that.
+        """
+        conversation = self.conversation()
+        note = conversation.messages()[-1]["content"]
+        self.assertIn("record_fields", note)
+        self.assertLess(note.index("record_fields"), note.index("ask about"))
 
     def _full_gig(self):
         return {
@@ -312,7 +322,7 @@ class ReadyForReviewTests(AssistantFixture):
     def test_declaring_the_form_finished_early_is_refused(self):
         self.start_gig()
         eager = [
-            reply(calls=[("propose_fields", {"title": "Framing"}), ("ready_for_review", {})]),
+            reply(calls=[("record_fields", {"title": "Framing"}), ("ready_for_review", {})]),
             reply("Sorry — what date is the gig?"),
         ]
         with patch.object(llm, "complete", side_effect=eager):
@@ -324,7 +334,8 @@ class ReadyForReviewTests(AssistantFixture):
         self.assertNotIn("redirect", response.json())
         self.assertNotIn("assistant_handoff", self.client.session)
 
-    def test_confirming_everything_hands_off_to_the_real_form(self):
+    def test_answering_everything_hands_off_to_the_real_form(self):
+        """One message carrying every answer is enough — no confirming round."""
         self.start_gig()
         payload = {
             "title": "Framing help",
@@ -335,16 +346,12 @@ class ReadyForReviewTests(AssistantFixture):
             "fixed_pay": 240,
         }
         done = reply(
-            calls=[
-                ("propose_fields", payload),
-                ("confirm_fields", {"names": list(payload)}),
-                ("ready_for_review", {}),
-            ]
+            calls=[("record_fields", payload), ("ready_for_review", {})]
         )
         with patch.object(llm, "complete", return_value=done):
             response = self.client.post(
                 reverse("assistant:say"),
-                {"text": "yes to all of that"},
+                {"text": "framing help, carpenter, first floor, 8 hours, $240, in 3 days"},
                 content_type="application/json",
             )
         self.assertIn("redirect", response.json())
@@ -502,7 +509,7 @@ class ResilienceTests(AssistantFixture):
     def test_unparseable_tool_arguments_are_discarded(self):
         """A malformed call is no instruction; the server's record is unchanged."""
         class Fn:
-            name = "propose_fields"
+            name = "record_fields"
             arguments = "{not json"
 
         class Raw:
