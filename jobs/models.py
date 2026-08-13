@@ -20,13 +20,15 @@ from __future__ import annotations
 
 from decimal import Decimal
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.core.validators import MinValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import ClientProfile, RateType, WorkerProfile
+from config import business_rules as rules
 from core.models import Region, TimestampedModel, Trade
 from core.state_machine import JobState, state_tone
 
@@ -814,3 +816,83 @@ class Application(TimestampedModel):
     @property
     def is_active(self) -> bool:
         return self.status == ApplicationStatus.APPLIED
+
+
+# ---------------------------------------------------------------------------
+# Reviews
+# ---------------------------------------------------------------------------
+
+
+class ReviewDirection(models.TextChoices):
+    """Which way a review points.
+
+    The subject is not stored. A job has exactly one client and exactly one
+    assigned worker, so the direction plus the job identifies who is being
+    rated — and a denormalised subject column is one more thing that can
+    disagree with the job it hangs off.
+    """
+
+    CLIENT_ON_WORKER = "client_on_worker", "Client rating the worker"
+    WORKER_ON_CLIENT = "worker_on_client", "Worker rating the client"
+
+
+class Review(TimestampedModel):
+    """One side's verdict on one finished job.
+
+    Written only once the money has moved. Rating someone before they are paid
+    would put a thumb on the scale of the payment itself — "give me five stars
+    and I'll approve" is a threat the timing makes impossible.
+
+    Both directions exist because both sides take a risk. A worker choosing
+    between two clients wants to know which one approves promptly and which
+    one argues, and that information only exists if workers can write it down.
+    """
+
+    job = models.ForeignKey(Job, on_delete=models.CASCADE, related_name="reviews")
+    direction = models.CharField(max_length=20, choices=ReviewDirection.choices)
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="reviews_written",
+    )
+    rating = models.PositiveSmallIntegerField(
+        validators=[
+            MinValueValidator(rules.RATING_MIN),
+            MaxValueValidator(rules.RATING_MAX),
+        ]
+    )
+    #: Optional. A score with no words is still a data point, and forcing
+    #: prose is how you get "good" a thousand times.
+    comment = models.TextField(max_length=1000, blank=True)
+
+    class Meta:
+        ordering = ("-created_at",)
+        constraints = [
+            # One review per side per job. Re-rating the same job would let
+            # somebody stack five reviews onto one day's work.
+            models.UniqueConstraint(
+                fields=["job", "direction"], name="one_review_per_direction_per_job"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    rating__gte=rules.RATING_MIN, rating__lte=rules.RATING_MAX
+                ),
+                name="rating_within_scale",
+            ),
+        ]
+        indexes = [models.Index(fields=["direction", "-created_at"])]
+
+    def __str__(self) -> str:
+        return f"{self.author} rated {self.rating}/5 on {self.job}"
+
+    @property
+    def subject_profile(self):
+        """The profile being rated — a WorkerProfile or a ClientProfile."""
+        if self.direction == ReviewDirection.CLIENT_ON_WORKER:
+            return self.job.assigned_worker
+        return self.job.client
+
+    @property
+    def subject_user(self):
+        profile = self.subject_profile
+        return profile.user if profile else None

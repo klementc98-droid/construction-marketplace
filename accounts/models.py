@@ -238,6 +238,23 @@ class ReputationMixin(models.Model):
         """Too little history for percentage stats to be meaningful."""
         return self.completed_job_count < rules.MIN_JOBS_FOR_PUBLIC_STATS
 
+    def record_rating(self, score: int) -> None:
+        """Fold one review's score into the running average.
+
+        Written with F() expressions rather than read-modify-write: two
+        reviews landing on the same profile at the same moment would otherwise
+        both read the old sum and one would be lost. The database does the
+        addition, so concurrency is its problem and not ours.
+
+        Kept on the mixin so both profile types get it from one place — the
+        counters are the same two columns either way.
+        """
+        type(self).objects.filter(pk=self.pk).update(
+            rating_sum=models.F("rating_sum") + score,
+            rating_count=models.F("rating_count") + 1,
+        )
+        self.refresh_from_db(fields=["rating_sum", "rating_count"])
+
     def flag_for_review(self, reason: str) -> None:
         self.flagged_for_review = True
         self.flagged_reason = reason

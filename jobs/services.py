@@ -38,9 +38,17 @@ from django.db import transaction
 from django.utils import timezone
 from django.utils.formats import date_format
 
+from config import business_rules as rules
 from core.state_machine import Actor, IllegalTransition, JobState, assert_transition
 
-from .models import Application, ApplicationStatus, Job, JobType
+from .models import (
+    Application,
+    ApplicationStatus,
+    Job,
+    JobType,
+    Review,
+    ReviewDirection,
+)
 
 #: The states a gig can expire out of. Both are "no money committed yet".
 EXPIRABLE_STATES = (JobState.POSTED, JobState.ACCEPTED)
@@ -149,3 +157,92 @@ def expire_stale_gigs(*, today=None) -> list[Job]:
         except IllegalTransition:
             continue
     return expired
+
+
+# ---------------------------------------------------------------------------
+# Reviews
+# ---------------------------------------------------------------------------
+#
+# The trust system the whitepaper sells rests on two columns — rating_sum and
+# rating_count — that until now nothing ever wrote. Profiles rendered
+# average_rating, eight templates fell through to "New", and they would have
+# stayed New forever. This is the code that moves them.
+#
+# Two rules shape the whole thing:
+#
+# * You may only rate a job that has been paid out. Rating before the money
+#   moves would make the review a lever on the payment — "five stars and I'll
+#   approve" is a conversation the timing makes impossible.
+# * One review per side per job, enforced by a unique constraint rather than a
+#   check in a view, because the view is not the only way rows get made.
+
+
+class ReviewError(RuntimeError):
+    """A refusal phrased for the person who hit it."""
+
+
+def _direction_for(job: Job, user) -> str:
+    """Which way this person's review points, or a refusal.
+
+    Membership is decided here rather than in the view: the same question is
+    asked by the form, the view and the service, and one answer is how they
+    stay consistent.
+    """
+    if job.client.user_id == user.pk:
+        return ReviewDirection.CLIENT_ON_WORKER
+    if job.assigned_worker and job.assigned_worker.user_id == user.pk:
+        return ReviewDirection.WORKER_ON_CLIENT
+    raise ReviewError("You weren't part of this job.")
+
+
+def can_review(job: Job, user) -> bool:
+    """Is there a review this person could still leave on this job?"""
+    if job.state != JobState.PAID_OUT or job.assigned_worker_id is None:
+        return False
+    try:
+        direction = _direction_for(job, user)
+    except ReviewError:
+        return False
+    return not Review.objects.filter(job=job, direction=direction).exists()
+
+
+def review_by(job: Job, user) -> "Review | None":
+    """The review this person already left on this job, if any."""
+    try:
+        direction = _direction_for(job, user)
+    except ReviewError:
+        return None
+    return Review.objects.filter(job=job, direction=direction).first()
+
+
+@transaction.atomic
+def leave_review(job: Job, author, *, rating: int, comment: str = "") -> "Review":
+    """Record one side's verdict and fold it into the subject's average.
+
+    The write and the counter update are one transaction. A review that landed
+    without moving the average would be invisible on every card and profile in
+    the app, which is worse than no review at all — it would look like the
+    feature was working.
+    """
+    if job.state != JobState.PAID_OUT:
+        raise ReviewError("You can rate a job once it's been paid out.")
+    if job.assigned_worker_id is None:
+        raise ReviewError("Nobody was booked on this job.")
+
+    direction = _direction_for(job, author)
+    if Review.objects.filter(job=job, direction=direction).exists():
+        raise ReviewError("You've already rated this job.")
+    if not rules.RATING_MIN <= rating <= rules.RATING_MAX:
+        raise ReviewError(
+            f"Ratings run from {rules.RATING_MIN} to {rules.RATING_MAX}."
+        )
+
+    review = Review.objects.create(
+        job=job,
+        direction=direction,
+        author=author,
+        rating=rating,
+        comment=comment.strip(),
+    )
+    review.subject_profile.record_rating(rating)
+    return review
