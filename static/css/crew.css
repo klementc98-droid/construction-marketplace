@@ -28,56 +28,63 @@
 
 :root {
   /* --- Palette ------------------------------------------------------------
-     Fired clay. The trades work in daylight against timber, brick and
-     concrete; a cold blue-grey UI reads like a bank, and this should read like
-     the site itself. Neutrals are warm sand rather than grey, and the colour
-     in the room is a two-step heat scale: burnt orange for anything you press
-     or follow, amber for the highlights that sit next to it.
+     Neutral ground, one loud colour. Near-white paper, white cards, near-black
+     text, and a single high-voltage lime for anything you press. Nothing else
+     is coloured: on a screen read outdoors, a page with one accent tells you
+     where to look, and a page with four tells you nothing.
 
-     `--accent` is the one that lands on text, so it is picked to clear 4.5:1
-     on --panel. `--accent-2` never carries a word on its own — it lives in
-     gradients, rails and the tool motifs, where contrast is decoration. */
+     The important constraint is that the lime CANNOT carry text. #b8e63e
+     measures 1.46:1 against a white card — it is a fill, and what sits on it
+     is --accent-fg, the near-black, at 12:1. Where the accent has to *be* the
+     text — a link, an active tab, a hover — the token is --accent-ink, a dark
+     olive of the same hue measuring 5.65:1 on white. Using --accent there
+     produces a word nobody can read, which is the one mistake this palette
+     invites, so the two are named differently on purpose.
 
-  --bg:            #faf5ee;
-  --bg-tint:       #f7e7d5;   /* the wash behind the header/hero */
-  --panel:         #fffcf7;
-  --panel-2:       #f7eddf;
-  --panel-3:       #eee0cd;
-  --line:          #eddfcb;
-  --line-strong:   #d8c1a3;
-  --fg:            #1a1310;
-  --fg-2:          #4a382b;
-  --dim:           #7d6a57;
+     In the dark theme the lime is already 12:1 on the ground, so --accent-ink
+     is simply the lime itself. */
+
+  --bg:            #f5f5f2;
+  --bg-tint:       #ecefe4;   /* the wash behind the header/hero */
+  --panel:         #ffffff;
+  --panel-2:       #f2f3ef;
+  --panel-3:       #e7e9e3;
+  --line:          #e3e5df;
+  --line-strong:   #c7cbc2;
+  --fg:            #202427;
+  --fg-2:          #3e454a;
+  --dim:           #5f666c;
   /* 5.1:1 on --panel. It was #a48d74, which measured 3.1:1 — under the 4.5:1
      floor for body text, and it carries real content (the job line under an
      inbox row, placeholders, secondary facts), not just decoration. */
-  --dimmer:        #806a52;
+  --dimmer:        #62696f;
 
-  --accent:        #bf4413;   /* burnt orange — 4.9:1 on --panel */
-  --accent-hover:  #9c3410;
-  --accent-2:      #e8951f;   /* amber — decoration only */
-  --accent-3:      #f6c04a;   /* gold, the top of the heat scale */
-  --brick:         #a13a18;
-  --accent-soft:   #fdeddd;   /* accent at ~8% over panel, precomputed */
-  --accent-fg:     #fffaf4;
+  --accent:        #b8e63e;   /* lime — a fill, never text */
+  --accent-hover:  #a6d62b;
+  --accent-2:      #d2ef6a;   /* decoration only */
+  --accent-3:      #e8f7a8;   /* palest step of the scale */
+  --brick:         #7fa81c;
+  --accent-soft:   #f1f9dc;   /* accent at ~10% over panel, precomputed */
+  --accent-fg:     #171a1c;   /* what sits on the lime — 12:1 */
+  --accent-ink:    #55701a;   /* the accent when it must be text — 5.65:1 */
 
   /* --- The heat scale, as two gradients -----------------------------------
      Kept as tokens so the button, the badge and the filament under the header
      are visibly the same material rather than three oranges that nearly match.
 
      Two of them, and the split is a contrast rule, not a taste one. `--heat`
-     runs accent → brick, both of which clear 4.5:1 against --accent-fg, so it
-     is safe under a label wherever the text happens to land. `--heat-bright`
-     opens on gold, which is beautiful and which no word can be read against —
-     so it is only ever used on things with nothing written on them: the 2px
-     filaments, the card edge, the mark. Do not put text on --heat-bright. */
+     runs accent → brick, both dark enough under --accent-fg that a label is
+     safe wherever it lands. `--heat-bright` opens on the palest step, which no
+     word can be read against — so it is only ever used on things with nothing
+     written on them: the 2px filaments, the card edge, the mark. Do not put
+     text on --heat-bright. */
   --heat:        linear-gradient(135deg, var(--accent) 0%, var(--brick) 100%);
   --heat-bright: linear-gradient(135deg, var(--accent-3) 0%, var(--accent-2) 30%,
                                          var(--accent) 66%, var(--brick) 100%);
 
-  --ok:            #4a6b12;
-  --warn:          #96590a;
-  --err:           #ab2a1e;
+  --ok:            #2f7a34;
+  --warn:          #8a5a00;
+  --err:           #b3261e;
   --info:          #1f5673;
 
   /* --- Radii -------------------------------------------------------------- */
@@ -93,23 +100,23 @@
   --radius-sm:  var(--r-sm);
 
   /* --- Elevation ----------------------------------------------------------
-     Warm-tinted rather than neutral black: a grey shadow on a cream surface
-     reads as dirt. Three steps only — resting, raised, floating. */
-  --shadow-sm: 0 1px 2px rgb(74 34 12 / .06),
-               0 1px 1px rgb(74 34 12 / .04);
-  --shadow-md: 0 2px 4px -1px rgb(74 34 12 / .07),
-               0 8px 16px -6px rgb(74 34 12 / .12);
-  --shadow-lg: 0 4px 8px -2px rgb(74 34 12 / .08),
-               0 18px 36px -12px rgb(74 34 12 / .18);
-  /* What a pressed, glowing, accent-coloured thing casts. */
-  --shadow-heat: 0 2px 6px -1px rgb(191 68 19 / .28),
-                 0 12px 24px -10px rgb(191 68 19 / .38);
+     Neutral, because the ground is neutral: the warm-tinted shadows this had
+     were tuned for a cream page and read as dirt on white. Three steps only —
+     resting, raised, floating. */
+  --shadow-sm: 0 1px 2px rgb(23 26 28 / .06),
+               0 1px 1px rgb(23 26 28 / .04);
+  --shadow-md: 0 2px 4px -1px rgb(23 26 28 / .07),
+               0 8px 16px -6px rgb(23 26 28 / .10);
+  --shadow-lg: 0 4px 8px -2px rgb(23 26 28 / .08),
+               0 18px 36px -12px rgb(23 26 28 / .14);
+  --shadow-heat: 0 2px 6px -1px rgb(127 168 28 / .26),
+                 0 12px 24px -10px rgb(127 168 28 / .34);
 
   /* --- Focus --------------------------------------------------------------
      Two rings: a solid accent line for definition and a soft halo so it stays
      visible against both the panel and the accent button itself. */
-  --ring: 0 0 0 2px var(--panel), 0 0 0 4px var(--accent);
-  --ring-soft: 0 0 0 4px rgb(191 68 19 / .20);
+  --ring: 0 0 0 2px var(--panel), 0 0 0 4px var(--accent-ink);
+  --ring-soft: 0 0 0 4px rgb(85 112 26 / .22);
 
   /* --- Motion -------------------------------------------------------------
      Fast enough to feel like a direct response, slow enough to be read. */
@@ -144,7 +151,7 @@
 /* ==========================================================================
    2. Dark theme
    --------------------------------------------------------------------------
-   The same room with the lights off — warm near-black, never blue-black. Two
+   The same room with the lights off — the primary near-black as ground. Two
    selectors, one declaration list, deliberately duplicated: `light-dark()`
    would remove the repetition but takes the whole palette down with it on any
    browser that lacks it, and an unstyled page is a worse outcome than forty
@@ -156,28 +163,29 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg:            #140f0c;
-    --bg-tint:       #221811;
-    --panel:         #1e1814;
-    --panel-2:       #29211b;
-    --panel-3:       #362b23;
-    --line:          #362c24;
-    --line-strong:   #56463a;
-    --fg:            #f8f1e7;
-    --fg-2:          #d6c8b8;
-    --dim:           #a3907c;
-    --dimmer:        #9a8975;   /* 5.2:1 on --panel; was #83705d at 3.7:1 */
+    --bg:            #171a1c;
+    --bg-tint:       #1c2023;
+    --panel:         #1e2225;
+    --panel-2:       #24282c;
+    --panel-3:       #2d3236;
+    --line:          #2a2f33;
+    --line-strong:   #414750;
+    --fg:            #f5f5f2;
+    --fg-2:          #c9cdcf;
+    --dim:           #949b9f;
+    --dimmer:        #9aa1a5;   /* 5.2:1 on --panel; was #83705d at 3.7:1 */
 
-    --accent:        #ff8a45;
-    --accent-hover:  #ffa771;
-    --accent-2:      #ffb24d;
-    --accent-3:      #ffd06b;
-    --brick:         #e0653a;
-    --accent-soft:   #2e1d12;
-    --accent-fg:     #231006;
+    --accent:        #b8e63e;
+    --accent-hover:  #c9ef63;
+    --accent-2:      #a6d62b;
+    --accent-3:      #d2f27a;
+    --brick:         #8fc01f;
+    --accent-soft:   #232b14;
+    --accent-fg:     #171a1c;
+    --accent-ink:    #b8e63e;
 
-    --ok:            #9dcd57;
-    --warn:          #f0b95c;
+    --ok:            #a8d95e;
+    --warn:          #e8b45c;
     --err:           #f2938a;
     --info:          #74b6d8;
 
@@ -186,39 +194,40 @@
                  0 10px 20px -6px rgb(0 0 0 / .5);
     --shadow-lg: 0 4px 10px -2px rgb(0 0 0 / .45),
                  0 22px 44px -12px rgb(0 0 0 / .6);
-    --shadow-heat: 0 2px 6px -1px rgb(255 138 69 / .22),
-                   0 14px 28px -12px rgb(255 138 69 / .32);
+    --shadow-heat: 0 2px 6px -1px rgb(184 230 62 / .20),
+                   0 14px 28px -12px rgb(184 230 62 / .28);
 
     --ring: 0 0 0 2px var(--panel), 0 0 0 4px var(--accent);
-    --ring-soft: 0 0 0 4px rgb(255 138 69 / .24);
+    --ring-soft: 0 0 0 4px rgb(184 230 62 / .26);
 
     color-scheme: dark;
   }
 }
 
 :root[data-theme="dark"] {
-  --bg:            #140f0c;
-  --bg-tint:       #221811;
-  --panel:         #1e1814;
-  --panel-2:       #29211b;
-  --panel-3:       #362b23;
-  --line:          #362c24;
-  --line-strong:   #56463a;
-  --fg:            #f8f1e7;
-  --fg-2:          #d6c8b8;
-  --dim:           #a3907c;
-  --dimmer:        #9a8975;   /* 5.2:1 on --panel; was #83705d at 3.7:1 */
+  --bg:            #171a1c;
+  --bg-tint:       #1c2023;
+  --panel:         #1e2225;
+  --panel-2:       #24282c;
+  --panel-3:       #2d3236;
+  --line:          #2a2f33;
+  --line-strong:   #414750;
+  --fg:            #f5f5f2;
+  --fg-2:          #c9cdcf;
+  --dim:           #949b9f;
+  --dimmer:        #9aa1a5;   /* 5.2:1 on --panel; was #83705d at 3.7:1 */
 
-  --accent:        #ff8a45;
-  --accent-hover:  #ffa771;
-  --accent-2:      #ffb24d;
-  --accent-3:      #ffd06b;
-  --brick:         #e0653a;
-  --accent-soft:   #2e1d12;
-  --accent-fg:     #231006;
+  --accent:        #b8e63e;
+  --accent-hover:  #c9ef63;
+  --accent-2:      #a6d62b;
+  --accent-3:      #d2f27a;
+  --brick:         #8fc01f;
+  --accent-soft:   #232b14;
+  --accent-fg:     #171a1c;
+    --accent-ink:    #b8e63e;
 
-  --ok:            #9dcd57;
-  --warn:          #f0b95c;
+  --ok:            #a8d95e;
+  --warn:          #e8b45c;
   --err:           #f2938a;
   --info:          #74b6d8;
 
@@ -227,11 +236,11 @@
                0 10px 20px -6px rgb(0 0 0 / .5);
   --shadow-lg: 0 4px 10px -2px rgb(0 0 0 / .45),
                0 22px 44px -12px rgb(0 0 0 / .6);
-  --shadow-heat: 0 2px 6px -1px rgb(255 138 69 / .22),
-                 0 14px 28px -12px rgb(255 138 69 / .32);
+  --shadow-heat: 0 2px 6px -1px rgb(184 230 62 / .20),
+                   0 14px 28px -12px rgb(184 230 62 / .28);
 
   --ring: 0 0 0 2px var(--panel), 0 0 0 4px var(--accent);
-  --ring-soft: 0 0 0 4px rgb(255 138 69 / .24);
+  --ring-soft: 0 0 0 4px rgb(184 230 62 / .26);
 
   color-scheme: dark;
 }
@@ -310,7 +319,7 @@ img, svg, video { max-width: 100%; }
 img { height: auto; }
 
 a {
-  color: var(--accent);
+  color: var(--accent-ink);
   text-decoration: none;
   text-underline-offset: 2.5px;
   text-decoration-thickness: 1.5px;
@@ -568,7 +577,7 @@ header.top .wrap {
   font-weight: 700;
   background: var(--accent-soft);
 }
-.nav-link.on svg { color: var(--accent); }
+.nav-link.on svg { color: var(--accent-ink); }
 /* A hairline under the current tab, drawn on the header's own border line. */
 .nav-link.on::after {
   content: "";
@@ -741,9 +750,9 @@ header.top .wrap {
 .tabbar a.on::before { opacity: 1; transform: translateX(-50%) scale(1); }
 .tabbar a > * { position: relative; }
 
-.tabbar a.on { color: var(--accent); font-weight: 720; }
-.tabbar a.on svg { color: var(--accent); }
-.tabbar a.on .pic { border-color: var(--accent); }
+.tabbar a.on { color: var(--accent-ink); font-weight: 720; }
+.tabbar a.on svg { color: var(--accent-ink); }
+.tabbar a.on .pic { border-color: var(--accent-ink); }
 
 /* Press feedback the whole bar shares: the tab dips, it does not just recolour.
    Touch has no hover to fall back on, so the press has to be the feedback. */
@@ -872,8 +881,8 @@ header.top .wrap {
 .btn.secondary::after { display: none; }
 .btn.secondary:hover {
   background: var(--accent-soft);
-  border-color: var(--accent);
-  color: var(--accent);
+  border-color: var(--accent-ink);
+  color: var(--accent-ink);
   box-shadow: var(--shadow-md);
 }
 
@@ -975,7 +984,7 @@ input:hover:not(:focus), select:hover:not(:focus), textarea:hover:not(:focus) {
 }
 input:focus, select:focus, textarea:focus {
   outline: none;
-  border-color: var(--accent);
+  border-color: var(--accent-ink);
   box-shadow: var(--ring-soft);
 }
 input::placeholder, textarea::placeholder { color: var(--dimmer); }
@@ -1039,7 +1048,7 @@ input[type=file] {
   cursor: pointer;
   transition: border-color var(--t-fast) var(--ease), background var(--t-fast) var(--ease);
 }
-input[type=file]:hover { border-color: var(--accent); background: var(--accent-soft); }
+input[type=file]:hover { border-color: var(--accent-ink); background: var(--accent-soft); }
 input[type=file]::file-selector-button {
   margin-right: 12px;
   padding: 7px 13px;
@@ -1068,7 +1077,7 @@ input[type=file]::file-selector-button:hover { background: var(--panel-2); }
    survive both themes and a monochrome screen. */
 
 .req {
-  color: var(--accent);
+  color: var(--accent-ink);
   font-weight: 700;
   /* Nudged off the baseline so it reads as a mark against the label rather
      than as punctuation in it. */
@@ -1106,7 +1115,7 @@ input[type=file]::file-selector-button:hover { background: var(--panel-2); }
   width: 17px; height: 17px;
   flex: none;
   margin-top: 1px;
-  color: var(--accent);
+  color: var(--accent-ink);
   fill: none;
   stroke: currentColor;
 }
@@ -1153,7 +1162,7 @@ ul.checks li label {
 }
 ul.checks li label:hover { background: var(--panel-2); }
 ul.checks li label:has(input:checked) { background: var(--accent-soft); font-weight: 560; }
-ul.checks input { width: 18px; height: 18px; flex: none; accent-color: var(--accent); cursor: pointer; }
+ul.checks input { width: 18px; height: 18px; flex: none; accent-color: var(--accent-ink); cursor: pointer; }
 
 /* --- radio group ---------------------------------------------------------
    A yes/no question deserves to look like one: the prompt reads as a sentence
@@ -1189,10 +1198,10 @@ ul.checks input { width: 18px; height: 18px; flex: none; accent-color: var(--acc
               box-shadow var(--t-fast) var(--ease);
 }
 .radio-group label:hover { border-color: var(--dimmer); background: var(--panel-2); }
-.radio-group input { width: 18px; height: 18px; flex: none; accent-color: var(--accent); cursor: pointer; }
+.radio-group input { width: 18px; height: 18px; flex: none; accent-color: var(--accent-ink); cursor: pointer; }
 /* :has() puts the selected state on the whole row, not just the dot. */
 .radio-group label:has(input:checked) {
-  border-color: var(--accent);
+  border-color: var(--accent-ink);
   background: var(--accent-soft);
   box-shadow: var(--ring-soft);
   font-weight: 580;
@@ -1250,9 +1259,9 @@ ul.checks input { width: 18px; height: 18px; flex: none; accent-color: var(--acc
   list-style: none;          /* Firefox */
 }
 .filterbar-toggle::-webkit-details-marker { display: none; }   /* Safari */
-.filterbar-toggle:hover { border-color: var(--accent); color: var(--accent); }
+.filterbar-toggle:hover { border-color: var(--accent-ink); color: var(--accent-ink); }
 .filterbar-toggle:focus-visible { outline: none; box-shadow: var(--ring); }
-.filterbar-drop[open] .filterbar-toggle { border-color: var(--accent); color: var(--accent); }
+.filterbar-drop[open] .filterbar-toggle { border-color: var(--accent-ink); color: var(--accent-ink); }
 
 /* The word goes on a phone; the icon and the count carry it. */
 @media (max-width: 559px) {
@@ -1320,7 +1329,7 @@ ul.checks input { width: 18px; height: 18px; flex: none; accent-color: var(--acc
   cursor: pointer;
   user-select: none;
 }
-.check-inline input { width: 17px; height: 17px; flex: none; accent-color: var(--accent); cursor: pointer; }
+.check-inline input { width: 17px; height: 17px; flex: none; accent-color: var(--accent-ink); cursor: pointer; }
 @media (max-width: 639px) { .check-inline { padding-bottom: 0; } }
 
 /* --- date list -----------------------------------------------------------
@@ -1352,7 +1361,7 @@ ul.checks input { width: 18px; height: 18px; flex: none; accent-color: var(--acc
   font-weight: 620;
   cursor: pointer;
 }
-.datecal-toggle:hover { border-color: var(--accent); color: var(--accent); }
+.datecal-toggle:hover { border-color: var(--accent-ink); color: var(--accent-ink); }
 .datecal-toggle:focus-visible { outline: none; box-shadow: var(--ring); }
 
 /* Over the form, not in it: a calendar that pushes the pay field down the
@@ -1389,7 +1398,7 @@ ul.checks input { width: 18px; height: 18px; flex: none; accent-color: var(--acc
   line-height: 1;
   cursor: pointer;
 }
-.datecal-nav:hover { border-color: var(--accent); color: var(--accent); }
+.datecal-nav:hover { border-color: var(--accent-ink); color: var(--accent-ink); }
 .datecal-nav:focus-visible { outline: none; box-shadow: var(--ring); }
 
 .datecal-week,
@@ -1424,7 +1433,7 @@ ul.checks input { width: 18px; height: 18px; flex: none; accent-color: var(--acc
 .datecal-day.today { border-color: var(--line-strong); font-weight: 700; }
 .datecal-day.on {
   background: var(--accent);
-  border-color: var(--accent);
+  border-color: var(--accent-ink);
   color: var(--accent-fg);
   font-weight: 700;
 }
@@ -1471,12 +1480,12 @@ ul.checks input { width: 18px; height: 18px; flex: none; accent-color: var(--acc
   width: 20px; height: 20px;
   border-radius: var(--r-full);
   background: color-mix(in srgb, var(--accent) 14%, transparent);
-  color: var(--accent);
+  color: var(--accent-ink);
   font-style: normal;
   font-size: 15px;
   line-height: 1;
 }
-.datelist-chip:hover { border-color: var(--accent); background: var(--panel-2); }
+.datelist-chip:hover { border-color: var(--accent-ink); background: var(--panel-2); }
 .datelist-chip:hover i { background: var(--accent); color: var(--accent-fg); }
 
 /* Sized to its own content rather than stretched to the form width — it is an
@@ -1936,13 +1945,13 @@ a.job-row:focus-visible { border-radius: var(--r-lg); }
   letter-spacing: -0.028em;
 }
 .job-row .pay {
-  color: var(--accent);
+  color: var(--accent-ink);
   font-size: 15.5px;
   font-weight: 760;
   letter-spacing: -0.026em;
   white-space: nowrap;
 }
-a.job-row:hover .title { color: var(--accent); }
+a.job-row:hover .title { color: var(--accent-ink); }
 /* A closed job's rate is history, not an offer. `.dim` on the span has to beat
    the accent above it, and on its own it does not — same specificity, declared
    earlier. */
@@ -2044,7 +2053,7 @@ a.job-row:hover .title { color: var(--accent); }
   overflow-wrap: anywhere;
 }
 .person-name a { color: var(--fg); }
-.person-name a:hover { color: var(--accent); }
+.person-name a:hover { color: var(--accent-ink); }
 .person-sub {
   margin-top: 1px;
   color: var(--dim);
@@ -2076,7 +2085,7 @@ a.job-row.pick .card::after {
   transition: transform var(--t-base) var(--ease-out), border-color var(--t-base) var(--ease);
 }
 a.job-row.pick:hover .card::after {
-  border-color: var(--accent);
+  border-color: var(--accent-ink);
   transform: translateY(-50%) rotate(45deg) translate(2px, -2px);
 }
 
@@ -2171,7 +2180,7 @@ a.job-row.pick:hover .card::after {
   text-decoration: none;
   white-space: nowrap;
 }
-.section-more:hover { color: var(--accent); }
+.section-more:hover { color: var(--accent-ink); }
 
 .section-sub {
   margin: 9px 0 13px;
@@ -2271,12 +2280,12 @@ a.job-row.pick:hover .card::after {
   line-height: 1.22;
   transition: color var(--t-fast) var(--ease);
 }
-.feed-body:hover .feed-headline h3 { color: var(--accent); }
+.feed-body:hover .feed-headline h3 { color: var(--accent-ink); }
 /* The rate is what the reader came for. It is set in the accent so a thumb
    scrolling at speed can find it without reading anything else. */
 .feed-headline .pay {
   flex: none;
-  color: var(--accent);
+  color: var(--accent-ink);
   font-size: 16.5px;
   font-weight: 780;
   letter-spacing: -0.028em;
@@ -2344,7 +2353,7 @@ a.job-row.pick:hover .card::after {
   width: 16px; height: 16px;
   flex: none;
   border: 2px solid var(--line-strong);
-  border-top-color: var(--accent);
+  border-top-color: var(--accent-ink);
   border-radius: 50%;
   animation: spin .7s linear infinite;
 }
@@ -2482,7 +2491,7 @@ a.job-row.pick:hover .card::after {
   transform: translate(-50%, -50%) rotate(45deg);
 }
 .dm-back:hover { background: var(--panel-2); }
-.dm-back:hover::before { border-color: var(--accent); }
+.dm-back:hover::before { border-color: var(--accent-ink); }
 
 .dm-face { flex: none; display: flex; }
 .dm-head-text { min-width: 0; }
@@ -2496,7 +2505,7 @@ a.job-row.pick:hover .card::after {
   letter-spacing: -0.026em;
 }
 .dm-head-name a { color: var(--fg); }
-.dm-head-name a:hover { color: var(--accent); }
+.dm-head-name a:hover { color: var(--accent-ink); }
 .dm-head-sub {
   margin: 0;
   overflow: hidden;
@@ -2629,7 +2638,7 @@ a.job-row.pick:hover .card::after {
 /* The ring moves to the pill so the whole composer lights up, not a rounded
    rectangle floating inside one. */
 .dm-compose:focus-within {
-  border-color: var(--accent);
+  border-color: var(--accent-ink);
   box-shadow: var(--shadow-md), var(--ring-soft);
 }
 
@@ -2737,7 +2746,7 @@ a.job-row.pick:hover .card::after {
    needs the fallback colour declared first, or a browser without it paints
    nothing at all where the most important word used to be. */
 .hero h1 .hot {
-  color: var(--accent);
+  color: var(--accent-ink);
   background: var(--heat);
   -webkit-background-clip: text;
   background-clip: text;
@@ -2764,7 +2773,7 @@ a.job-row.pick:hover .card::after {
    good number of people want the terms before the account. */
 .hero-more { margin: 10px 0 0; font-size: 14px; }
 .hero-more a { color: var(--dim); }
-.hero-more a:hover { color: var(--accent); }
+.hero-more a:hover { color: var(--accent-ink); }
 .hero-points {
   display: grid;
   gap: 8px;
@@ -2782,7 +2791,7 @@ a.job-row.pick:hover .card::after {
   font-size: 13.5px;
   line-height: 1.45;
 }
-.hero-points svg { width: 17px; height: 17px; flex: none; margin-top: 2px; color: var(--accent); }
+.hero-points svg { width: 17px; height: 17px; flex: none; margin-top: 2px; color: var(--accent-ink); }
 .hero-points strong { display: block; color: var(--fg); font-weight: 700; }
 
 
@@ -2836,7 +2845,7 @@ a.job-row.pick:hover .card::after {
 
 .timeline li.current .dot {
   background: var(--accent);
-  border-color: var(--accent);
+  border-color: var(--accent-ink);
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 20%, transparent);
   animation: pulse 2.4s var(--ease-out) infinite;
 }
@@ -2926,7 +2935,7 @@ footer.foot .wrap {
   gap: 6px 16px;
 }
 footer.foot a { color: var(--dim); }
-footer.foot a:hover { color: var(--accent); }
+footer.foot a:hover { color: var(--accent-ink); }
 footer.foot .foot-brand { color: var(--fg-2); font-weight: 700; }
 @media (max-width: 779px) { footer.foot { padding-bottom: 20px; } }
 
@@ -2963,7 +2972,7 @@ footer.foot .foot-brand { color: var(--fg-2); font-weight: 700; }
   transition: transform var(--t-base) var(--ease-out);
 }
 .back-link:hover {
-  color: var(--accent);
+  color: var(--accent-ink);
   background: var(--accent-soft);
   text-decoration: none;
 }
@@ -3157,7 +3166,7 @@ footer.foot .foot-brand { color: var(--fg-2); font-weight: 700; }
   transition: border-color var(--t-base) var(--ease),
               background var(--t-base) var(--ease);
 }
-.asst-pick:hover { border-color: var(--accent); background: var(--accent-soft); }
+.asst-pick:hover { border-color: var(--accent-ink); background: var(--accent-soft); }
 .asst-pick:focus-visible { outline: none; box-shadow: var(--ring); }
 .asst-pick-t { display: block; font-size: 14.5px; font-weight: 620; }
 .asst-pick-d { display: block; margin-top: 3px; color: var(--dim); font-size: 12.5px; line-height: 1.5; }
@@ -3178,7 +3187,7 @@ footer.foot .foot-brand { color: var(--fg-2); font-weight: 700; }
   text-align: left;
   cursor: pointer;
 }
-.asst-form-pick:hover { border-color: var(--accent); color: var(--accent); }
+.asst-form-pick:hover { border-color: var(--accent-ink); color: var(--accent-ink); }
 .asst-form-pick:focus-visible { outline: none; box-shadow: var(--ring); }
 
 /* ==========================================================================
@@ -3257,7 +3266,7 @@ footer.foot .foot-brand { color: var(--fg-2); font-weight: 700; }
   border-radius: var(--r-md);
   background: var(--accent-soft);
 }
-.chat-offer-i { width: 21px; height: 21px; flex: none; color: var(--accent); }
+.chat-offer-i { width: 21px; height: 21px; flex: none; color: var(--accent-ink); }
 .chat-offer-b { flex: 1; min-width: 0; }
 .chat-offer-b strong { display: block; color: var(--fg); font-size: 14.5px; font-weight: 640; }
 .chat-offer-b span { display: block; margin-top: 3px; color: var(--dim); font-size: 12.5px; line-height: 1.55; }
@@ -3323,7 +3332,7 @@ footer.foot .foot-brand { color: var(--fg-2); font-weight: 700; }
   font-family: inherit;
   font-size: 15px; /* 16px-ish: anything smaller and iOS zooms the page on focus. */
 }
-.asst-input:focus { outline: none; border-color: var(--accent); box-shadow: var(--ring-soft); }
+.asst-input:focus { outline: none; border-color: var(--accent-ink); box-shadow: var(--ring-soft); }
 .asst-input:disabled { opacity: .6; }
 .asst-send {
   flex: none;
@@ -3387,11 +3396,11 @@ footer.foot .foot-brand { color: var(--fg-2); font-weight: 700; }
 
 .doc ul, .doc ol { margin: 0 0 12px; padding-left: 22px; }
 .doc li { margin-bottom: 6px; }
-.doc li::marker { color: var(--accent); }
+.doc li::marker { color: var(--accent-ink); }
 
 .doc hr { margin: 24px 0; border: 0; border-top: 1px solid var(--line); }
 
-.doc a { color: var(--accent); }
+.doc a { color: var(--accent-ink); }
 
 /* The lifecycle diagram. Monospace and scrollable in its own right — it must
    never be what makes the page scroll sideways on a phone. */
