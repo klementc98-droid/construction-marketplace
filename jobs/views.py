@@ -390,14 +390,38 @@ def job_apply(request, pk: int):
     if request.method == "POST":
         form = ApplicationForm(request.POST, instance=existing)
         if form.is_valid():
-            application = form.save(commit=False)
-            application.job = job
-            application.worker = worker
-            # Re-applying after withdrawing puts you back in the running
-            # rather than creating a second row — see the unique constraint.
-            application.status = ApplicationStatus.APPLIED
-            application.save()
-            messages.success(request, "Application sent.")
+            # One application, however many days the booking runs. A five-day
+            # booking is five rows underneath — each day carries its own escrow
+            # and its own sign-off — but nobody applies for Tuesday and thinks
+            # they have not applied for Wednesday. Applying once applies to the
+            # booking, so the row per day is bookkeeping the reader never meets.
+            days = _booking_days(job)
+            with transaction.atomic():
+                for day in days:
+                    application = form.save(commit=False)
+                    application.pk = None
+                    application._state.adding = True
+                    application.job = day
+                    application.worker = worker
+                    # Re-applying after withdrawing puts you back in the running
+                    # rather than creating a second row — see the unique
+                    # constraint, which update_or_create honours per day.
+                    Application.objects.update_or_create(
+                        job=day,
+                        worker=worker,
+                        defaults={
+                            "message": application.message,
+                            "status": ApplicationStatus.APPLIED,
+                            "responded_at": None,
+                        },
+                    )
+            if len(days) > 1:
+                messages.success(
+                    request,
+                    _("Applied for all %(count)s days.") % {"count": len(days)},
+                )
+            else:
+                messages.success(request, _("Application sent."))
             return redirect("jobs:detail", pk=job.pk)
     else:
         form = ApplicationForm(instance=existing)
@@ -498,22 +522,33 @@ def application_select(request, pk: int):
         )
         return redirect("jobs:applicants", pk=job.pk)
 
+    # Confirming somebody books the booking, not one day of it. They applied
+    # once for all five days; being given Tuesday and left waiting on Wednesday
+    # is not an answer to what they asked.
+    days = _booking_days(job)
+    now = timezone.now()
+    sealed = []
     with transaction.atomic():
-        job = _seal(job.pk, application.worker, None, timezone.now(), actor=Actor.CLIENT)
+        for day in days:
+            result = _seal(day.pk, application.worker, None, now, actor=Actor.CLIENT)
+            if result is not None:
+                sealed.append(result)
 
-    if job is None:
-        messages.error(request, "Someone has already been selected for this job.")
+    if not sealed:
+        messages.error(request, _("Someone has already been selected for this job."))
         return redirect("jobs:applicants", pk=application.job_id)
 
-    if job.is_gig:
+    if len(sealed) > 1:
         messages.success(
             request,
-            f"{application.worker.user} has the job. Funding escrow comes next — "
-            "that flow arrives in phase 4.",
+            _("%(who)s has all %(count)s days.")
+            % {"who": application.worker.user, "count": len(sealed)},
         )
     else:
-        messages.success(request, f"{application.worker.user} has the job.")
-    return redirect("jobs:detail", pk=job.pk)
+        messages.success(
+            request, _("%(who)s has the job.") % {"who": application.worker.user}
+        )
+    return redirect("jobs:detail", pk=sealed[0].pk)
 
 
 # ---------------------------------------------------------------------------
@@ -702,6 +737,22 @@ def offer_respond(request, pk: int):
 # counter is a proposal *about* the job, and only accepting writes to it. That
 # ordering is the whole safety story: the job's fixed_pay is what the client's
 # card is charged, so it must never move while nobody has agreed to it.
+
+
+def _booking_days(job):
+    """Every job in this booking, oldest day first — or just this one.
+
+    A multi-day booking is several rows and has to be: each day carries its own
+    escrow, sign-off and expiry. Anything a person does to "the job" as a whole
+    — applying, being confirmed — has to reach all of them, or the reader ends
+    up half in and half out of something they answered once.
+    """
+    if not job.offer_group:
+        return [job]
+    return list(
+        Job.objects.filter(offer_group=job.offer_group, state=JobState.POSTED)
+        .order_by("gig_date")
+    )
 
 
 def _effective_terms(job, worker):

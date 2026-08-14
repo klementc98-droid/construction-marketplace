@@ -45,6 +45,7 @@ msgid_plural "%(jobs)s jobs done here"
 msgstr[0] "%(jobs)s δουλειά εδώ"
 msgstr[1] "%(jobs)s δουλειές εδώ"
 
+#: templates/accounts/_feed_items.html
 #: templates/jobs/_job_row.html
 msgid "%(n)s day"
 msgid_plural "%(n)s days"
@@ -77,6 +78,7 @@ msgstr[1] "%(n)s δουλειές σού προσφέρθηκαν"
 msgid "%(pay)s for %(hours)s hours"
 msgstr "%(pay)s για %(hours)s ώρες"
 
+#: templates/accounts/_feed_items.html
 #: templates/jobs/_job_row.html
 msgid "%(pay)s per day"
 msgstr "%(pay)s ανά ημέρα"
@@ -88,6 +90,14 @@ msgstr "%(score)s★ από τεχνίτες"
 #: core/dates.py
 msgid "%(value)r isn't a date in YYYY-MM-DD form."
 msgstr "Το %(value)r δεν είναι ημερομηνία σε μορφή YYYY-MM-DD."
+
+#: jobs/views.py
+msgid "%(who)s has all %(count)s days."
+msgstr "Ο/Η %(who)s πήρε και τις %(count)s ημέρες."
+
+#: jobs/views.py
+msgid "%(who)s has the job."
+msgstr "Ο/Η %(who)s πήρε τη δουλειά."
 
 #: templates/accounts/_worker_card.html
 msgid "%(years)s yr"
@@ -275,9 +285,17 @@ msgstr "Κάτι να προσθέσεις; (προαιρετικό)"
 msgid "Applicants"
 msgstr "Υποψήφιοι"
 
+#: jobs/views.py
+msgid "Application sent."
+msgstr "Η αίτηση στάλθηκε."
+
 #: jobs/models.py
 msgid "Applied"
 msgstr "Έκανε αίτηση"
+
+#: jobs/views.py
+msgid "Applied for all %(count)s days."
+msgstr "Έγινε αίτηση και για τις %(count)s ημέρες."
 
 #: templates/accounts/_feed_items.html
 #: templates/jobs/_filters.html
@@ -575,6 +593,10 @@ msgstr "Ημερομηνία"
 #: accounts/forms.py
 msgid "Date of birth"
 msgstr "Ημερομηνία γέννησης"
+
+#: jobs/models.py
+msgid "Date passed"
+msgstr "Η ημερομηνία πέρασε"
 
 #: templates/worklog/workspace.html
 msgid "Day finished"
@@ -1032,6 +1054,12 @@ msgstr "Αν τα προσθέσεις, μπορούμε να διασταυρώ
 #: templates/jobs/job_apply.html
 msgid "If you get this gig, the client funds it before you travel — and escrow releases on its own once the day is signed off."
 msgstr "Αν πάρεις αυτό το μεροκάματο, ο πελάτης το χρηματοδοτεί πριν ξεκινήσεις — και η μεσεγγύηση αποδεσμεύεται από μόνη της μόλις εγκριθεί η ημέρα."
+
+#: jobs/models.py
+msgid "In %(days)s day"
+msgid_plural "In %(days)s days"
+msgstr[0] "Σε %(days)s ημέρα"
+msgstr[1] "Σε %(days)s ημέρες"
 
 #: core/state_machine.py
 msgid "In progress"
@@ -1957,6 +1985,10 @@ msgstr "Μετάβαση στο περιεχόμενο"
 msgid "So we built the board around the money rather than bolting payment on at the end. For a dated gig, the client's card is charged before the worker travels. Nobody works on a promise."
 msgstr "Έτσι χτίσαμε τον πίνακα γύρω από τα χρήματα, αντί να προσθέσουμε την πληρωμή στο τέλος. Για μεροκάματο με ημερομηνία, η κάρτα του πελάτη χρεώνεται πριν ξεκινήσει ο τεχνίτης. Κανείς δεν δουλεύει με υπόσχεση."
 
+#: jobs/views.py
+msgid "Someone has already been selected for this job."
+msgstr "Κάποιος έχει ήδη επιλεγεί για αυτή τη δουλειά."
+
 #: templates/worklog/workspace.html
 msgid "Something's wrong with this"
 msgstr "Κάτι δεν πάει καλά με αυτό"
@@ -2206,6 +2238,14 @@ msgstr "Οι συνομιλίες ανοίγουν μόλις ένας τεχν�
 #: jobs/forms.py
 msgid "Title, description, or area"
 msgstr "Τίτλος, περιγραφή ή περιοχή"
+
+#: jobs/models.py
+msgid "Today"
+msgstr "Σήμερα"
+
+#: jobs/models.py
+msgid "Tomorrow"
+msgstr "Αύριο"
 
 #: jobs/models.py
 msgid "Total for the day."
@@ -2681,7 +2721,9 @@ msgstr "π.χ. βόρεια περιοχή, μετακινούμαι σε όλη
 
 #: accounts/models.py
 #: jobs/models.py
+#: templates/accounts/_feed_items.html
 #: templates/jobs/_job_row.html
+#: templates/jobs/mine.html
 msgid "hr"
 msgstr "ώρα"
 

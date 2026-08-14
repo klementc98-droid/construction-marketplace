@@ -491,3 +491,86 @@ class WaitingPanelTests(JobFactoryMixin, TestCase):
         from django.contrib.auth.models import AnonymousUser
 
         self.assertFalse(waiting_for(AnonymousUser()))
+
+
+class BookingIsOneThingTests(JobFactoryMixin, TestCase):
+    """Five days is one job to look at, one to apply for, one to be given.
+
+    The rows stay per day underneath — each carries its own escrow, sign-off
+    and expiry — but nobody applies for Tuesday and thinks they have not
+    applied for Wednesday.
+    """
+
+    def booking(self, days=5):
+        from uuid import uuid4
+
+        group = uuid4()
+        made = []
+        for n in range(days):
+            job = self.gig(fixed_pay=Decimal("90"))
+            job.offer_group = group
+            job.gig_date = timezone.localdate() + timedelta(days=1 + n)
+            job.save(update_fields=["offer_group", "gig_date"])
+            made.append(job)
+        return made
+
+    def test_the_feed_shows_one_card_not_five(self):
+        self.booking(5)
+        response = self.client.get(reverse("accounts:home"))
+        self.assertEqual(len(response.context["page"].object_list), 1)
+        self.assertEqual(response.context["total"], 1)
+
+    def test_the_card_says_how_many_days(self):
+        self.booking(5)
+        response = self.client.get(reverse("accounts:home"))
+        self.assertContains(response, "5 days")
+        self.assertContains(response, "per day")
+
+    def test_applying_once_applies_for_every_day(self):
+        made = self.booking(5)
+        self.client.force_login(self.worker_user)
+        self.client.post(
+            reverse("jobs:apply", args=[made[2].pk]), {"message": "I can do all week."}
+        )
+        self.assertEqual(
+            Application.objects.filter(worker=self.worker_profile).count(), 5
+        )
+
+    def test_confirming_them_books_every_day(self):
+        from core.state_machine import JobState
+
+        made = self.booking(5)
+        self.client.force_login(self.worker_user)
+        self.client.post(reverse("jobs:apply", args=[made[0].pk]), {"message": ""})
+
+        application = Application.objects.filter(job=made[0]).get()
+        self.client.force_login(self.client_user)
+        self.client.post(reverse("jobs:application_select", args=[application.pk]))
+
+        for job in made:
+            job.refresh_from_db()
+            self.assertEqual(job.state, JobState.ACCEPTED, f"{job.gig_date} not booked")
+            self.assertEqual(job.assigned_worker, self.worker_profile)
+
+    def test_a_single_day_job_is_unaffected(self):
+        from core.state_machine import JobState
+
+        job = self.gig()
+        self.client.force_login(self.worker_user)
+        self.client.post(reverse("jobs:apply", args=[job.pk]), {"message": ""})
+        self.assertEqual(Application.objects.filter(job=job).count(), 1)
+
+        application = Application.objects.get(job=job)
+        self.client.force_login(self.client_user)
+        self.client.post(reverse("jobs:application_select", args=[application.pk]))
+        job.refresh_from_db()
+        self.assertEqual(job.state, JobState.ACCEPTED)
+
+    def test_re_applying_does_not_stack_rows(self):
+        made = self.booking(3)
+        self.client.force_login(self.worker_user)
+        for _ in range(2):
+            self.client.post(reverse("jobs:apply", args=[made[0].pk]), {"message": "hi"})
+        self.assertEqual(
+            Application.objects.filter(worker=self.worker_profile).count(), 3
+        )

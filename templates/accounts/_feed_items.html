@@ -18,14 +18,23 @@ arrived with the page or afterwards.
 
       <p class="feed-tags">
         {% if job.is_gig %}
-          {% if job.starts_in %}
-            <span class="badge {% if job.is_urgent %}state{% else %}gig{% endif %}">{{ job.starts_in }}</span>
+          {% comment %} A booking of several days is one card. Five cards differing
+             only by date read as the same job posted five times.
+          {% endcomment %}
+          {% if job.group_days > 1 %}
+            <span class="badge gig">{% blocktranslate count n=job.group_days %}{{ n }} day{% plural %}{{ n }} days{% endblocktranslate %}</span>
+            <span class="badge">{{ job.group_dates.0|date:"j M" }} – {{ job.group_dates|last|date:"j M" }}</span>
+            <span class="badge">{% blocktranslate with pay=job.fixed_pay|money %}{{ pay }} per day{% endblocktranslate %}</span>
           {% else %}
-            <span class="badge gig">{% translate "Gig" %}</span>
+            {% if job.starts_in %}
+              <span class="badge {% if job.is_urgent %}state{% else %}gig{% endif %}">{{ job.starts_in }}</span>
+            {% else %}
+              <span class="badge gig">{% translate "Gig" %}</span>
+            {% endif %}
+            <span class="badge">{{ job.gig_date|date:"D j M" }}</span>
           {% endif %}
-          <span class="badge">{{ job.gig_date|date:"D j M" }}</span>
           <span class="badge">{% blocktranslate with n=job.gig_hours|floatformat:"-1" %}{{ n }} hrs{% endblocktranslate %}</span>
-          {% if job.implied_hourly %}<span class="badge">≈{{ job.implied_hourly|money }}/hr</span>{% endif %}
+          {% if job.implied_hourly %}<span class="badge">≈{{ job.implied_hourly|money }}/{% translate "hr" %}</span>{% endif %}
         {% else %}
           <span class="badge">{{ job.get_position_type_display }}</span>
         {% endif %}

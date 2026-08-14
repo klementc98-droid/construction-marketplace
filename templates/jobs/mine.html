@@ -42,7 +42,7 @@
             {% if offer.job.starts_in %}<span class="badge state">{{ offer.job.starts_in }}</span>{% endif %}
             {{ offer.job.gig_date|date:"D j M" }}
             · {{ offer.job.gig_hours|floatformat:"-1" }} hrs
-            {% if offer.job.implied_hourly %} · ≈{{ offer.job.implied_hourly|money }}/hr{% endif %}
+            {% if offer.job.implied_hourly %} · ≈{{ offer.job.implied_hourly|money }}/{% translate "hr" %}{% endif %}
             <br>
             From {{ offer.job.client.company_name|default:offer.job.client.user }}
             · {{ offer.job.trade }}

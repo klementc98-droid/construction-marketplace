@@ -26,7 +26,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.urls import reverse
 from django.utils import timezone
-from django.utils.translation import gettext_lazy as _
+from django.utils.translation import gettext_lazy as _, ngettext
 
 from accounts.models import ClientProfile, RateType, WorkerProfile
 from config import business_rules as rules
@@ -510,13 +510,15 @@ class Job(TimestampedModel):
             return ""
         days = (self.gig_date - timezone.localdate()).days
         if days < 0:
-            return "Date passed"
+            return _("Date passed")
         if days == 0:
-            return "Today"
+            return _("Today")
         if days == 1:
-            return "Tomorrow"
+            return _("Tomorrow")
         if days <= 6:
-            return f"In {days} days"
+            return ngettext("In %(days)s day", "In %(days)s days", days) % {
+                "days": days
+            }
         return ""
 
     @property

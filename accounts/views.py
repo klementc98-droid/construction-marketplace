@@ -14,7 +14,7 @@ from assistant.conversation import take_handoff
 from config import business_rules as rules
 from core.models import Region, Trade
 from core.state_machine import JobState
-from jobs.models import Job
+from jobs.models import Job, collapse_groups
 from jobs.waiting import waiting_for
 
 from .forms import (
@@ -58,13 +58,17 @@ def home(request):
     jobs = (
         Job.objects.public()
         .select_related("trade", "region", "client__user")
-        .order_by("-created_at")
+        .order_by("-created_at", "gig_date")
     )
-    page = Paginator(jobs, FEED_PAGE_SIZE).get_page(request.GET.get("page"))
+    # Collapsed before paging, not after: a booking of five days is one entry,
+    # and paging the rows first would put two days of the same booking on
+    # different pages and still show five cards.
+    rows = collapse_groups(jobs)
+    page = Paginator(rows, FEED_PAGE_SIZE).get_page(request.GET.get("page"))
 
     context = {
         "page": page,
-        "total": jobs.count(),
+        "total": len(rows),
         # Same panel as "Mine", from the same counts — the answer to "is
         # anything waiting on me?" must not depend on which page you opened.
         "waiting": waiting_for(request.user),
