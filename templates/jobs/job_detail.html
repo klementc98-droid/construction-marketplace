@@ -202,6 +202,12 @@
     </div>
   </div>
 
+  {% if group_days > 1 %}
+    <p class="note">
+      {% blocktranslate count n=group_days with pay=job.fixed_pay|money first=group_first|date:"j M" last=group_last|date:"j M" %}One day of a {{ n }}-day booking, {{ first }} to {{ last }} — {{ pay }} per day. Each day is agreed and signed off on its own.{% plural %}One day of a {{ n }}-day booking, {{ first }} to {{ last }} — {{ pay }} per day. Each day is agreed and signed off on its own.{% endblocktranslate %}
+    </p>
+  {% endif %}
+
   {% comment %} Rating, once the job is over and its day has gone by. Both are
      required: rating before the money moves puts a thumb on the scale of the
      payment itself, and rating before the work has happened is a score about

@@ -10,9 +10,20 @@ so a job looks the same everywhere it appears.
     </div>
     <div class="row-meta">
       {% if job.is_gig %}
-        <span class="badge gig">{% translate "Gig" %}</span>
-        {{ job.gig_date|date:"D j M" }}
-        {% if job.implied_hourly %}· ≈{{ job.implied_hourly|money }}/hr{% endif %}
+        {% comment %} A booking of several days is one row: the badge carries the count
+           and the dates read as a span, because three cards differing only by
+           date read as the same job posted three times by mistake. The pay is
+           per day either way — that is what fixed_pay has always meant.
+        {% endcomment %}
+        {% if job.group_days > 1 %}
+          <span class="badge gig">{% blocktranslate count n=job.group_days %}{{ n }} day{% plural %}{{ n }} days{% endblocktranslate %}</span>
+          {{ job.group_dates.0|date:"j M" }} – {{ job.group_dates|last|date:"j M" }}
+          · {% blocktranslate with pay=job.fixed_pay|money %}{{ pay }} per day{% endblocktranslate %}
+        {% else %}
+          <span class="badge gig">{% translate "Gig" %}</span>
+          {{ job.gig_date|date:"D j M" }}
+        {% endif %}
+        {% if job.implied_hourly %}· ≈{{ job.implied_hourly|money }}/{% translate "hr" %}{% endif %}
       {% else %}
         <span class="badge">{{ job.get_position_type_display }}</span>
       {% endif %}

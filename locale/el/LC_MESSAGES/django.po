@@ -45,6 +45,12 @@ msgid_plural "%(jobs)s jobs done here"
 msgstr[0] "%(jobs)s δουλειά εδώ"
 msgstr[1] "%(jobs)s δουλειές εδώ"
 
+#: templates/jobs/_job_row.html
+msgid "%(n)s day"
+msgid_plural "%(n)s days"
+msgstr[0] "%(n)s ημέρα"
+msgstr[1] "%(n)s ημέρες"
+
 #: templates/accounts/_feed_items.html
 msgid "%(n)s hrs"
 msgstr "%(n)s ώρες"
@@ -52,6 +58,10 @@ msgstr "%(n)s ώρες"
 #: jobs/models.py
 msgid "%(pay)s for %(hours)s hours"
 msgstr "%(pay)s για %(hours)s ώρες"
+
+#: templates/jobs/_job_row.html
+msgid "%(pay)s per day"
+msgstr "%(pay)s ανά ημέρα"
 
 #: templates/jobs/job_detail.html
 msgid "%(score)s★ from workers"
@@ -1391,6 +1401,12 @@ msgstr "Στο τραπέζι τώρα"
 msgid "One date, one price. You fund escrow when you confirm a worker."
 msgstr "Μία ημερομηνία, μία τιμή. Χρηματοδοτείς τη μεσεγγύηση όταν επιβεβαιώνεις τεχνίτη."
 
+#: templates/jobs/job_detail.html
+msgid "One day of a %(n)s-day booking, %(first)s to %(last)s — %(pay)s per day. Each day is agreed and signed off on its own."
+msgid_plural "One day of a %(n)s-day booking, %(first)s to %(last)s — %(pay)s per day. Each day is agreed and signed off on its own."
+msgstr[0] "Μία ημέρα από κράτηση %(n)s ημέρας, %(first)s έως %(last)s — %(pay)s ανά ημέρα. Κάθε ημέρα συμφωνείται και εγκρίνεται ξεχωριστά."
+msgstr[1] "Μία ημέρα από κράτηση %(n)s ημερών, %(first)s έως %(last)s — %(pay)s ανά ημέρα. Κάθε ημέρα συμφωνείται και εγκρίνεται ξεχωριστά."
+
 #: jobs/models.py
 msgid "One-day gig"
 msgstr "Μεροκάματο μίας ημέρας"
@@ -2609,6 +2625,7 @@ msgstr "π.χ. βόρεια περιοχή, μετακινούμαι σε όλη
 
 #: accounts/models.py
 #: jobs/models.py
+#: templates/jobs/_job_row.html
 msgid "hr"
 msgstr "ώρα"
 

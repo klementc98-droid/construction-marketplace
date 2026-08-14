@@ -358,3 +358,72 @@ class BoardVisibilityTests(JobFactoryMixin, TestCase):
 
         unfiltered = self.client.get(reverse("jobs:worker_list"))
         self.assertContains(unfiltered, str(never_asked.user))
+
+
+class BookingDisplayTests(JobFactoryMixin, TestCase):
+    """A four-day booking reads as one booking, not four jobs.
+
+    The rows stay per day in the database — each carries its own escrow,
+    sign-off and expiry — but three near-identical cards differing only by
+    date read as the same job posted three times by mistake.
+    """
+
+    def booking(self, days=3, pay="90"):
+        from uuid import uuid4
+
+        group = uuid4()
+        made = []
+        for n in range(days):
+            job = self.gig(fixed_pay=Decimal(pay))
+            job.offer_group = group
+            job.gig_date = timezone.localdate() + timedelta(days=3 + n)
+            job.save(update_fields=["offer_group", "gig_date"])
+            made.append(job)
+        return made
+
+    def test_the_board_shows_one_row_for_the_booking(self):
+        from jobs.models import collapse_groups
+
+        made = self.booking(4)
+        rows = collapse_groups(Job.objects.filter(offer_group=made[0].offer_group))
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].group_days, 4)
+
+    def test_the_row_carries_every_date_in_order(self):
+        from jobs.models import collapse_groups
+
+        made = self.booking(3)
+        row = collapse_groups(Job.objects.filter(offer_group=made[0].offer_group))[0]
+        self.assertEqual(row.group_dates, sorted(j.gig_date for j in made))
+
+    def test_a_single_day_job_is_untouched(self):
+        from jobs.models import collapse_groups
+
+        self.gig()
+        rows = collapse_groups(Job.objects.filter(offer_group=None))
+        self.assertTrue(all(r.group_days == 1 for r in rows))
+
+    def test_the_count_on_the_board_matches_the_rows(self):
+        """"12 open posts" for four bookings is a number matching nothing."""
+        self.booking(4)
+        response = self.client.get(reverse("jobs:list"))
+        self.assertEqual(response.context["total"], len(response.context["jobs"]))
+
+    def test_the_pay_is_stated_per_day(self):
+        self.booking(3, pay="90")
+        response = self.client.get(reverse("jobs:list"))
+        self.assertContains(response, "per day")
+
+    def test_both_parties_see_the_booking_on_the_day(self):
+        made = self.booking(3)
+        for user in (self.client_user,):
+            self.client.force_login(user)
+            response = self.client.get(reverse("jobs:detail", args=[made[0].pk]))
+            self.assertEqual(response.context["group_days"], 3)
+            self.assertContains(response, "per day")
+
+    def test_the_days_are_still_separate_rows_underneath(self):
+        """The display groups them; escrow and sign-off still do not."""
+        made = self.booking(3)
+        self.assertEqual(Job.objects.filter(offer_group=made[0].offer_group).count(), 3)
+        self.assertEqual(len({j.pk for j in made}), 3)

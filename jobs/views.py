@@ -38,6 +38,7 @@ from .forms import (
 )
 from .models import (
     Application,
+    collapse_groups,
     ReviewDirection,
     ApplicationStatus,
     Counter,
@@ -78,8 +79,14 @@ def job_list(request):
     jobs = form.filtered(
         Job.objects.public().select_related("trade", "region", "client__user")
     )
+    # One row per booking, not per day — see collapse_groups. The count follows
+    # the rows for the same reason: "12 open posts" for four bookings is a
+    # number that does not match anything the reader can see.
+    rows = collapse_groups(jobs.order_by("gig_date", "-created_at"))
     return render(
-        request, "jobs/job_list.html", {"form": form, "jobs": jobs, "total": jobs.count()}
+        request,
+        "jobs/job_list.html",
+        {"form": form, "jobs": rows, "total": len(rows)},
     )
 
 
@@ -143,6 +150,17 @@ def job_detail(request, pk: int):
         else None
     )
 
+    # The sibling days of a multi-day booking, for the note on this one.
+    group_dates: list = []
+    group_days = 1
+    if job.offer_group:
+        group_dates = sorted(
+            Job.objects.filter(offer_group=job.offer_group)
+            .exclude(gig_date=None)
+            .values_list("gig_date", flat=True)
+        )
+        group_days = max(len(group_dates), 1)
+
     # The negotiation, from whichever side is looking.
     #
     # A worker sees their own thread. The client sees the one thread there is
@@ -200,6 +218,12 @@ def job_detail(request, pk: int):
             # method, and the answer depends on who is looking.
             "can_review": job.can_be_reviewed_by(request.user),
             "my_review": job.review_from(request.user),
+            # Which booking this day belongs to, if it belongs to one. Both
+            # sides get it: the worker needs to know three days were agreed,
+            # not one, and the client needs the same picture back.
+            "group_days": group_days,
+            "group_first": group_dates[0] if group_dates else None,
+            "group_last": group_dates[-1] if group_dates else None,
         },
     )
 
@@ -1019,10 +1043,15 @@ def mine(request):
         request,
         "jobs/mine.html",
         {
+            # Collapsed, so a four-day booking is one line here too. The
+            # client posted one thing and should see one thing.
             "posted": (
-                Job.objects.filter(client=client)
-                .select_related("trade", "assigned_worker__user")
-                .with_applicant_counts()
+                collapse_groups(
+                    Job.objects.filter(client=client)
+                    .select_related("trade", "assigned_worker__user")
+                    .with_applicant_counts()
+                    .order_by("-created_at", "gig_date")
+                )
                 if client
                 else None
             ),

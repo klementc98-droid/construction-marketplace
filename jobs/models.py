@@ -108,6 +108,46 @@ class JobQuerySet(models.QuerySet):
         )
 
 
+def collapse_groups(jobs):
+    """One entry per multi-day booking, rather than one per day.
+
+    A three-day booking is three gigs in the database, and has to be: each day
+    carries its own escrow, its own sign-off and its own expiry, and two days
+    cannot share a row when either can be finished or called off while the
+    other runs. That is a storage fact, not something a reader should have to
+    look at — three near-identical cards differing only by date read as the
+    same job posted three times by mistake.
+
+    So the list shows the booking. The first day carries the entry and gains
+    two attributes for the template: ``group_days``, the count, and
+    ``group_dates``, every date in it. Everything else about the row — the
+    title, the trade, the per-day pay — is the same on all of them by
+    construction, so the first is a fair representative.
+
+    Ungrouped jobs pass through untouched with ``group_days`` of 1.
+    """
+    seen: dict = {}
+    out = []
+    for job in jobs:
+        if not job.offer_group:
+            job.group_days = 1
+            job.group_dates = [job.gig_date] if job.gig_date else []
+            out.append(job)
+            continue
+        first = seen.get(job.offer_group)
+        if first is None:
+            job.group_days = 1
+            job.group_dates = [job.gig_date] if job.gig_date else []
+            seen[job.offer_group] = job
+            out.append(job)
+        else:
+            first.group_days += 1
+            if job.gig_date:
+                first.group_dates.append(job.gig_date)
+                first.group_dates.sort()
+    return out
+
+
 class Job(TimestampedModel):
     """One post, of either kind."""
 
