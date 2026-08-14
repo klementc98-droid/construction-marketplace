@@ -87,6 +87,17 @@
     {% endfor %}
   {% endif %}
 
+  {% comment %} Work already under way. Without this a job left its own client's
+     profile the moment they confirmed somebody — the page listed open posts
+     only, so accepting an applicant looked like losing the job.
+  {% endcomment %}
+  {% if current_jobs %}
+    <h2>{% translate "Under way" %}</h2>
+    {% for job in current_jobs %}
+      {% include "jobs/_job_row.html" %}
+    {% endfor %}
+  {% endif %}
+
   {% if is_own %}
     <div class="btn-row">
       <a class="btn secondary" href="{% url 'accounts:client_edit' %}">{% translate "Edit hiring profile" %}</a>

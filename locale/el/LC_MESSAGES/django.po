@@ -220,6 +220,10 @@ msgstr "Πρόσθεσε το όνομά σου ώστε να ξέρουν πο�
 msgid "Admin"
 msgstr "Διαχειριστής"
 
+#: templates/jobs/job_detail.html
+msgid "Agree and the job closes. Payment stays between the two of you — then you can both leave a rating."
+msgstr "Συμφώνησε και η δουλειά κλείνει. Η πληρωμή μένει μεταξύ σας — μετά μπορείτε να αφήσετε αξιολόγηση."
+
 #: jobs/models.py
 msgid "Agreed"
 msgstr "Συμφωνήθηκε"
@@ -593,6 +597,10 @@ msgstr "Περιγραφή της δουλειάς"
 #: templates/payments/payouts.html
 msgid "Details submitted"
 msgstr "Τα στοιχεία υποβλήθηκαν"
+
+#: templates/jobs/job_detail.html
+msgid "Did this job"
+msgstr "Έκανε αυτή τη δουλειά"
 
 #: templates/messaging/start_direct.html
 msgid "Direct contact is attached to a gig so the worker knows what the message is about — post one first."
@@ -1011,6 +1019,7 @@ msgstr "Αν πάρεις αυτό το μεροκάματο, ο πελάτης 
 msgid "In progress"
 msgstr "Σε εξέλιξη"
 
+#: templates/jobs/job_detail.html
 #: templates/worklog/workspace.html
 msgid "Is the work done?"
 msgstr "Τελείωσε η δουλειά;"
@@ -1018,6 +1027,14 @@ msgstr "Τελείωσε η δουλειά;"
 #: templates/worklog/workspace.html
 msgid "Job complete"
 msgstr "Η δουλειά ολοκληρώθηκε"
+
+#: templates/jobs/job_detail.html
+msgid "Job done"
+msgstr "Η δουλειά τελείωσε"
+
+#: templates/jobs/job_detail.html
+msgid "Job done — close it"
+msgstr "Η δουλειά τελείωσε — κλείσ' την"
 
 #: templates/worklog/workspace.html
 msgid "Job post"
@@ -1105,6 +1122,10 @@ msgstr "Ψάχνει αυτή τη στιγμή"
 #: templates/accounts/dashboard.html
 msgid "Looking to pick up work yourself?"
 msgstr "Ψάχνεις εσύ για δουλειά;"
+
+#: templates/jobs/job_detail.html
+msgid "Mark it done. Once the client agrees, the job closes and you can both leave a rating."
+msgstr "Σήμανέ τη ως ολοκληρωμένη. Μόλις συμφωνήσει ο πελάτης, η δουλειά κλείνει και μπορείτε να αφήσετε αξιολόγηση."
 
 #: templates/worklog/workspace.html
 msgid "Mark it finished and the client confirms. Payment is between the two of you — we record that the job happened, nothing more."
@@ -1819,6 +1840,7 @@ msgstr "Αποθήκευση στοιχείων"
 msgid "Save profile"
 msgstr "Αποθήκευση προφίλ"
 
+#: templates/jobs/job_detail.html
 #: templates/jobs/review_form.html
 #: templates/worklog/workspace.html
 msgid "Saving…"
@@ -2103,6 +2125,10 @@ msgstr "Θα δει το μεροκάματο μαζί με το πρώτο σο
 msgid "They've answered with different terms — see above."
 msgstr "Απάντησε με διαφορετικούς όρους — δες παραπάνω."
 
+#: templates/jobs/job_detail.html
+msgid "They've marked the work done."
+msgstr "Σήμανε τη δουλειά ως ολοκληρωμένη."
+
 #: templates/worklog/workspace.html
 msgid "They've marked the work finished."
 msgstr "Σήμανε τη δουλειά ως ολοκληρωμένη."
@@ -2224,6 +2250,10 @@ msgstr "Γράψε την απάντησή σου…"
 msgid "Under review"
 msgstr "Υπό εξέταση"
 
+#: templates/accounts/client_detail.html
+msgid "Under way"
+msgstr "Σε εξέλιξη"
+
 #: accounts/forms.py
 msgid "Up to (leave blank for a flat rate)"
 msgstr "Έως (άφησέ το κενό για ενιαία τιμή)"
@@ -2247,6 +2277,10 @@ msgstr "Δες το όπως το βλέπουν οι άλλοι"
 #: templates/jobs/job_detail.html
 msgid "View their profile"
 msgstr "Δες το προφίλ του"
+
+#: templates/jobs/job_detail.html
+msgid "Waiting on the client to agree the work is done."
+msgstr "Αναμονή να συμφωνήσει ο πελάτης ότι η δουλειά ολοκληρώθηκε."
 
 #: templates/worklog/workspace.html
 msgid "Waiting on the client to confirm."

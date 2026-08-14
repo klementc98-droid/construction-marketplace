@@ -591,3 +591,76 @@ class ReviewTests(JobFactoryMixin, TestCase):
         self.client.force_login(self.client_user)
         response = self.client.get(reverse("jobs:detail", args=[job.pk]))
         self.assertNotContains(response, reverse("jobs:review", args=[job.pk]))
+
+
+class MutualDoneTests(JobFactoryMixin, TestCase):
+    """"Job done" from both sides, reachable from the job page.
+
+    The buttons used to live only in the workspace. A button nobody finds is a
+    button that does not exist, and this is the page both parties land on from
+    a link, a message or their own list.
+    """
+
+    def accepted_no_escrow(self):
+        from core.state_machine import JobState
+
+        job = self.gig()
+        job.use_escrow = False
+        job.state = JobState.ACCEPTED
+        job.assigned_worker = self.worker_profile
+        job.gig_date = timezone.localdate() - timedelta(days=1)
+        job.save(update_fields=["use_escrow", "state", "assigned_worker", "gig_date"])
+        return job
+
+    def test_the_worker_is_offered_the_button_on_the_job_page(self):
+        job = self.accepted_no_escrow()
+        self.client.force_login(self.worker_user)
+        response = self.client.get(reverse("jobs:detail", args=[job.pk]))
+        self.assertContains(response, reverse("worklog:finish", args=[job.pk]))
+
+    def test_the_client_is_not_offered_it_first(self):
+        """Mutual means the worker says so first — they did the work."""
+        job = self.accepted_no_escrow()
+        self.client.force_login(self.client_user)
+        response = self.client.get(reverse("jobs:detail", args=[job.pk]))
+        self.assertNotContains(response, reverse("worklog:confirm", args=[job.pk]))
+
+    def test_after_the_worker_marks_it_the_client_gets_the_button(self):
+        from core.state_machine import JobState
+
+        job = self.accepted_no_escrow()
+        self.client.force_login(self.worker_user)
+        self.client.post(reverse("worklog:finish", args=[job.pk]))
+        job.refresh_from_db()
+        self.assertEqual(job.state, JobState.COMPLETED)
+
+        self.client.force_login(self.client_user)
+        response = self.client.get(reverse("jobs:detail", args=[job.pk]))
+        self.assertContains(response, reverse("worklog:confirm", args=[job.pk]))
+
+    def test_both_pressing_it_closes_the_job_and_opens_rating(self):
+        from core.state_machine import JobState
+
+        job = self.accepted_no_escrow()
+        self.client.force_login(self.worker_user)
+        self.client.post(reverse("worklog:finish", args=[job.pk]))
+        self.client.force_login(self.client_user)
+        self.client.post(reverse("worklog:confirm", args=[job.pk]))
+
+        job.refresh_from_db()
+        self.assertEqual(job.state, JobState.CLOSED)
+        # The day has passed, so rating is due for both.
+        self.assertTrue(job.can_be_reviewed_by(self.client_user))
+        self.assertTrue(job.can_be_reviewed_by(self.worker_user))
+
+    def test_an_escrowed_job_keeps_the_escrow_flow(self):
+        """No stray "job done" button on a job with money held."""
+        from core.state_machine import JobState
+
+        job = self.gig()
+        job.state = JobState.ACCEPTED
+        job.assigned_worker = self.worker_profile
+        job.save(update_fields=["state", "assigned_worker"])
+        self.client.force_login(self.worker_user)
+        response = self.client.get(reverse("jobs:detail", args=[job.pk]))
+        self.assertNotContains(response, reverse("worklog:finish", args=[job.pk]))

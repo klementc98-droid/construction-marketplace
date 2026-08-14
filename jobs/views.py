@@ -221,6 +221,11 @@ def job_detail(request, pk: int):
             # Which booking this day belongs to, if it belongs to one. Both
             # sides get it: the worker needs to know three days were agreed,
             # not one, and the client needs the same picture back.
+            # The assigned worker specifically, not any worker looking at it —
+            # the "job done" button belongs to the person doing the job.
+            "is_worker_here": (
+                worker is not None and job.assigned_worker_id == worker.pk
+            ),
             "group_days": group_days,
             "group_first": group_dates[0] if group_dates else None,
             "group_last": group_dates[-1] if group_dates else None,

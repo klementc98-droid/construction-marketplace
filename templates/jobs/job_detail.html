@@ -202,6 +202,44 @@
     </div>
   </div>
 
+  {% comment %} "Job done", from whichever side is looking. On the job page rather
+     than only in the workspace, because this is where both parties land from a
+     link, a message or their own list — a button nobody finds is a button that
+     does not exist. Non-escrow only: with money held, finishing runs through
+     check-in and the release, which the workspace handles.
+  {% endcomment %}
+  {% if not job.is_escrowed %}
+    {% if is_worker_here and job.state == 'accepted' %}
+      <div class="card action-panel">
+        <p class="flush"><strong>{% translate "Is the work done?" %}</strong></p>
+        <p class="note">
+          {% translate "Mark it done. Once the client agrees, the job closes and you can both leave a rating." %}
+        </p>
+        <form method="post" action="{% url 'worklog:finish' job.pk %}">
+          {% csrf_token %}
+          <button class="btn" type="submit" data-busy-label="{% translate "Saving…" %}">
+            {% translate "Job done" %}
+          </button>
+        </form>
+      </div>
+    {% elif is_owner and job.awaiting_client_confirmation %}
+      <div class="card action-panel">
+        <p class="flush"><strong>{% translate "They've marked the work done." %}</strong></p>
+        <p class="note">
+          {% translate "Agree and the job closes. Payment stays between the two of you — then you can both leave a rating." %}
+        </p>
+        <form method="post" action="{% url 'worklog:confirm' job.pk %}">
+          {% csrf_token %}
+          <button class="btn" type="submit" data-busy-label="{% translate "Saving…" %}">
+            {% translate "Job done — close it" %}
+          </button>
+        </form>
+      </div>
+    {% elif is_worker_here and job.awaiting_client_confirmation %}
+      <p class="note">{% translate "Waiting on the client to agree the work is done." %}</p>
+    {% endif %}
+  {% endif %}
+
   {% if group_days > 1 %}
     <p class="note">
       {% blocktranslate count n=group_days with pay=job.fixed_pay|money first=group_first|date:"j M" last=group_last|date:"j M" %}One day of a {{ n }}-day booking, {{ first }} to {{ last }} — {{ pay }} per day. Each day is agreed and signed off on its own.{% plural %}One day of a {{ n }}-day booking, {{ first }} to {{ last }} — {{ pay }} per day. Each day is agreed and signed off on its own.{% endblocktranslate %}
@@ -235,7 +273,11 @@
   {% if job.assigned_worker %}
     <h2>{% translate "Assigned to" %}</h2>
     <div class="card">
-      {% translate "Working this job" as working_sub %}
+      {% if job.is_finished %}
+        {% translate "Did this job" as working_sub %}
+      {% else %}
+        {% translate "Working this job" as working_sub %}
+      {% endif %}
       {% include "_person.html" with person=job.assigned_worker.user size="md" sub=working_sub %}
       <div class="btn-row">
         {% if job.is_gig %}

@@ -312,6 +312,24 @@ def client_detail(request, pk: int):
             # What they have open right now says more about a client than any
             # of the counters do.
             "open_jobs": profile.jobs.public().select_related("trade", "region")[:5],
+            # And what is under way. Without this a job disappeared from its own
+            # client's profile the moment they confirmed somebody — the page
+            # listed only open posts, so accepting an applicant looked like
+            # losing the job. Work in hand is also the more useful signal: a
+            # client with three jobs running is plainly hiring.
+            "current_jobs": (
+                profile.jobs.filter(
+                    state__in=[
+                        JobState.ACCEPTED,
+                        JobState.ESCROW_HELD,
+                        JobState.IN_PROGRESS,
+                        JobState.COMPLETED,
+                        JobState.ENDED_EARLY,
+                    ]
+                )
+                .select_related("trade", "region", "assigned_worker__user")
+                .order_by("gig_date")[:5]
+            ),
         },
     )
 
