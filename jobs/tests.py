@@ -574,3 +574,52 @@ class BookingIsOneThingTests(JobFactoryMixin, TestCase):
         self.assertEqual(
             Application.objects.filter(worker=self.worker_profile).count(), 3
         )
+
+
+class BookingTotalsTests(JobFactoryMixin, TestCase):
+    """Per day, said as such, with the totals beside it.
+
+    "€95 for 9 hours" as the headline of a four-day booking is wrong by a
+    factor of four, and it is the number somebody decides on.
+    """
+
+    def booking(self, pays, hours="9"):
+        from uuid import uuid4
+
+        group = uuid4()
+        for n, pay in enumerate(pays):
+            job = self.gig(fixed_pay=Decimal(pay), gig_hours=Decimal(hours))
+            job.offer_group = group
+            job.gig_date = timezone.localdate() + timedelta(days=1 + n)
+            job.save(update_fields=["offer_group", "gig_date"])
+        return group
+
+    def rows(self):
+        from jobs.models import collapse_groups
+
+        return collapse_groups(Job.objects.public().order_by("gig_date"))
+
+    def test_the_totals_are_summed_not_multiplied(self):
+        """Days can differ: a counter is agreed per day."""
+        self.booking(["95", "95", "120", "95"])
+        row = [r for r in self.rows() if r.group_days > 1][0]
+        self.assertEqual(row.group_pay, Decimal("405"))
+        self.assertEqual(row.group_days, 4)
+
+    def test_hours_total_across_the_days(self):
+        self.booking(["95", "95", "95"], hours="9")
+        row = [r for r in self.rows() if r.group_days > 1][0]
+        self.assertEqual(row.group_hours, Decimal("27"))
+
+    def test_the_headline_says_per_day(self):
+        self.booking(["95", "95", "95", "95"])
+        response = self.client.get(reverse("accounts:home"))
+        self.assertContains(response, "per day")
+        self.assertContains(response, "total for")
+        self.assertContains(response, "hrs in all")
+
+    def test_a_single_day_still_reads_as_the_job(self):
+        """No totals language on something that is one day."""
+        self.gig(fixed_pay=Decimal("95"))
+        response = self.client.get(reverse("accounts:home"))
+        self.assertNotContains(response, "total for")

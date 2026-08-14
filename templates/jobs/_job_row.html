@@ -6,7 +6,11 @@ so a job looks the same everywhere it appears.
   <div class="card">
     <div class="row-top">
       <span class="title">{{ job.title }}</span>
-      <span class="pay">{{ job.pay_display }}</span>
+      <span class="pay">
+        {% if job.group_days > 1 %}
+          {% blocktranslate with pay=job.fixed_pay|money %}{{ pay }} per day{% endblocktranslate %}
+        {% else %}{{ job.pay_display }}{% endif %}
+      </span>
     </div>
     <div class="row-meta">
       {% if job.is_gig %}
@@ -18,7 +22,8 @@ so a job looks the same everywhere it appears.
         {% if job.group_days > 1 %}
           <span class="badge gig">{% blocktranslate count n=job.group_days %}{{ n }} day{% plural %}{{ n }} days{% endblocktranslate %}</span>
           {{ job.group_dates.0|date:"j M" }} – {{ job.group_dates|last|date:"j M" }}
-          · {% blocktranslate with pay=job.fixed_pay|money %}{{ pay }} per day{% endblocktranslate %}
+          · {% blocktranslate with total=job.group_pay|money n=job.group_days %}{{ total }} total for {{ n }} days{% endblocktranslate %}
+          · {% blocktranslate with h=job.group_hours|floatformat:"-1" %}{{ h }} hrs in all{% endblocktranslate %}
         {% else %}
           <span class="badge gig">{% translate "Gig" %}</span>
           {{ job.gig_date|date:"D j M" }}

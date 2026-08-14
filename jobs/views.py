@@ -154,13 +154,16 @@ def job_detail(request, pk: int):
     # The sibling days of a multi-day booking, for the note on this one.
     group_dates: list = []
     group_days = 1
+    group_pay = job.fixed_pay
+    group_hours = job.gig_hours
     if job.offer_group:
-        group_dates = sorted(
-            Job.objects.filter(offer_group=job.offer_group)
-            .exclude(gig_date=None)
-            .values_list("gig_date", flat=True)
-        )
-        group_days = max(len(group_dates), 1)
+        siblings = list(Job.objects.filter(offer_group=job.offer_group))
+        group_dates = sorted(j.gig_date for j in siblings if j.gig_date)
+        group_days = max(len(siblings), 1)
+        # Summed, not multiplied: a counter is agreed per day, so the days of
+        # one booking can end up on different numbers.
+        group_pay = sum((j.fixed_pay or 0) for j in siblings)
+        group_hours = sum((j.gig_hours or 0) for j in siblings)
 
     # The negotiation, from whichever side is looking.
     #
@@ -228,6 +231,8 @@ def job_detail(request, pk: int):
                 worker is not None and job.assigned_worker_id == worker.pk
             ),
             "group_days": group_days,
+            "group_pay": group_pay,
+            "group_hours": group_hours,
             "group_first": group_dates[0] if group_dates else None,
             "group_last": group_dates[-1] if group_dates else None,
         },

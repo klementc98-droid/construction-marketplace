@@ -242,7 +242,7 @@
 
   {% if group_days > 1 %}
     <p class="note">
-      {% blocktranslate count n=group_days with pay=job.fixed_pay|money first=group_first|date:"j M" last=group_last|date:"j M" %}One day of a {{ n }}-day booking, {{ first }} to {{ last }} — {{ pay }} per day. Each day is agreed and signed off on its own.{% plural %}One day of a {{ n }}-day booking, {{ first }} to {{ last }} — {{ pay }} per day. Each day is agreed and signed off on its own.{% endblocktranslate %}
+      {% blocktranslate with n=group_days pay=job.fixed_pay|money first=group_first|date:"j M" last=group_last|date:"j M" total=group_pay|money hours=group_hours|floatformat:"-1" %}One day of a {{ n }}-day booking, {{ first }} to {{ last }}. {{ pay }} per day — {{ total }} and {{ hours }} hours in all. Each day is agreed and signed off on its own.{% endblocktranslate %}
     </p>
   {% endif %}
 

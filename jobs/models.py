@@ -126,22 +126,31 @@ def collapse_groups(jobs):
 
     Ungrouped jobs pass through untouched with ``group_days`` of 1.
     """
+    def start(job):
+        job.group_days = 1
+        job.group_dates = [job.gig_date] if job.gig_date else []
+        # Summed rather than multiplied out from the first day: the days of a
+        # booking can end up on different numbers, because a counter is agreed
+        # per day. Multiplying the representative would quietly under- or
+        # over-state a total the reader is about to rely on.
+        job.group_pay = job.fixed_pay or Decimal("0")
+        job.group_hours = job.gig_hours or Decimal("0")
+        return job
+
     seen: dict = {}
     out = []
     for job in jobs:
         if not job.offer_group:
-            job.group_days = 1
-            job.group_dates = [job.gig_date] if job.gig_date else []
-            out.append(job)
+            out.append(start(job))
             continue
         first = seen.get(job.offer_group)
         if first is None:
-            job.group_days = 1
-            job.group_dates = [job.gig_date] if job.gig_date else []
-            seen[job.offer_group] = job
+            seen[job.offer_group] = start(job)
             out.append(job)
         else:
             first.group_days += 1
+            first.group_pay += job.fixed_pay or Decimal("0")
+            first.group_hours += job.gig_hours or Decimal("0")
             if job.gig_date:
                 first.group_dates.append(job.gig_date)
                 first.group_dates.sort()

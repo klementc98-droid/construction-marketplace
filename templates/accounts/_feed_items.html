@@ -13,7 +13,15 @@ arrived with the page or afterwards.
     <a href="{% url 'jobs:detail' job.pk %}" class="feed-body">
       <div class="feed-headline">
         <h3>{{ job.title }}</h3>
-        <span class="pay">{{ job.pay_display }}</span>
+        {% comment %} On a booking the headline is the per-day figure, said as such.
+           pay_display alone reads as the total for the whole thing, which on
+           four days is wrong by a factor of four.
+        {% endcomment %}
+        <span class="pay">
+          {% if job.group_days > 1 %}
+            {% blocktranslate with pay=job.fixed_pay|money %}{{ pay }} per day{% endblocktranslate %}
+          {% else %}{{ job.pay_display }}{% endif %}
+        </span>
       </div>
 
       <p class="feed-tags">
@@ -24,7 +32,8 @@ arrived with the page or afterwards.
           {% if job.group_days > 1 %}
             <span class="badge gig">{% blocktranslate count n=job.group_days %}{{ n }} day{% plural %}{{ n }} days{% endblocktranslate %}</span>
             <span class="badge">{{ job.group_dates.0|date:"j M" }} – {{ job.group_dates|last|date:"j M" }}</span>
-            <span class="badge">{% blocktranslate with pay=job.fixed_pay|money %}{{ pay }} per day{% endblocktranslate %}</span>
+            <span class="badge">{% blocktranslate with total=job.group_pay|money n=job.group_days %}{{ total }} total for {{ n }} days{% endblocktranslate %}</span>
+            <span class="badge">{% blocktranslate with h=job.group_hours|floatformat:"-1" %}{{ h }} hrs in all{% endblocktranslate %}</span>
           {% else %}
             {% if job.starts_in %}
               <span class="badge {% if job.is_urgent %}state{% else %}gig{% endif %}">{{ job.starts_in }}</span>
@@ -33,7 +42,9 @@ arrived with the page or afterwards.
             {% endif %}
             <span class="badge">{{ job.gig_date|date:"D j M" }}</span>
           {% endif %}
-          <span class="badge">{% blocktranslate with n=job.gig_hours|floatformat:"-1" %}{{ n }} hrs{% endblocktranslate %}</span>
+          {% if job.group_days == 1 %}
+            <span class="badge">{% blocktranslate with n=job.gig_hours|floatformat:"-1" %}{{ n }} hrs{% endblocktranslate %}</span>
+          {% endif %}
           {% if job.implied_hourly %}<span class="badge">≈{{ job.implied_hourly|money }}/{% translate "hr" %}</span>{% endif %}
         {% else %}
           <span class="badge">{{ job.get_position_type_display }}</span>
