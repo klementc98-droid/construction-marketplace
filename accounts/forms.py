@@ -9,6 +9,7 @@ from django.utils import timezone
 
 from config import business_rules as rules
 from core.models import Region, Trade
+from core.dates import parse_date_list
 
 from .models import (
     AvailabilityDate,
@@ -242,35 +243,11 @@ class WorkerProfileForm(_RegionMixin):
                 )
 
     def clean_available_dates(self) -> list[date]:
-        raw = (self.cleaned_data.get("available_dates") or "").strip()
-        if not raw:
-            return []
-
-        today = timezone.localdate()
-        parsed: list[date] = []
-        stale: list[date] = []
-        for chunk in raw.replace("\n", ",").split(","):
-            chunk = chunk.strip()
-            if not chunk:
-                continue
-            try:
-                day = datetime.strptime(chunk, "%Y-%m-%d").date()
-            except ValueError:
-                raise forms.ValidationError(
-                    f"{chunk!r} isn't a date in YYYY-MM-DD form."
-                )
-            (stale if day < today else parsed).append(day)
-
-        # The picker's `min` already stops this, so anything caught here was
-        # typed by hand or posted directly. Rejected rather than quietly
-        # dropped: a worker who meant to offer next Tuesday and typed last
-        # Tuesday should be told, not left looking unavailable.
-        if stale:
-            listed = ", ".join(d.isoformat() for d in sorted(set(stale)))
-            raise forms.ValidationError(
-                f"{listed} — that's in the past. Pick days from today onwards."
-            )
-        return sorted(set(parsed))
+        # Shared with the offer form's date picker — see core.dates for why
+        # a past date is rejected rather than quietly dropped.
+        return parse_date_list(
+            self.cleaned_data.get("available_dates"), today=timezone.localdate()
+        )
 
     def clean_cv(self):
         cv = self.cleaned_data.get("cv")

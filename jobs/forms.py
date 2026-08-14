@@ -12,6 +12,7 @@ from django import forms
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
+from core.dates import parse_date_list
 from core.models import Region, Trade
 
 from .models import Application, Counter, Job, JobType, PositionType
@@ -96,11 +97,17 @@ class GigForm(_BaseJobForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.instance.job_type = JobType.GIG
-        # A date picker that cannot offer yesterday saves the round trip to a
-        # server-side error for the most common slip.
-        self.fields["gig_date"].widget.attrs["min"] = timezone.localdate().isoformat()
+        # Guarded because OfferForm swaps the single gig_date for a list of
+        # them — it asks the same question, just allowing more than one answer.
+        if "gig_date" in self.fields:
+            # A date picker that cannot offer yesterday saves the round trip to
+            # a server-side error for the most common slip.
+            self.fields["gig_date"].widget.attrs["min"] = (
+                timezone.localdate().isoformat()
+            )
         for name in ("gig_date", "gig_hours", "fixed_pay"):
-            self.fields[name].required = True
+            if name in self.fields:
+                self.fields[name].required = True
 
 
 class StandingForm(_BaseJobForm):
@@ -152,6 +159,35 @@ class OfferForm(GigForm):
     They can still add them later by editing the job.
     """
 
+    #: One or more days, in place of the single ``gig_date`` an ordinary gig
+    #: asks for. Booking somebody for Tuesday and Wednesday is one decision and
+    #: should be one form; filling this in twice is the kind of paperwork that
+    #: makes a client message the worker instead and lose the escrow.
+    #:
+    #: Each day still becomes its own gig — see the view. A gig is one dated
+    #: shift with its own escrow and its own sign-off, and that is not a
+    #: presentation detail: two days cannot share a hold when either of them
+    #: can be finished, disputed or called off on its own.
+    #:
+    #: ``data-date-list`` is what crew.js looks for. With JS it becomes a
+    #: calendar plus a row of removable chips; without it, the plain text input
+    #: it already is. Same widget as the worker availability field, so a client
+    #: who also works here meets one date picker, not two.
+    gig_dates = forms.CharField(
+        label=_("Which days?"),
+        help_text=_("Pick one or more. Each day is booked and paid separately."),
+        # Its own required message. "This field is required" on a picker that
+        # shows chips reads as a fault in the widget rather than an answer the
+        # form is still waiting for.
+        error_messages={"required": _("Pick at least one day.")},
+        widget=forms.TextInput(
+            attrs={
+                "placeholder": "2026-08-04, 2026-08-05",
+                "data-date-list": "",
+            }
+        ),
+    )
+
     note = forms.CharField(
         label="Anything they should know?",
         required=False,
@@ -167,13 +203,35 @@ class OfferForm(GigForm):
         "itself and stays with the post.",
     )
 
+    #: A ceiling, not a rule about how people work. Each day written here is a
+    #: row, a thread and a card in the worker's list, and a mistyped paste
+    #: should not be able to send somebody ninety of them.
+    MAX_DAYS = 14
+
     class Meta(GigForm.Meta):
-        fields = [f for f in GigForm.Meta.fields
-                  if f not in ("site_latitude", "site_longitude")]
+        fields = [
+            f for f in GigForm.Meta.fields
+            if f not in ("site_latitude", "site_longitude", "gig_date")
+        ]
 
     def __init__(self, *args, worker=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.worker = worker
+
+        # Declared fields land after the model's, which would put the dates
+        # below the pay. Put them back where gig_date used to be: the day comes
+        # before the hours and the price, because the other two are answers
+        # about that day.
+        order = list(self.Meta.fields)
+        order.insert(order.index("gig_hours"), "gig_dates")
+        self.order_fields(order + ["note"])
+
+        # The value crew.js reads as the calendar's `min`, so the picker cannot
+        # offer a day that clean_gig_dates would reject.
+        self.fields["gig_dates"].widget.attrs["data-date-list"] = (
+            timezone.localdate().isoformat()
+        )
+
         if worker is None:
             return
 
@@ -189,6 +247,41 @@ class OfferForm(GigForm):
             first_trade = worker.trades.first()
             if first_trade is not None:
                 self.fields["trade"].initial = first_trade
+
+    def clean_gig_dates(self) -> list:
+        dates = parse_date_list(
+            self.cleaned_data.get("gig_dates"), today=timezone.localdate()
+        )
+        if not dates:
+            raise forms.ValidationError(_("Pick at least one day."))
+        if len(dates) > self.MAX_DAYS:
+            raise forms.ValidationError(
+                _(
+                    "That's %(count)s days — %(limit)s at a time is the limit. "
+                    "Send these and write the rest as a second offer."
+                )
+                % {"count": len(dates), "limit": self.MAX_DAYS}
+            )
+        return dates
+
+    def clean(self):
+        """Give the instance a date before the model gets to validate it.
+
+        ``_post_clean`` runs Job.full_clean, which refuses a gig with no date —
+        and gig_date is no longer a form field, so without this the instance
+        reaches that check empty. The first day is as good as any: the view
+        overwrites it per job, and this instance is only ever the template the
+        days are copied from.
+        """
+        cleaned = super().clean()
+        days = cleaned.get("gig_dates")
+        # Today as the placeholder when the dates did not survive validation.
+        # Job.clean would otherwise report a missing gig_date, and a ModelForm
+        # cannot attach a model error to a field it does not have — it raises
+        # ValueError instead of rendering. The user has already been told what
+        # is actually wrong, on gig_dates, and this instance is never saved.
+        self.instance.gig_date = days[0] if days else timezone.localdate()
+        return cleaned
 
 
 class OfferResponseForm(forms.Form):

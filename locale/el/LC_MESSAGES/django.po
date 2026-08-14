@@ -8,6 +8,10 @@
 msgid ""
 msgstr "Project-Id-Version: constructions-finest\nReport-Msgid-Bugs-To: \nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\nLanguage: el\nPlural-Forms: nplurals=2; plural=(n != 1);\n"
 
+#: jobs/views.py
+msgid "%(count)s offers sent to %(worker)s, one for each day. They can take all of them or only the days that suit."
+msgstr "%(count)s προσφορές στάλθηκαν στον/στην %(worker)s, μία για κάθε ημέρα. Μπορεί να τις δεχτεί όλες ή μόνο τις ημέρες που τον/την βολεύουν."
+
 #: templates/jobs/job_list.html
 msgid "%(counter)s open post."
 msgid_plural "%(counter)s open posts."
@@ -1224,6 +1228,14 @@ msgstr "Ανά ώρα"
 msgid "Photos of past work"
 msgstr "Φωτογραφίες προηγούμενων δουλειών"
 
+#: jobs/forms.py
+msgid "Pick at least one day."
+msgstr "Διάλεξε τουλάχιστον μία ημέρα."
+
+#: jobs/forms.py
+msgid "Pick one or more. Each day is booked and paid separately."
+msgstr "Διάλεξε μία ή περισσότερες. Κάθε ημέρα κλείνεται και πληρώνεται ξεχωριστά."
+
 #: templates/messaging/start_direct.html
 msgid "Pick which gig you're contacting them about."
 msgstr "Διάλεξε για ποιο μεροκάματο επικοινωνείς μαζί του."
@@ -1813,6 +1825,10 @@ msgstr "Τι δεν κάνουμε"
 #: templates/jobs/counter_form.html
 msgid "What's posted"
 msgstr "Τι έχει ανέβει"
+
+#: jobs/forms.py
+msgid "Which days?"
+msgstr "Ποιες ημέρες;"
 
 #: templates/assistant/_widget.html
 msgid "Which one?"

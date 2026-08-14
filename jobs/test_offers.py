@@ -22,6 +22,9 @@ from accounts.models import AvailabilityStatus, WorkerProfile
 from core.state_machine import JobState
 
 from .models import Application, Job, JobType, Offer, OfferStatus
+from decimal import Decimal
+
+from .forms import OfferForm
 from .tests import JobFactoryMixin, make_user
 
 
@@ -38,7 +41,7 @@ class OfferTests(JobFactoryMixin, TestCase):
             "title": "Second fix, Tuesday",
             "description": "Hanging doors on the first floor.",
             "location": "North side",
-            "gig_date": (timezone.localdate() + timedelta(days=4)).isoformat(),
+            "gig_dates": (timezone.localdate() + timedelta(days=4)).isoformat(),
             "gig_hours": "8",
             "fixed_pay": "240",
             "note": "You did the framing on this one - same site.",
@@ -261,3 +264,120 @@ class OfferTests(JobFactoryMixin, TestCase):
 
         self.assertFalse(self.client_profile.is_hiring)
         self.assertNotIn(offer.job, self.client_profile.open_jobs)
+
+
+class MultiDayOfferTests(JobFactoryMixin, TestCase):
+    """One offer form, several days.
+
+    Each day becomes its own gig on purpose: a gig is one dated shift with its
+    own escrow and its own sign-off, so two days cannot share a row when either
+    can be finished, disputed or called off while the other runs normally.
+    """
+
+    def days(self, count):
+        start = timezone.localdate() + timedelta(days=3)
+        return [start + timedelta(days=n) for n in range(count)]
+
+    def payload(self, dates, **overrides):
+        return {
+            "trade": self.carpentry.pk,
+            "region": self.region.pk,
+            "title": "Second fix",
+            "description": "Hanging doors on the first floor.",
+            "location": "North side",
+            "gig_dates": ", ".join(d.isoformat() for d in dates),
+            "gig_hours": "8",
+            "fixed_pay": "240",
+            "note": "Same site as the framing.",
+        } | overrides
+
+    def send(self, dates, **overrides):
+        self.client.force_login(self.client_user)
+        return self.client.post(
+            reverse("jobs:offer", args=[self.worker_profile.pk]),
+            self.payload(dates, **overrides),
+        )
+
+    def test_three_days_make_three_gigs_and_three_offers(self):
+        dates = self.days(3)
+        self.send(dates)
+
+        jobs = Job.objects.filter(is_private=True).order_by("gig_date")
+        self.assertEqual(jobs.count(), 3)
+        self.assertEqual([j.gig_date for j in jobs], dates)
+        self.assertEqual(Offer.objects.count(), 3)
+
+    def test_every_day_carries_the_same_terms(self):
+        self.send(self.days(3))
+        for job in Job.objects.filter(is_private=True):
+            self.assertEqual(job.title, "Second fix")
+            self.assertEqual(job.fixed_pay, Decimal("240"))
+            self.assertEqual(job.gig_hours, Decimal("8"))
+            self.assertEqual(job.trade, self.carpentry)
+
+    def test_each_day_gets_its_own_thread(self):
+        """The offer is answered per day, so the questions are too."""
+        from messaging.models import Conversation
+
+        self.send(self.days(2))
+        self.assertEqual(Conversation.objects.count(), 2)
+
+    def test_one_day_still_lands_on_that_job(self):
+        """The single-date path is the common one and must not have changed."""
+        response = self.send(self.days(1))
+        job = Job.objects.get(is_private=True)
+        self.assertRedirects(
+            response, reverse("jobs:detail", args=[job.pk]), fetch_redirect_response=False
+        )
+
+    def test_several_days_land_on_the_list_rather_than_one_of_them(self):
+        response = self.send(self.days(3))
+        self.assertRedirects(
+            response, reverse("jobs:mine"), fetch_redirect_response=False
+        )
+
+    def test_the_worker_can_take_one_day_and_leave_the_rest(self):
+        """The reason these are separate rows at all."""
+        self.send(self.days(3))
+        offers = list(Offer.objects.order_by("job__gig_date"))
+
+        self.client.force_login(self.worker_user)
+        self.client.post(
+            reverse("jobs:offer_respond", args=[offers[0].pk]), {"answer": "accept"}
+        )
+
+        offers[0].refresh_from_db()
+        offers[1].refresh_from_db()
+        self.assertEqual(offers[0].status, OfferStatus.ACCEPTED)
+        self.assertTrue(offers[1].is_pending)
+
+    def test_a_duplicate_day_is_not_booked_twice(self):
+        dates = self.days(2)
+        self.send([dates[0], dates[1], dates[0]])
+        self.assertEqual(Job.objects.filter(is_private=True).count(), 2)
+
+    def test_no_days_is_refused(self):
+        response = self.send([])
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Job.objects.filter(is_private=True).count(), 0)
+        self.assertContains(response, "Pick at least one day")
+
+    def test_a_past_day_is_refused_rather_than_dropped(self):
+        """Silently skipping it would send an offer the client never wrote."""
+        yesterday = timezone.localdate() - timedelta(days=1)
+        response = self.send([yesterday, *self.days(1)])
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Job.objects.filter(is_private=True).count(), 0)
+        self.assertContains(response, "in the past")
+
+    def test_too_many_days_is_refused_whole(self):
+        response = self.send(self.days(OfferForm.MAX_DAYS + 1))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Job.objects.filter(is_private=True).count(), 0)
+
+    def test_nothing_is_written_when_one_day_is_bad(self):
+        """All in one transaction: three good days and one bad writes none."""
+        bad = [*self.days(3), timezone.localdate() - timedelta(days=2)]
+        self.send(bad)
+        self.assertEqual(Job.objects.filter(is_private=True).count(), 0)
+        self.assertEqual(Offer.objects.count(), 0)

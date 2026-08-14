@@ -17,6 +17,7 @@ from django.db.models import Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 
 from accounts.models import AvailabilityStatus, WorkerProfile
@@ -485,35 +486,66 @@ def offer_create(request, worker_pk: int):
     if request.method == "POST":
         form = OfferForm(request.POST, worker=worker)
         if form.is_valid():
+            days = form.cleaned_data["gig_dates"]
+            note = form.cleaned_data["note"]
+
+            # One gig per day. A gig is one dated shift with its own escrow and
+            # its own sign-off, so two days cannot share a row: either can be
+            # finished, disputed or called off while the other runs normally,
+            # and a single job would have nowhere to record that.
+            #
+            # All of them in one transaction — a client who picked three days
+            # and got two is worse off than one who got an error.
             with transaction.atomic():
-                job = form.save(commit=False)
-                job.client = client
-                job.is_private = True
-                job.save()
+                jobs = []
+                for day in days:
+                    job = form.save(commit=False)
+                    # save(commit=False) hands back the same instance each time,
+                    # so it carries the previous day's primary key. Clearing both
+                    # makes the next save an INSERT rather than an overwrite.
+                    job.pk = None
+                    job._state.adding = True
+                    job.gig_date = day
+                    job.client = client
+                    job.is_private = True
+                    job.save()
+                    jobs.append(job)
 
-                offer = Offer.objects.create(
-                    job=job, worker=worker, note=form.cleaned_data["note"]
-                )
+                    offer = Offer.objects.create(job=job, worker=worker, note=note)
 
-                # A thread from the start. An offer someone wants to ask one
-                # question about should not need them to say no to get a reply
-                # channel — and the client's covering note is the natural
-                # first message, so it lands where the answer will.
-                conversation = Conversation.objects.create(job=job, worker=worker)
-                if offer.note:
-                    message = Message.objects.create(
-                        conversation=conversation,
-                        sender=request.user,
-                        body=offer.note,
+                    # A thread from the start. An offer someone wants to ask one
+                    # question about should not need them to say no to get a
+                    # reply channel — and the client's covering note is the
+                    # natural first message, so it lands where the answer will.
+                    conversation = Conversation.objects.create(
+                        job=job, worker=worker
                     )
-                    conversation.last_message_at = message.created_at
-                    conversation.save(update_fields=["last_message_at", "updated_at"])
+                    if offer.note:
+                        message = Message.objects.create(
+                            conversation=conversation,
+                            sender=request.user,
+                            body=offer.note,
+                        )
+                        conversation.last_message_at = message.created_at
+                        conversation.save(
+                            update_fields=["last_message_at", "updated_at"]
+                        )
+
+            if len(jobs) == 1:
+                messages.success(
+                    request,
+                    _("Offer sent to %(worker)s. You'll hear back here and in "
+                      "messages.") % {"worker": worker.user},
+                )
+                return redirect("jobs:detail", pk=jobs[0].pk)
 
             messages.success(
                 request,
-                f"Offer sent to {worker.user}. You'll hear back here and in messages.",
+                _("%(count)s offers sent to %(worker)s, one for each day. They "
+                  "can take all of them or only the days that suit.")
+                % {"count": len(jobs), "worker": worker.user},
             )
-            return redirect("jobs:detail", pk=job.pk)
+            return redirect("jobs:mine")
     else:
         form = OfferForm(worker=worker)
 
