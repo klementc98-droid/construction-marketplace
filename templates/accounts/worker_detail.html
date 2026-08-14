@@ -4,7 +4,10 @@
 
 {% block content %}
   {% url 'jobs:worker_list' as workers_url %}
-  {% include "_back.html" with href=back_href|default:workers_url label=back_label|default:"Find workers" %}
+  {% comment %} Resolved into a variable first: a literal default inside the include
+     is a string the catalogue never sees. {% endcomment %}
+  {% translate "Find workers" as workers_label %}
+  {% include "_back.html" with href=back_href|default:workers_url label=back_label|default:workers_label %}
 
   {# ---- who ------------------------------------------------------------- #}
   <div class="card">
@@ -18,12 +21,12 @@
         <p class="facts">
           <span>{{ profile.service_area|default:profile.region.name }}</span>
           <span class="sep">·</span>
-          <span>{{ profile.years_experience }} yr{{ profile.years_experience|pluralize }} in the trade</span>
+          <span>{% blocktranslate count years=profile.years_experience %}{{ years }} yr in the trade{% plural %}{{ years }} yrs in the trade{% endblocktranslate %}</span>
           {% if profile.user.age %}
             <span class="sep">·</span><span>{{ profile.user.age }}</span>
           {% endif %}
           <span class="sep">·</span>
-          <span>Joined {{ profile.user.date_joined|date:"M Y" }}</span>
+          <span>{% blocktranslate with since=profile.user.date_joined|date:"M Y" %}Joined {{ since }}{% endblocktranslate %}</span>
         </p>
       </div>
     </div>
@@ -41,7 +44,7 @@
     {% endcomment %}
     {% if profile.user.is_client %}
       <p class="note" style="margin-top:14px">
-        Also hires on Construction's Finest —
+        {% translate "Also hires on Construction's Finest —" %}
         <a href="{% url 'accounts:client_detail' profile.user.client_profile.pk %}">{% translate "see their hiring profile" %}</a>.
       </p>
     {% endif %}
@@ -83,16 +86,14 @@
     {% endcomment %}
     {% if profile.available_from %}
       <p class="note">
-        Booked through {{ profile.busy_until|date:"D j M" }}. You can still line
-        them up for {{ profile.available_from|date:"j M" }} onwards — their rate
-        is {{ profile.rate_display }}.
+        {% blocktranslate with until=profile.busy_until|date:"D j M" free=profile.available_from|date:"j M" rate=profile.rate_display %}Booked through {{ until }}. You can still line them up for {{ free }} onwards — their rate is {{ rate }}.{% endblocktranslate %}
       </p>
     {% elif profile.has_open_ended_commitment %}
       <p class="note">
         {% translate "On a longer-term placement with no set finish date. Worth asking if you're planning ahead." %}
       </p>
     {% elif profile.is_open_to_offers %}
-      <p class="note">Open to offers — their rate is {{ profile.rate_display }}.</p>
+      <p class="note">{% blocktranslate with rate=profile.rate_display %}Open to offers — their rate is {{ rate }}.{% endblocktranslate %}</p>
     {% endif %}
 
     {% comment %} The offer goes here rather than at the foot of the page: this card is

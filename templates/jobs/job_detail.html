@@ -5,7 +5,8 @@
 
 {% block content %}
   {% url 'jobs:list' as jobs_url %}
-  {% include "_back.html" with href=back_href|default:jobs_url label=back_label|default:"Find work" %}
+  {% translate "Find work" as jobs_label %}
+  {% include "_back.html" with href=back_href|default:jobs_url label=back_label|default:jobs_label %}
 
   <h1>{{ job.title }}</h1>
   <p class="lede">

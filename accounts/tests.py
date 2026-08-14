@@ -619,7 +619,7 @@ class FeedTests(FeedFixture):
 
 
 
-class SeekingStatusTests(TestCase):
+class SeekingFixture(TestCase):
     """"What are they after right now" must never contradict the facts."""
 
     def setUp(self):
@@ -663,6 +663,11 @@ class SeekingStatusTests(TestCase):
                 position_type="ongoing",
             )
         return Job.objects.create(**kwargs)
+
+
+class SeekingStatusTests(SeekingFixture):
+    """What a worker says they are after, and what the record says."""
+
 
     def test_available_now_reads_as_available(self):
         self.assertEqual(self.worker.availability_headline, "Available now")
@@ -953,3 +958,68 @@ class HomeTabsTests(FeedFixture):
         )
         self.assertNotIn("workers", response.context)
         self.assertNotContains(response, "<h2>Find workers</h2>")
+
+
+class StaleCommitmentTests(SeekingFixture):
+    """A booking whose last day has gone by is not a booking.
+
+    A gig can sit in an active state well past its date — waiting on a
+    sign-off, or on an approval window that has not run out. The worker is
+    plainly not busy on a day that has been and gone, and every page that
+    quotes a date has to agree about that.
+    """
+
+    def past_job(self):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from core.state_machine import JobState
+
+        job = self.make_job(state=JobState.ACCEPTED)
+        job.assigned_worker = self.worker
+        job.gig_date = timezone.localdate() - timedelta(days=5)
+        job.save(update_fields=["assigned_worker", "gig_date"])
+        return job
+
+    def test_a_finished_day_no_longer_makes_them_busy(self):
+        self.past_job()
+        self.assertIsNone(self.worker.busy_until)
+        self.assertIsNone(self.worker.available_from)
+
+    def test_they_read_as_available_again(self):
+        """The bug as reported: "free from 1 Aug" still showing in mid-August."""
+        self.past_job()
+        self.assertEqual(self.worker.availability_headline, "Available now")
+        self.assertEqual(self.worker.availability_tone, "ok")
+
+    def test_the_profile_page_stops_quoting_the_old_date(self):
+        from django.urls import reverse
+
+        self.past_job()
+        response = self.client.get(
+            reverse("accounts:worker_detail", args=[self.worker.pk])
+        )
+        self.assertNotContains(response, "Booked through")
+
+    def test_a_future_booking_still_reads_as_busy(self):
+        """The guard must not swallow the case it exists to report."""
+        from core.state_machine import JobState
+
+        job = self.make_job(state=JobState.ACCEPTED)
+        job.assigned_worker = self.worker
+        job.save(update_fields=["assigned_worker"])
+
+        self.assertEqual(self.worker.busy_until, job.gig_date)
+        self.assertEqual(self.worker.availability_tone, "soon")
+
+    def test_a_past_day_no_longer_blocks_being_booked_again(self):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        self.past_job()
+        self.worker.availability_status = AvailabilityStatus.AVAILABLE_NOW
+        self.worker.save(update_fields=["availability_status"])
+        tomorrow = timezone.localdate() + timedelta(days=1)
+        self.assertTrue(self.worker.is_free_on(tomorrow))

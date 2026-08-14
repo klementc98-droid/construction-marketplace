@@ -5,6 +5,7 @@ from __future__ import annotations
 from decimal import Decimal
 
 from django import template
+from django.utils.translation import gettext as _
 
 register = template.Library()
 
@@ -30,12 +31,12 @@ def as_percent(value: Decimal | None, digits: int = 0) -> str:
     to earn, which is the single rule the trust display exists to protect.
     """
     if value is None:
-        return "New"
+        return _("New")
     return f"{Decimal(value) * 100:.{digits}f}%"
 
 
 @register.filter
 def stars(value: Decimal | None) -> str:
     if value is None:
-        return "New"
+        return _("New")
     return f"{value} ★"

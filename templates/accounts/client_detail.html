@@ -1,10 +1,12 @@
 {% extends "base.html" %}
+{% load i18n %}
 {% load account_extras i18n %}
 {% block title %}{{ profile }} — Construction's Finest{% endblock %}
 
 {% block content %}
   {% url 'jobs:list' as jobs_url %}
-  {% include "_back.html" with href=back_href|default:jobs_url label=back_label|default:"Find work" %}
+  {% translate "Find work" as jobs_label %}
+  {% include "_back.html" with href=back_href|default:jobs_url label=back_label|default:jobs_label %}
 
   <div class="card">
     <div class="profile-head">

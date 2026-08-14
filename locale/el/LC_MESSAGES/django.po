@@ -45,6 +45,7 @@ msgid_plural "%(years)s yrs"
 msgstr[0] "%(years)s χρόνος"
 msgstr[1] "%(years)s χρόνια"
 
+#: templates/accounts/worker_detail.html
 #: templates/jobs/offer_form.html
 msgid "%(years)s yr in the trade"
 msgid_plural "%(years)s yrs in the trade"
@@ -179,6 +180,10 @@ msgstr "Όλα τα μηνύματα"
 msgid "All trades"
 msgstr "Όλες οι ειδικότητες"
 
+#: templates/accounts/worker_detail.html
+msgid "Also hires on Construction's Finest —"
+msgstr "Προσλαμβάνει επίσης στο Construction's Finest —"
+
 #: jobs/models.py
 msgid "Anything they should know before saying yes."
 msgstr "Οτιδήποτε πρέπει να ξέρει πριν πει ναι."
@@ -299,6 +304,10 @@ msgstr "Κλεισμένο"
 #: templates/jobs/job_applicants.html
 msgid "Booked that day"
 msgstr "Κλεισμένος εκείνη την ημέρα"
+
+#: templates/accounts/worker_detail.html
+msgid "Booked through %(until)s. You can still line them up for %(free)s onwards — their rate is %(rate)s."
+msgstr "Κλεισμένος έως %(until)s. Μπορείς πάντως να τον κλείσεις από %(free)s και μετά — η αμοιβή του είναι %(rate)s."
 
 #: templates/jobs/offer_form.html
 msgid "Booked until %(until)s, free from %(from_day)s."
@@ -653,9 +662,11 @@ msgstr "Συμπλήρωσέ το με συνομιλία"
 msgid "Filters"
 msgstr "Φίλτρα"
 
+#: templates/accounts/client_detail.html
 #: templates/accounts/dashboard.html
 #: templates/accounts/feed.html
 #: templates/base.html
+#: templates/jobs/job_detail.html
 #: templates/jobs/job_list.html
 msgid "Find work"
 msgstr "Βρες δουλειά"
@@ -666,6 +677,7 @@ msgstr "Βρες δουλειά."
 
 #: templates/accounts/dashboard.html
 #: templates/accounts/feed.html
+#: templates/accounts/worker_detail.html
 #: templates/base.html
 #: templates/jobs/worker_list.html
 msgid "Find workers"
@@ -936,6 +948,10 @@ msgid "Jobs done"
 msgstr "Δουλειές που έγιναν"
 
 #: templates/accounts/worker_detail.html
+msgid "Joined %(since)s"
+msgstr "Μέλος από %(since)s"
+
+#: templates/accounts/worker_detail.html
 msgid "Just message them"
 msgstr "Απλώς στείλε του μήνυμα"
 
@@ -1049,6 +1065,7 @@ msgstr "Όνομα, βιογραφικό ή περιοχή εξυπηρέτησ�
 msgid "Neighbourhood, cross streets, or site name."
 msgstr "Γειτονιά, διασταύρωση ή όνομα εργοταξίου."
 
+#: accounts/templatetags/account_extras.py
 #: templates/accounts/_worker_card.html
 #: templates/accounts/client_detail.html
 #: templates/jobs/job_applicants.html
@@ -1336,6 +1353,10 @@ msgstr "Ανοιχτός σε δουλειά πλήρους απασχόληση
 #: jobs/forms.py
 msgid "Open to full-time"
 msgstr "Ανοιχτοί σε πλήρη απασχόληση"
+
+#: templates/accounts/worker_detail.html
+msgid "Open to offers — their rate is %(rate)s."
+msgstr "Δέχεται προσφορές — η αμοιβή του είναι %(rate)s."
 
 #: accounts/models.py
 msgid "Open to ongoing work"

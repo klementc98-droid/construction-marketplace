@@ -471,9 +471,20 @@ class WorkerProfile(ReputationMixin, TimestampedModel):
 
         ``None`` with :attr:`has_open_ended_commitment` set means "committed,
         but nobody knows for how long" — a standing position has no end date.
+
+        Days that have already gone by are not counted. A gig can sit in an
+        active state well past its date — waiting on a sign-off, or an approval
+        window that has not run out — and the worker is plainly not busy on a
+        day that has been and gone. The check lives here rather than in each
+        caller because that is exactly how it went wrong: only
+        :attr:`availability_headline` made it, so the profile page and the
+        offer form both went on quoting a date in the past.
         """
+        today = timezone.localdate()
         dates = [
-            job.gig_date for job in self.active_jobs if job.gig_date is not None
+            job.gig_date
+            for job in self.active_jobs
+            if job.gig_date is not None and job.gig_date >= today
         ]
         return max(dates) if dates else None
 
@@ -508,10 +519,10 @@ class WorkerProfile(ReputationMixin, TimestampedModel):
 
         end = self.busy_until
         if end is not None:
+            # busy_until never looks backwards now, so there is no stale case
+            # left to fall through — see the note on that property.
             today = timezone.localdate()
-            if end < today:
-                pass  # commitment has run its course; fall through to normal
-            elif end == today:
+            if end == today:
                 return _("Busy today, free from tomorrow")
             else:
                 # One string with both dates in it, not "Busy until" + a date +
@@ -618,8 +629,13 @@ class WorkerProfile(ReputationMixin, TimestampedModel):
         """
         if self.availability_status == AvailabilityStatus.UNAVAILABLE:
             return "off"
-        if self.is_on_a_job:
-            return "soon" if self.available_from is not None else "off"
+        # Spelled out rather than asking is_on_a_job and then which kind: a
+        # dated gig whose day has passed leaves that property true while
+        # busy_until is None, and the worker read as unavailable for good.
+        if self.has_open_ended_commitment:
+            return "off"
+        if self.busy_until is not None:
+            return "soon"
         return "ok"
 
 
