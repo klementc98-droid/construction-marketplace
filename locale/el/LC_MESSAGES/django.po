@@ -431,6 +431,10 @@ msgstr "Ο πελάτης αξιολογεί τον τεχνίτη"
 msgid "Close assistant"
 msgstr "Κλείσιμο βοηθού"
 
+#: core/state_machine.py
+msgid "Closed — settled directly"
+msgstr "Έκλεισε — διακανονίστηκε απευθείας"
+
 #: accounts/forms.py
 msgid "Company (optional)"
 msgstr "Εταιρεία (προαιρετικό)"
@@ -443,6 +447,14 @@ msgstr "Ολοκληρώθηκε — αναμονή έγκρισης"
 #: templates/jobs/job_applicants.html
 msgid "Completion"
 msgstr "Ολοκλήρωση"
+
+#: templates/worklog/workspace.html
+msgid "Confirm and close"
+msgstr "Επιβεβαίωση και κλείσιμο"
+
+#: templates/worklog/workspace.html
+msgid "Confirm and the job closes. Nothing is released — there is no money held on this one — but it goes on both track records and you can each leave a rating."
+msgstr "Επιβεβαίωσε και η δουλειά κλείνει. Δεν αποδεσμεύεται τίποτα — δεν κρατούνται χρήματα σε αυτή — αλλά καταγράφεται στα ιστορικά και των δύο και μπορείτε να αφήσετε αξιολόγηση."
 
 #: templates/accounts/worker_detail.html
 msgid "Construction's Finest does not verify licence numbers. Check with your state board before hiring for regulated work."
@@ -643,6 +655,10 @@ msgstr "Τελείωσε νωρίτερα"
 #: core/state_machine.py
 msgid "Escrow held"
 msgstr "Σε μεσεγγύηση"
+
+#: jobs/forms.py
+msgid "Escrow means the money is charged before the worker travels and released once you sign the day off. Settling directly is between the two of you — we keep the record, not the money."
+msgstr "Η μεσεγγύηση σημαίνει ότι τα χρήματα χρεώνονται πριν ξεκινήσει ο τεχνίτης και αποδεσμεύονται μόλις εγκρίνεις την ημέρα. Ο απευθείας διακανονισμός είναι μεταξύ σας — εμείς κρατάμε το αρχείο, όχι τα χρήματα."
 
 #: templates/accounts/dashboard.html
 msgid "Escrow payments, check-in and ratings arrive in phases 4–6. Posting, search, applications and messaging are live."
@@ -847,6 +863,14 @@ msgstr "Προσλαμβάνει τώρα"
 msgid "Hiring someone for a job of your own?"
 msgstr "Ψάχνεις κάποιον για δική σου δουλειά;"
 
+#: jobs/forms.py
+msgid "Hold it in escrow until the day is signed off"
+msgstr "Κρατήσέ τα σε μεσεγγύηση μέχρι να εγκριθεί η ημέρα"
+
+#: jobs/models.py
+msgid "Hold the client's payment until the day is signed off."
+msgstr "Κρατά την πληρωμή του πελάτη μέχρι να εγκριθεί η ημέρα."
+
 #: templates/base.html
 msgid "Home"
 msgstr "Αρχική"
@@ -864,6 +888,10 @@ msgstr "Ώρες εργασίας"
 #: templates/assistant/_widget.html
 msgid "How can I help?"
 msgstr "Πώς μπορώ να βοηθήσω;"
+
+#: jobs/forms.py
+msgid "How is this paid?"
+msgstr "Πώς πληρώνεται;"
 
 #: templates/base.html
 #: templates/core/whitepaper.html
@@ -933,6 +961,10 @@ msgstr "Αν πάρεις αυτό το μεροκάματο, ο πελάτης 
 #: core/state_machine.py
 msgid "In progress"
 msgstr "Σε εξέλιξη"
+
+#: templates/worklog/workspace.html
+msgid "Is the work done?"
+msgstr "Τελείωσε η δουλειά;"
 
 #: templates/worklog/workspace.html
 msgid "Job complete"
@@ -1016,6 +1048,10 @@ msgstr "Ψάχνει αυτή τη στιγμή"
 #: templates/accounts/dashboard.html
 msgid "Looking to pick up work yourself?"
 msgstr "Ψάχνεις εσύ για δουλειά;"
+
+#: templates/worklog/workspace.html
+msgid "Mark it finished and the client confirms. Payment is between the two of you — we record that the job happened, nothing more."
+msgstr "Σήμανέ τη ως ολοκληρωμένη και ο πελάτης επιβεβαιώνει. Η πληρωμή είναι μεταξύ σας — εμείς καταγράφουμε ότι η δουλειά έγινε, τίποτα άλλο."
 
 #: core/models.py
 msgid "Mason/Concrete"
@@ -1159,6 +1195,10 @@ msgstr "Καμία φωτογραφία ακόμη."
 #: templates/jobs/_negotiation.html
 msgid "No thanks"
 msgstr "Όχι ευχαριστώ"
+
+#: templates/worklog/workspace.html
+msgid "No timer on this one: with no money held there is nothing to release, so it stays here until they agree."
+msgstr "Καμία αντίστροφη μέτρηση εδώ: αφού δεν κρατούνται χρήματα, δεν υπάρχει τίποτα να αποδεσμευτεί, οπότε μένει έτσι μέχρι να συμφωνήσει."
 
 #: templates/accounts/worker_detail.html
 msgid "No trades listed."
@@ -1696,6 +1736,10 @@ msgstr "Αποθήκευση στοιχείων"
 msgid "Save profile"
 msgstr "Αποθήκευση προφίλ"
 
+#: templates/worklog/workspace.html
+msgid "Saving…"
+msgstr "Αποθήκευση…"
+
 #: jobs/forms.py
 msgid "Search"
 msgstr "Αναζήτηση"
@@ -1919,6 +1963,10 @@ msgstr "Η λευκή βίβλος καλύπτει τον μηχανισμό μ
 msgid "The work"
 msgstr "Η δουλειά"
 
+#: templates/worklog/workspace.html
+msgid "The work is done"
+msgstr "Η δουλειά τελείωσε"
+
 #: templates/core/about.html
 msgid "The work is signed off"
 msgstr "Η δουλειά εγκρίνεται"
@@ -1950,6 +1998,10 @@ msgstr "Θα δει το μεροκάματο μαζί με το πρώτο σο
 #: templates/jobs/job_detail.html
 msgid "They've answered with different terms — see above."
 msgstr "Απάντησε με διαφορετικούς όρους — δες παραπάνω."
+
+#: templates/worklog/workspace.html
+msgid "They've marked the work finished."
+msgstr "Σήμανε τη δουλειά ως ολοκληρωμένη."
 
 #: templates/jobs/offer_form.html
 msgid "They've said they're free on"
@@ -2085,6 +2137,10 @@ msgid "View their profile"
 msgstr "Δες το προφίλ του"
 
 #: templates/worklog/workspace.html
+msgid "Waiting on the client to confirm."
+msgstr "Αναμονή επιβεβαίωσης από τον πελάτη."
+
+#: templates/worklog/workspace.html
 msgid "Waiting on the client to fund the gig"
 msgstr "Αναμονή να χρηματοδοτήσει ο πελάτης το μεροκάματο"
 
@@ -2115,6 +2171,10 @@ msgstr "Δεν χρησιμοποιούμε την τοποθεσία για ν�
 #: templates/core/about.html
 msgid "We do not verify licence numbers."
 msgstr "Δεν επαληθεύουμε αριθμούς αδειών."
+
+#: jobs/forms.py
+msgid "We'll settle it directly — cash, invoice, our own way"
+msgstr "Θα το διακανονίσουμε απευθείας — μετρητά, τιμολόγιο, με τον τρόπο μας"
 
 #: templates/accounts/select_role.html
 msgid "Welcome"

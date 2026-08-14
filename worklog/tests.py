@@ -436,3 +436,90 @@ class WorkspaceViewTests(WorkTestCase):
         record = CheckIn.objects.get(job=job)
         self.assertIsNone(record.latitude)
         self.assertIsNone(record.accuracy_m)
+
+
+class NoEscrowJobTests(WorkTestCase):
+    """A gig the two sides settle themselves.
+
+    The short route: accepted → worker says done → client agrees → closed.
+    No funding step, no check-in, no timer, because none of those mean
+    anything when the platform is not holding the money.
+    """
+
+    def setUp(self):
+        self.worker = self.worker_profile
+        self.job = self.make_job(state=JobState.ACCEPTED)
+        self.job.use_escrow = False
+        self.job.assigned_worker = self.worker
+        self.job.save(update_fields=["use_escrow", "assigned_worker"])
+
+    def test_the_job_reports_itself_as_unescrowed(self):
+        self.assertFalse(self.job.is_escrowed)
+
+    def test_a_standing_position_is_never_escrowed_whatever_the_flag_says(self):
+        """There is no single day to sign off, so the flag is not the question."""
+        from jobs.models import JobType
+
+        self.job.job_type = JobType.STANDING
+        self.job.use_escrow = True
+        self.assertFalse(self.job.is_escrowed)
+
+    def test_the_worker_marks_the_work_finished_without_checking_in(self):
+        services.mark_work_finished(self.job, self.worker)
+        self.job.refresh_from_db()
+        self.assertEqual(self.job.state, JobState.COMPLETED)
+        self.assertTrue(self.job.awaiting_client_confirmation)
+
+    def test_no_completion_record_is_written(self):
+        """That row is a payout calculation, and there is no payout."""
+        services.mark_work_finished(self.job, self.worker)
+        self.job.refresh_from_db()
+        self.assertFalse(hasattr(self.job, "completion"))
+
+    def test_the_client_confirming_closes_it(self):
+        services.mark_work_finished(self.job, self.worker)
+        services.confirm_closed(self.job, self.client_user)
+        self.job.refresh_from_db()
+        self.assertEqual(self.job.state, JobState.CLOSED)
+        self.assertTrue(self.job.is_finished)
+
+    def test_closing_counts_on_both_track_records(self):
+        """Settled directly still happened. Not counting it would make the
+        pair who trust each other look like the pair who never worked."""
+        before_worker = self.worker.jobs_completed
+        before_client = self.job.client.jobs_completed
+
+        services.mark_work_finished(self.job, self.worker)
+        services.confirm_closed(self.job, self.client_user)
+
+        self.worker.refresh_from_db()
+        self.job.client.refresh_from_db()
+        self.assertEqual(self.worker.jobs_completed, before_worker + 1)
+        self.assertEqual(self.job.client.jobs_completed, before_client + 1)
+
+    def test_the_worker_cannot_close_it_alone(self):
+        """Both sides or nothing — there is no hold to fall back on."""
+        services.mark_work_finished(self.job, self.worker)
+        with self.assertRaises(services.WorkflowError):
+            services.confirm_closed(self.job, self.worker.user)
+        self.job.refresh_from_db()
+        self.assertEqual(self.job.state, JobState.COMPLETED)
+
+    def test_nothing_closes_on_a_timer(self):
+        """No money held means no window, so the sweep must leave it alone."""
+        services.mark_work_finished(self.job, self.worker)
+        services.settle_due()
+        self.job.refresh_from_db()
+        self.assertEqual(self.job.state, JobState.COMPLETED)
+
+    def test_an_escrowed_job_refuses_the_short_route(self):
+        escrowed = self.make_job(state=JobState.ACCEPTED)
+        escrowed.assigned_worker = self.worker
+        escrowed.save(update_fields=["assigned_worker"])
+        with self.assertRaises(services.WorkflowError):
+            services.mark_work_finished(escrowed, self.worker)
+
+    def test_an_unescrowed_job_refuses_the_escrow_release(self):
+        services.mark_work_finished(self.job, self.worker)
+        with self.assertRaises(services.WorkflowError):
+            services.approve(self.job, self.client_user)

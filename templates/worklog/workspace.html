@@ -147,6 +147,51 @@
       </p>
     </div>
 
+  {% comment %} The no-escrow route, first because it must win over the escrow
+     branches below: on this job there is no check-in to offer and no release to
+     approve, and offering either would be a button that raises. Two moves and
+     both sides have to make one — there is no hold and so no timer, which is
+     why nothing here happens on its own.
+  {% endcomment %}
+  {% elif is_worker and not job.is_escrowed and 'completed' in moves %}
+    <h2>{% translate "Next" %}</h2>
+    <div class="card action-panel">
+      <p class="flush"><strong>{% translate "Is the work done?" %}</strong></p>
+      <p class="note">
+        {% translate "Mark it finished and the client confirms. Payment is between the two of you — we record that the job happened, nothing more." %}
+      </p>
+      <form method="post" action="{% url 'worklog:finish' job.pk %}">
+        {% csrf_token %}
+        <button class="btn" type="submit" data-busy-label="{% translate "Saving…" %}">
+          {% translate "The work is done" %}
+        </button>
+      </form>
+    </div>
+
+  {% elif is_client and job.awaiting_client_confirmation %}
+    <h2>{% translate "Next" %}</h2>
+    <div class="card action-panel">
+      <p class="flush"><strong>{% translate "They've marked the work finished." %}</strong></p>
+      <p class="note">
+        {% translate "Confirm and the job closes. Nothing is released — there is no money held on this one — but it goes on both track records and you can each leave a rating." %}
+      </p>
+      <form method="post" action="{% url 'worklog:confirm' job.pk %}">
+        {% csrf_token %}
+        <button class="btn" type="submit" data-busy-label="{% translate "Saving…" %}">
+          {% translate "Confirm and close" %}
+        </button>
+      </form>
+    </div>
+
+  {% elif is_worker and job.awaiting_client_confirmation %}
+    <h2>{% translate "Next" %}</h2>
+    <div class="card">
+      <p class="flush"><strong>{% translate "Waiting on the client to confirm." %}</strong></p>
+      <p class="note">
+        {% translate "No timer on this one: with no money held there is nothing to release, so it stays here until they agree." %}
+      </p>
+    </div>
+
   {% elif is_worker and 'in_progress' in moves %}
     <h2>{% translate "Next" %}</h2>
     <div class="card action-panel">

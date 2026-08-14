@@ -192,6 +192,22 @@ class Job(TimestampedModel):
         validators=[MinValueValidator(Decimal("0"))],
     )
 
+    #: Whether the platform holds the money for this gig.
+    #:
+    #: Default True, because escrow is the reason this board exists and an
+    #: unfunded gig is the arrangement everyone already had. Off is for the
+    #: pair who would rather settle it themselves — cash on the day, an
+    #: invoice, a regular they have worked with for years — and who otherwise
+    #: message each other and leave the platform entirely, which loses the
+    #: record along with the money.
+    #:
+    #: Only meaningful on a gig. A standing position never had escrow: it is
+    #: paid at a rate over an open period with no single day to sign off.
+    use_escrow = models.BooleanField(
+        default=True,
+        help_text=_("Hold the client's payment until the day is signed off."),
+    )
+
     #: Set when the client picks someone. On a gig this is the worker escrow
     #: will pay; on a standing position it simply records who got the job.
     assigned_worker = models.ForeignKey(
@@ -304,6 +320,40 @@ class Job(TimestampedModel):
     @property
     def is_open(self) -> bool:
         return self.state == JobState.POSTED
+
+    # -- escrow, or not ----------------------------------------------------
+
+    @property
+    def is_escrowed(self) -> bool:
+        """Does the platform hold the money for this job?
+
+        Asked instead of reading ``use_escrow`` directly, because the answer is
+        two conditions and one of them is easy to forget: a standing position
+        has no escrow whatever the flag says, since there is no single day to
+        sign off and nothing is captured. Left to callers, that check gets made
+        in some templates and not others.
+        """
+        return self.is_gig and self.use_escrow
+
+    @property
+    def awaiting_client_confirmation(self) -> bool:
+        """The worker has said the work is done and it is the client's turn.
+
+        The non-escrow equivalent of the approval window, minus the window:
+        there is no hold to release and so no timer, which is why nothing here
+        happens on its own. Mutual agreement or nothing.
+        """
+        return self.state == JobState.COMPLETED and not self.is_escrowed
+
+    @property
+    def is_finished(self) -> bool:
+        """Work happened and the job is over, by either route.
+
+        What a review hangs off — see :class:`Review`. Cancelled, expired and
+        refunded are terminal too, but nothing was done on them, so there is
+        nothing for either side to rate.
+        """
+        return self.state in (JobState.PAID_OUT, JobState.CLOSED)
 
     def get_absolute_url(self) -> str:
         """Where this job lives. Django's convention, and the one thing every

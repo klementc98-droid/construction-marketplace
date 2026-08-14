@@ -164,6 +164,40 @@ def complete(request, pk: int):
 
 @login_required
 @require_POST
+def finish(request, pk: int):
+    """Worker: "the work is done" — on a gig with no escrow."""
+    job = get_object_or_404(Job.objects.select_related("client__user"), pk=pk)
+    worker, is_worker, _ = _roles(request, job)
+    if not is_worker:
+        flash.error(request, "Only the worker on this job can mark it done.")
+        return redirect("worklog:workspace", pk=job.pk)
+    try:
+        services.mark_work_finished(job, worker)
+    except services.WorkflowError as exc:
+        flash.error(request, str(exc))
+        return redirect("worklog:workspace", pk=job.pk)
+    flash.success(
+        request, "Marked as finished. Waiting for the client to confirm."
+    )
+    return redirect("worklog:workspace", pk=job.pk)
+
+
+@login_required
+@require_POST
+def confirm(request, pk: int):
+    """Client: "yes, it happened" — closes a gig with no escrow."""
+    job = get_object_or_404(Job.objects.select_related("client__user"), pk=pk)
+    try:
+        services.confirm_closed(job, request.user)
+    except services.WorkflowError as exc:
+        flash.error(request, str(exc))
+        return redirect("worklog:workspace", pk=job.pk)
+    flash.success(request, "Closed. You can both leave a rating now.")
+    return redirect("worklog:workspace", pk=job.pk)
+
+
+@login_required
+@require_POST
 def end_early(request, pk: int):
     job = get_object_or_404(Job.objects.select_related("client__user"), pk=pk)
     _, is_worker, is_client = _roles(request, job)

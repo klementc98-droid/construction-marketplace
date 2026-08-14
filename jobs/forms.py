@@ -70,11 +70,13 @@ class GigForm(_BaseJobForm):
             "gig_date",
             "gig_hours",
             "fixed_pay",
+            "use_escrow",
             "site_latitude",
             "site_longitude",
         ]
         labels = _BaseJobForm.Meta.labels | {
             "gig_date": _("Date"),
+            "use_escrow": _("How is this paid?"),
             "gig_hours": _("Hours"),
             "fixed_pay": _("Total pay for the day"),
             "site_latitude": _("Site latitude (optional)"),
@@ -82,12 +84,26 @@ class GigForm(_BaseJobForm):
         }
         help_texts = _BaseJobForm.Meta.help_texts | {
             "fixed_pay": _("What the worker is paid in full, before the platform fee."),
+            "use_escrow": _(
+                "Escrow means the money is charged before the worker travels "
+                "and released once you sign the day off. Settling directly is "
+                "between the two of you — we keep the record, not the money."
+            ),
             "site_longitude": _("If you add these, we can sanity-check the worker's "
             "check-in against the site. It is only ever a note on the record — "
             "never a condition of them checking in."),
         }
         widgets = _BaseJobForm.Meta.widgets | {
             "gig_date": forms.DateInput(attrs={"type": "date"}),
+            # Two labelled options, not a lone tick box. An unticked box cannot
+            # tell "settle it ourselves" apart from "did not read the question",
+            # and this one decides whether anybody's money is protected.
+            "use_escrow": forms.RadioSelect(
+                choices=[
+                    (True, _("Hold it in escrow until the day is signed off")),
+                    (False, _("We'll settle it directly — cash, invoice, our own way")),
+                ]
+            ),
             "gig_hours": forms.NumberInput(attrs={"step": "0.5", "min": "0.5"}),
             "fixed_pay": forms.NumberInput(attrs={"step": "1", "min": "0"}),
             "site_latitude": forms.NumberInput(attrs={"step": "any", "placeholder": _("40.712776")}),
@@ -323,12 +339,22 @@ class CounterForm(forms.ModelForm):
             "fixed_pay": _("Total pay for the day"),
             "gig_hours": _("Hours"),
             "gig_date": _("Date"),
+            "use_escrow": _("How is this paid?"),
             "note": _("Why? (optional)"),
         }
         widgets = {
             "fixed_pay": forms.NumberInput(attrs={"step": "1", "min": "1"}),
             "gig_hours": forms.NumberInput(attrs={"step": "0.5", "min": "0.5"}),
             "gig_date": forms.DateInput(attrs={"type": "date"}),
+            # Two labelled options, not a lone tick box. An unticked box cannot
+            # tell "settle it ourselves" apart from "did not read the question",
+            # and this one decides whether anybody's money is protected.
+            "use_escrow": forms.RadioSelect(
+                choices=[
+                    (True, _("Hold it in escrow until the day is signed off")),
+                    (False, _("We'll settle it directly — cash, invoice, our own way")),
+                ]
+            ),
             "note": forms.TextInput(
                 attrs={"placeholder": _("e.g. That's a long day for the price — $280 and it's yours.")}
             ),

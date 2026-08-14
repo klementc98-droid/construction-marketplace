@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from django.db import transaction
+from django.db import models, transaction
 from django.utils import timezone
 
 from config import business_rules as rules
@@ -144,6 +144,80 @@ def complete(job: Job, worker) -> Completion:
         "approve, after which payment releases automatically.",
     )
     return completion
+
+
+@transaction.atomic
+def mark_work_finished(job: Job, worker) -> Job:
+    """The worker says the day is done, on a gig with no escrow.
+
+    Straight from ACCEPTED, because the no-escrow route has no check-in: a
+    check-in exists to start the clock on a hold, and there is no hold. No
+    Completion row either — that record is a payout calculation, and there is
+    no payout to calculate.
+
+    Nothing is settled by this. It puts the job in front of the client and
+    waits, and it waits indefinitely: with no money held there is no window to
+    lapse and nothing for a timer to release.
+    """
+    if job.assigned_worker_id != worker.pk:
+        raise WorkflowError("This isn't your job.")
+    if job.is_escrowed:
+        raise WorkflowError(
+            "This job runs through escrow — check in on site, then mark it done."
+        )
+
+    locked = Job.objects.select_for_update().get(pk=job.pk)
+    assert_transition(locked.state, JobState.COMPLETED, Actor.WORKER)
+    locked.state = JobState.COMPLETED
+    locked.save(update_fields=["state", "updated_at"])
+
+    _notify(
+        job,
+        worker.user,
+        "Marked the work finished. Confirm it when you agree and the job is "
+        "closed — payment is between us, so nothing releases on its own.",
+    )
+    return locked
+
+
+@transaction.atomic
+def confirm_closed(job: Job, user) -> Job:
+    """The client agrees the work happened. Closes a no-escrow gig.
+
+    The second half of the only agreement this route has. CLOSED rather than
+    PAID_OUT: we did not pay anybody, and a state claiming we did would put a
+    payment in the record that never happened.
+
+    Counters move here exactly as they do on a release, so a job settled
+    directly still counts on both track records. Not counting it would make
+    the pair who trust each other look like the pair who have never worked.
+    """
+    if job.client.user_id != user.pk:
+        raise WorkflowError("Only the client who posted this can confirm it.")
+    if job.is_escrowed:
+        raise WorkflowError("This job has money held — approve the release instead.")
+
+    locked = Job.objects.select_for_update().get(pk=job.pk)
+    assert_transition(locked.state, JobState.CLOSED, Actor.CLIENT)
+    locked.state = JobState.CLOSED
+    locked.save(update_fields=["state", "updated_at"])
+
+    worker = job.assigned_worker
+    if worker is not None:
+        type(worker).objects.filter(pk=worker.pk).update(
+            jobs_completed=models.F("jobs_completed") + 1
+        )
+    client = job.client
+    type(client).objects.filter(pk=client.pk).update(
+        jobs_completed=models.F("jobs_completed") + 1
+    )
+
+    _notify(
+        job,
+        user,
+        "Confirmed — the job is closed. You can both leave a rating now.",
+    )
+    return locked
 
 
 @transaction.atomic

@@ -13,10 +13,21 @@ happen before work is recorded. Two machines would allow the pair to disagree,
 and reconciling "job says completed, payment says unfunded" is exactly the bug
 class this design exists to prevent.
 
+    with escrow (the client funds before anyone travels):
+
     posted ─→ accepted ─→ escrow_held ─→ in_progress ─┬─→ completed ─→ paid_out
                                                       └─→ ended_early ─┘
               (any of the above) ─→ disputed ─→ admin resolves ─→ paid_out
                                                                └→ refunded
+
+    without escrow (Job.use_escrow is False — the two settle it themselves):
+
+    posted ─→ accepted ─→ completed ─→ closed
+
+    The short path has no funding step, no check-in and no timer, because none
+    of those mean anything when we are not holding the money. What it keeps is
+    the part that is still true either way: both sides agreeing the work
+    happened, which is what a review later hangs off.
 """
 
 from __future__ import annotations
@@ -69,6 +80,20 @@ class JobState(models.TextChoices):
     REFUNDED = "refunded", _("Refunded")
     """Funds returned to the client. Terminal."""
 
+    CLOSED = "closed", _("Closed — settled directly")
+    """Both sides agreed the work is done, with no money through the platform.
+
+    The terminal state for a gig posted without escrow. Deliberately not
+    PAID_OUT: nothing was paid out *by us*, and a state that claims otherwise
+    would put a payment in the record that never existed — and every report
+    counting money moved would be wrong.
+
+    Reached only when both sides say so. The worker marks the work finished and
+    the client confirms; neither alone closes it, because with no escrow there
+    is no timer and no hold, so mutual agreement is the only thing the record
+    can rest on.
+    """
+
     CANCELLED = "cancelled", _("Cancelled")
     """Called off before any work happened. Terminal."""
 
@@ -95,6 +120,7 @@ STATE_TONES: dict[str, str] = {
     JobState.DISPUTED: "alert",      # needs a human
     JobState.PAID_OUT: "done",
     JobState.REFUNDED: "over",       # finished, but nothing was earned
+    JobState.CLOSED: "done",       # finished, settled between them
     JobState.CANCELLED: "over",
     JobState.EXPIRED: "over",
 }
@@ -154,6 +180,12 @@ TRANSITIONS: dict[str, tuple[Transition, ...]] = {
     ),
     JobState.ACCEPTED: (
         _t(JobState.ESCROW_HELD, "Client funds escrow", Actor.CLIENT, Actor.SYSTEM),
+        # The no-escrow path. Whether a given job may take it is not a question
+        # about the state — it is a question about the row, so the view checks
+        # use_escrow exactly as the check-in view checks who is assigned. The
+        # table has never encoded which row a move applies to, only who may
+        # make it; see the note on direct offers above.
+        _t(JobState.COMPLETED, "Worker marks the work finished", Actor.WORKER),
         # Either side can still walk away before money is committed. This is a
         # feature: an unfunded acceptance is not yet a promise worth enforcing.
         _t(JobState.CANCELLED, "Cancel before funding", Actor.CLIENT, Actor.WORKER, Actor.ADMIN),
@@ -180,6 +212,9 @@ TRANSITIONS: dict[str, tuple[Transition, ...]] = {
     ),
     JobState.COMPLETED: (
         _t(JobState.PAID_OUT, "Client approves release", Actor.CLIENT),
+        # Same move, different meaning, on a job with no escrow: the client is
+        # agreeing the work happened, not releasing anything.
+        _t(JobState.CLOSED, "Client confirms — nothing to release", Actor.CLIENT),
         # Silence is approval. A client who never logs in again must not be
         # able to hold a worker's pay hostage indefinitely.
         _t(JobState.PAID_OUT, "Approval window lapsed — auto-release", Actor.SYSTEM),
@@ -192,6 +227,7 @@ TRANSITIONS: dict[str, tuple[Transition, ...]] = {
         _t(JobState.REFUNDED, "Admin resolves for client", Actor.ADMIN),
     ),
     # Terminal states have no exits.
+    JobState.CLOSED: (),
     JobState.PAID_OUT: (),
     JobState.REFUNDED: (),
     JobState.CANCELLED: (),
