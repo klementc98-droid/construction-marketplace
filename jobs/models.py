@@ -414,17 +414,21 @@ class Job(TimestampedModel):
     def can_be_reviewed_by(self, user) -> bool:
         """Is a review from this person due, and not already written?
 
-        Three conditions, and the date is the one worth spelling out: a gig can
-        close before its day — a client confirming early, or a cancelled-then-
-        closed record — and rating somebody for work that has not happened yet
-        is a score about nothing.
+        Being finished is the whole test. It used to also require the gig date
+        to have passed, which sounded right and was wrong: a job only reaches
+        PAID_OUT or CLOSED because both sides said the work happened — the
+        client released the money, or both pressed "job done". Asking the
+        calendar to agree after that left people staring at a finished job with
+        no way to rate it, which is exactly what it did.
+
+        The protection that matters is still here, in is_finished: rating
+        before the money has moved would put a thumb on the scale of the
+        payment itself.
         """
-        if not user.is_authenticated or not self.is_finished:
+        if not getattr(user, "is_authenticated", False) or not self.is_finished:
             return False
         direction = self.review_direction_for(user)
         if direction is None:
-            return False
-        if self.gig_date and self.gig_date > timezone.localdate():
             return False
         return not self.reviews.filter(direction=direction).exists()
 

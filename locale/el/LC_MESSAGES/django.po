@@ -51,9 +51,27 @@ msgid_plural "%(n)s days"
 msgstr[0] "%(n)s ημέρα"
 msgstr[1] "%(n)s ημέρες"
 
+#: templates/jobs/_waiting.html
+msgid "%(n)s finished job to rate"
+msgid_plural "%(n)s finished jobs to rate"
+msgstr[0] "%(n)s ολοκληρωμένη δουλειά προς αξιολόγηση"
+msgstr[1] "%(n)s ολοκληρωμένες δουλειές προς αξιολόγηση"
+
 #: templates/accounts/_feed_items.html
 msgid "%(n)s hrs"
 msgstr "%(n)s ώρες"
+
+#: templates/jobs/_waiting.html
+msgid "%(n)s job marked done, waiting for you to agree"
+msgid_plural "%(n)s jobs marked done, waiting for you to agree"
+msgstr[0] "%(n)s δουλειά σημάνθηκε ως ολοκληρωμένη, περιμένει τη συμφωνία σου"
+msgstr[1] "%(n)s δουλειές σημάνθηκαν ως ολοκληρωμένες, περιμένουν τη συμφωνία σου"
+
+#: templates/jobs/_waiting.html
+msgid "%(n)s job offered to you"
+msgid_plural "%(n)s jobs offered to you"
+msgstr[0] "%(n)s δουλειά σού προσφέρθηκε"
+msgstr[1] "%(n)s δουλειές σού προσφέρθηκαν"
 
 #: jobs/models.py
 msgid "%(pay)s for %(hours)s hours"
@@ -2293,6 +2311,10 @@ msgstr "Αναμονή να χρηματοδοτήσει ο πελάτης το 
 #: jobs/models.py
 msgid "Waiting on the worker"
 msgstr "Αναμονή για τον τεχνίτη"
+
+#: templates/jobs/_waiting.html
+msgid "Waiting on you"
+msgstr "Περιμένουν εσένα"
 
 #: templates/core/about.html
 msgid "Want the detail?"

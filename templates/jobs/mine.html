@@ -3,6 +3,8 @@
 {% block title %}{% translate "Your jobs — Construction's Finest" %}{% endblock %}
 
 {% block content %}
+  {% include "jobs/_waiting.html" %}
+
   <h1>{% translate "Your jobs" %}</h1>
 
   {% comment %} Offers first, above everything. A gig offered for Thursday is worth nothing

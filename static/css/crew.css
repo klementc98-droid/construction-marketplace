@@ -2103,6 +2103,42 @@ a.job-row.pick:hover .card::after {
 }
 .feed-head h1 { margin-bottom: 10px; }
 
+/* --- what is waiting on you ---------------------------------------------
+   Top of the page, accent-edged, and absent entirely when there is nothing.
+   An empty "0 waiting" is a line that teaches people to stop reading the
+   place notices appear. */
+
+.waiting {
+  margin-bottom: 18px;
+  border-left: 3px solid var(--accent);
+}
+.waiting-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0 0 8px;
+}
+.waiting-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: var(--r-full);
+  background: var(--accent);
+  color: var(--accent-fg);
+  font-size: 12px;
+  font-weight: 700;
+}
+.waiting-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 14.5px;
+  line-height: 1.75;
+}
+.waiting-list a { color: var(--accent-ink); font-weight: 600; }
+
 /* --- the home page's two sections ---------------------------------------
    Find workers, then find work. Each is a heading, a line of context and a
    way through to the full board. The rule under the heading is what makes

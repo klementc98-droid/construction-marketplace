@@ -15,6 +15,7 @@ from config import business_rules as rules
 from core.models import Region, Trade
 from core.state_machine import JobState
 from jobs.models import Job
+from jobs.waiting import waiting_for
 
 from .forms import (
     AccountDetailsForm,
@@ -61,7 +62,13 @@ def home(request):
     )
     page = Paginator(jobs, FEED_PAGE_SIZE).get_page(request.GET.get("page"))
 
-    context = {"page": page, "total": jobs.count()}
+    context = {
+        "page": page,
+        "total": jobs.count(),
+        # Same panel as "Mine", from the same counts — the answer to "is
+        # anything waiting on me?" must not depend on which page you opened.
+        "waiting": waiting_for(request.user),
+    }
 
     # Finished work is not shown here at all. It used to pad the end of the
     # feed so an empty board did not read as a blank screen, but a board full

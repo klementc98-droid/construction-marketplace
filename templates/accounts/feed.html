@@ -54,10 +54,9 @@
   somebody. The scroll loader builds its request from window.location, so
   ?show= carries through to it untouched.
 
-  Workers used to be filler at the end of the job feed, rendered only once the
-  open work ran out — so on any board with something posted, half of what this
-  site does never appeared at all.
   {% endcomment %}
+  {% include "jobs/_waiting.html" %}
+
   <nav class="home-tabs" aria-label="{% translate "What to browse" %}">
     <a class="home-tab{% if showing == 'work' %} on{% endif %}"
        href="{% url 'accounts:home' %}"

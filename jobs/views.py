@@ -36,6 +36,7 @@ from .forms import (
     OfferResponseForm,
     WorkerFilterForm,
 )
+from .waiting import waiting_for
 from .models import (
     Application,
     collapse_groups,
@@ -1048,6 +1049,7 @@ def mine(request):
         request,
         "jobs/mine.html",
         {
+            "waiting": waiting_for(request.user),
             # Collapsed, so a four-day booking is one line here too. The
             # client posted one thing and should see one thing.
             "posted": (

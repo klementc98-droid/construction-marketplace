@@ -111,7 +111,6 @@ class GigForm(_BaseJobForm):
             "site_longitude",
         ]
         labels = _BaseJobForm.Meta.labels | {
-            "gig_date": _("Date"),
             "use_escrow": _("How is this paid?"),
             "gig_hours": _("Hours"),
             "fixed_pay": _("Total pay for the day"),
@@ -130,7 +129,6 @@ class GigForm(_BaseJobForm):
             "never a condition of them checking in."),
         }
         widgets = _BaseJobForm.Meta.widgets | {
-            "gig_date": forms.DateInput(attrs={"type": "date"}),
             # Two labelled options, not a lone tick box. An unticked box cannot
             # tell "settle it ourselves" apart from "did not read the question",
             # and this one decides whether anybody's money is protected.

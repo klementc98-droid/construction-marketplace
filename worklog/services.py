@@ -215,8 +215,7 @@ def confirm_closed(job: Job, user) -> Job:
     _notify(
         job,
         user,
-        "Confirmed — the job is closed. Once the day has passed you can "
-        "both leave a rating.",
+        "Confirmed — the job is closed. You can both leave a rating now.",
     )
     return locked
 

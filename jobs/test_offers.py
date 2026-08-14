@@ -562,14 +562,20 @@ class ReviewTests(JobFactoryMixin, TestCase):
         self.rate(job, self.client_user)
         self.assertEqual(Review.objects.count(), 0)
 
-    def test_a_job_closed_before_its_day_waits_for_the_day(self):
-        """A client confirming early must not unlock a score about nothing."""
+    def test_a_job_closed_before_its_day_can_still_be_rated(self):
+        """Being finished is the whole test.
+
+        This used to also require the gig date to have passed, which sounded
+        right and was wrong: a job only reaches CLOSED because both sides said
+        the work happened. Asking the calendar to agree after that left people
+        staring at a finished job with no way to rate it.
+        """
         from jobs.models import Review
 
-        job = self.finished_job(days_ago=-2)          # closes, day still ahead
-        self.assertFalse(job.can_be_reviewed_by(self.client_user))
+        job = self.finished_job(days_ago=-2)          # closed, day still ahead
+        self.assertTrue(job.can_be_reviewed_by(self.client_user))
         self.rate(job, self.client_user)
-        self.assertEqual(Review.objects.count(), 0)
+        self.assertEqual(Review.objects.count(), 1)
 
     def test_a_stranger_gets_a_404_not_a_refusal(self):
         """Confirming the job exists would leak who is hiring, and for what."""

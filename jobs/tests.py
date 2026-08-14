@@ -427,3 +427,67 @@ class BookingDisplayTests(JobFactoryMixin, TestCase):
         made = self.booking(3)
         self.assertEqual(Job.objects.filter(offer_group=made[0].offer_group).count(), 3)
         self.assertEqual(len({j.pk for j in made}), 3)
+
+
+class WaitingPanelTests(JobFactoryMixin, TestCase):
+    """"Waiting on you", on both the home page and Mine.
+
+    The three things that can sit unanswered here all cost somebody real time
+    when they go unseen, and none of them announce themselves — they sit
+    inside a list you have to think to open.
+    """
+
+    def test_nothing_waiting_renders_nothing(self):
+        """An empty "0 waiting" teaches people to stop reading the notice."""
+        self.client.force_login(self.client_user)
+        for url in (reverse("accounts:home"), reverse("jobs:mine")):
+            with self.subTest(url=url):
+                self.assertNotContains(self.client.get(url), "Waiting on you")
+
+    def test_a_finished_job_to_rate_is_counted(self):
+        from core.state_machine import JobState
+        from jobs.waiting import waiting_for
+
+        job = self.gig()
+        job.state = JobState.CLOSED
+        job.assigned_worker = self.worker_profile
+        job.save(update_fields=["state", "assigned_worker"])
+
+        self.assertEqual(waiting_for(self.client_user).ratings, 1)
+        self.assertEqual(waiting_for(self.worker_user).ratings, 1)
+
+    def test_it_stops_counting_once_rated(self):
+        from core.state_machine import JobState
+        from jobs.models import Review, ReviewDirection
+        from jobs.waiting import waiting_for
+
+        job = self.gig()
+        job.state = JobState.CLOSED
+        job.assigned_worker = self.worker_profile
+        job.save(update_fields=["state", "assigned_worker"])
+        Review.objects.create(
+            job=job, author=self.client_user,
+            direction=ReviewDirection.CLIENT_ON_WORKER, rating=5,
+        )
+
+        self.assertEqual(waiting_for(self.client_user).ratings, 0)
+        self.assertEqual(waiting_for(self.worker_user).ratings, 1)
+
+    def test_it_shows_on_both_pages(self):
+        from core.state_machine import JobState
+
+        job = self.gig()
+        job.state = JobState.CLOSED
+        job.assigned_worker = self.worker_profile
+        job.save(update_fields=["state", "assigned_worker"])
+
+        self.client.force_login(self.client_user)
+        for url in (reverse("accounts:home"), reverse("jobs:mine")):
+            with self.subTest(url=url):
+                self.assertContains(self.client.get(url), "Waiting on you")
+
+    def test_a_signed_out_visitor_is_never_asked_for_anything(self):
+        from jobs.waiting import waiting_for
+        from django.contrib.auth.models import AnonymousUser
+
+        self.assertFalse(waiting_for(AnonymousUser()))

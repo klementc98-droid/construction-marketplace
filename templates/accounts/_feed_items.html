@@ -75,19 +75,10 @@ arrived with the page or afterwards.
     <span class="sr-only" role="status">{% translate "Loading more work…" %}</span>
   </div>
 {% else %}
-  {% comment %} Past the live jobs. Everything from here is explicitly not available —
-     labelled hard, with no Apply button, because a filler card that looked
-     applicable would waste somebody's afternoon.
-  {% endcomment %}
-  {% comment %} Workers used to be filler here. They have their own section on the
-     home page now — see feed.html. Nothing worker-shaped belongs in this file:
-     the scroll loader appends it once per page, so anything here arrives again
-     every time somebody scrolls.
-  {% endcomment %}
-  {% comment %} Finished work used to be listed here as "Recently filled", to pad the
-     end of the feed. It is gone: a board carrying jobs nobody can apply to
-     makes the reader check each card before finding out it is over. The
-     records themselves are untouched — see the note in accounts.views.
+  {% comment %} Past the live jobs. Nothing is appended here: workers have their own
+     tab on the home page, and finished work is not listed at all. The scroll
+     loader appends this file once per page, so anything added here arrives
+     again every time somebody scrolls.
   {% endcomment %}
   {% if page.number > 1 %}
     <p class="empty" style="padding:30px 16px">
