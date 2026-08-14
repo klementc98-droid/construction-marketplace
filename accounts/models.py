@@ -354,8 +354,8 @@ class WorkerProfile(ReputationMixin, TimestampedModel):
     open_to_full_time = models.BooleanField(
         null=True,
         blank=True,
-        verbose_name="Open to a full-time job?",
-        help_text="Full-time positions are posted as standing jobs, not day gigs.",
+        verbose_name=_("Open to a full-time job?"),
+        help_text=_("Full-time positions are posted as standing jobs, not day gigs."),
     )
 
     #: What this worker is after *right now*, in their own words.
@@ -367,8 +367,8 @@ class WorkerProfile(ReputationMixin, TimestampedModel):
     seeking = models.CharField(
         max_length=200,
         blank=True,
-        verbose_name="What are you looking for right now?",
-        help_text="Shown at the top of your profile. Change it as often as you like.",
+        verbose_name=_("What are you looking for right now?"),
+        help_text=_("Shown at the top of your profile. Change it as often as you like."),
     )
 
     bio = models.TextField(blank=True, max_length=2000)
@@ -378,7 +378,7 @@ class WorkerProfile(ReputationMixin, TimestampedModel):
         blank=True,
         null=True,
         validators=[FileExtensionValidator(list(rules.ALLOWED_CV_EXTENSIONS))],
-        help_text="Optional PDF résumé.",
+        help_text=_("Optional PDF résumé."),
     )
 
     # -- reputation counters (written by phases 4-6) -----------------------

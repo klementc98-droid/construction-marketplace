@@ -1330,6 +1330,112 @@ ul.checks input { width: 18px; height: 18px; flex: none; accent-color: var(--acc
 
 .datelist { margin-top: 6px; }
 
+/* --- the multi-date calendar -------------------------------------------
+   Drawn by crew.js rather than handed to <input type="date">, because a
+   native picker closes on the first choice and booking three days should be
+   three taps rather than three rounds of open-pick-close. */
+
+.datecal { position: relative; margin-top: 6px; }
+
+.datecal-toggle {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-top: 8px;
+  padding: 0 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-md);
+  background: var(--panel);
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 14.5px;
+  font-weight: 620;
+  cursor: pointer;
+}
+.datecal-toggle:hover { border-color: var(--accent); color: var(--accent); }
+.datecal-toggle:focus-visible { outline: none; box-shadow: var(--ring); }
+
+/* Over the form, not in it: a calendar that pushes the pay field down the
+   page every time it opens loses the reader's place. */
+.datecal-panel {
+  position: absolute;
+  z-index: 45;
+  top: calc(100% + 6px);
+  left: 0;
+  width: min(320px, calc(100vw - 32px));
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--panel);
+  box-shadow: var(--shadow-lg);
+}
+
+.datecal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.datecal-month { font-size: 14.5px; letter-spacing: -0.01em; }
+.datecal-nav {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--panel-2);
+  color: var(--fg);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+}
+.datecal-nav:hover { border-color: var(--accent); color: var(--accent); }
+.datecal-nav:focus-visible { outline: none; box-shadow: var(--ring); }
+
+.datecal-week,
+.datecal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+.datecal-week {
+  margin-bottom: 4px;
+  color: var(--dim);
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.datecal-day {
+  aspect-ratio: 1;
+  min-height: 36px;          /* a thumb target, not a link */
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 13.5px;
+  cursor: pointer;
+}
+.datecal-day:hover:not(:disabled) { background: var(--panel-2); }
+.datecal-day:focus-visible { outline: none; box-shadow: var(--ring); }
+.datecal-day:disabled { color: var(--dimmer); cursor: default; }
+.datecal-day.today { border-color: var(--line-strong); font-weight: 700; }
+.datecal-day.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-fg);
+  font-weight: 700;
+}
+
+.datecal-foot {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.datecal-foot .btn { width: 100%; min-height: 40px; }
+
 .datelist-chips {
   display: flex;
   flex-wrap: wrap;

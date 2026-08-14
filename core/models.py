@@ -67,7 +67,7 @@ class Trade(TimestampedModel):
     #: admin — not a code change in every template that touches profiles.
     requires_license = models.BooleanField(
         default=False,
-        help_text="Prompt for a licence number on worker profiles in this trade.",
+        help_text=_("Prompt for a licence number on worker profiles in this trade."),
     )
 
     display_order = models.PositiveSmallIntegerField(default=100)

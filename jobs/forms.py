@@ -12,7 +12,7 @@ from django import forms
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
-from core.dates import parse_date_list
+from core.dates import date_picker_attrs, parse_date_list
 from core.models import Region, Trade
 
 from .models import Application, Counter, Job, JobType, PositionType
@@ -43,18 +43,18 @@ class _BaseJobForm(_RegionDefaultMixin):
         model = Job
         fields = ["trade", "title", "description", "region", "location"]
         labels = {
-            "trade": "Trade",
-            "title": "Job title",
-            "description": "What's the work?",
-            "location": "Where in town?",
+            "trade": _("Trade"),
+            "title": _("Job title"),
+            "description": _("What's the work?"),
+            "location": _("Where in town?"),
         }
         help_texts = {
-            "title": "How it appears in the list — be specific.",
-            "location": "Neighbourhood, cross streets, or site name.",
+            "title": _("How it appears in the list — be specific."),
+            "location": _("Neighbourhood, cross streets, or site name."),
         }
         widgets = {
             "description": forms.Textarea(attrs={"rows": 6}),
-            "title": forms.TextInput(attrs={"placeholder": "e.g. Framing carpenter, 2-storey rebuild"}),
+            "title": forms.TextInput(attrs={"placeholder": _("e.g. Framing carpenter, 2-storey rebuild")}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -74,24 +74,24 @@ class GigForm(_BaseJobForm):
             "site_longitude",
         ]
         labels = _BaseJobForm.Meta.labels | {
-            "gig_date": "Date",
-            "gig_hours": "Hours",
-            "fixed_pay": "Total pay for the day",
-            "site_latitude": "Site latitude (optional)",
-            "site_longitude": "Site longitude (optional)",
+            "gig_date": _("Date"),
+            "gig_hours": _("Hours"),
+            "fixed_pay": _("Total pay for the day"),
+            "site_latitude": _("Site latitude (optional)"),
+            "site_longitude": _("Site longitude (optional)"),
         }
         help_texts = _BaseJobForm.Meta.help_texts | {
-            "fixed_pay": "What the worker is paid in full, before the platform fee.",
-            "site_longitude": "If you add these, we can sanity-check the worker's "
+            "fixed_pay": _("What the worker is paid in full, before the platform fee."),
+            "site_longitude": _("If you add these, we can sanity-check the worker's "
             "check-in against the site. It is only ever a note on the record — "
-            "never a condition of them checking in.",
+            "never a condition of them checking in."),
         }
         widgets = _BaseJobForm.Meta.widgets | {
             "gig_date": forms.DateInput(attrs={"type": "date"}),
             "gig_hours": forms.NumberInput(attrs={"step": "0.5", "min": "0.5"}),
             "fixed_pay": forms.NumberInput(attrs={"step": "1", "min": "0"}),
-            "site_latitude": forms.NumberInput(attrs={"step": "any", "placeholder": "40.712776"}),
-            "site_longitude": forms.NumberInput(attrs={"step": "any", "placeholder": "-74.005974"}),
+            "site_latitude": forms.NumberInput(attrs={"step": "any", "placeholder": _("40.712776")}),
+            "site_longitude": forms.NumberInput(attrs={"step": "any", "placeholder": _("-74.005974")}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -121,13 +121,13 @@ class StandingForm(_BaseJobForm):
             "rate_max",
         ]
         labels = _BaseJobForm.Meta.labels | {
-            "position_type": "Type of position",
-            "rate_type": "Paid by",
-            "rate_min": "Rate",
-            "rate_max": "Up to (optional)",
+            "position_type": _("Type of position"),
+            "rate_type": _("Paid by"),
+            "rate_min": _("Rate"),
+            "rate_max": _("Up to (optional)"),
         }
         help_texts = _BaseJobForm.Meta.help_texts | {
-            "rate_max": "Leave blank if it is a single flat rate.",
+            "rate_max": _("Leave blank if it is a single flat rate."),
         }
         widgets = _BaseJobForm.Meta.widgets | {
             "rate_min": forms.NumberInput(attrs={"step": "1", "min": "0"}),
@@ -182,25 +182,25 @@ class OfferForm(GigForm):
         error_messages={"required": _("Pick at least one day.")},
         widget=forms.TextInput(
             attrs={
-                "placeholder": "2026-08-04, 2026-08-05",
+                "placeholder": _("2026-08-04, 2026-08-05"),
                 "data-date-list": "",
             }
         ),
     )
 
     note = forms.CharField(
-        label="Anything they should know?",
+        label=_("Anything they should know?"),
         required=False,
         max_length=1500,
         widget=forms.Textarea(
             attrs={
                 "rows": 5,
-                "placeholder": "Why you're asking them, what the day looks like, "
-                "where to park, who to ask for on site…",
+                "placeholder": _("Why you're asking them, what the day looks like, "
+                "where to park, who to ask for on site…"),
             }
         ),
-        help_text="Only this worker sees it. The description above is the job "
-        "itself and stays with the post.",
+        help_text=_("Only this worker sees it. The description above is the job "
+        "itself and stays with the post."),
     )
 
     #: A ceiling, not a rule about how people work. Each day written here is a
@@ -226,10 +226,10 @@ class OfferForm(GigForm):
         order.insert(order.index("gig_hours"), "gig_dates")
         self.order_fields(order + ["note"])
 
-        # The value crew.js reads as the calendar's `min`, so the picker cannot
-        # offer a day that clean_gig_dates would reject.
-        self.fields["gig_dates"].widget.attrs["data-date-list"] = (
-            timezone.localdate().isoformat()
+        # The calendar's floor and its wording, both from the server — see
+        # core.dates.date_picker_attrs.
+        self.fields["gig_dates"].widget.attrs.update(
+            date_picker_attrs(floor=timezone.localdate())
         )
 
         if worker is None:
@@ -294,11 +294,11 @@ class OfferResponseForm(forms.Form):
     """
 
     response_note = forms.CharField(
-        label="Add a note (optional)",
+        label=_("Add a note (optional)"),
         required=False,
         max_length=300,
         widget=forms.Textarea(
-            attrs={"rows": 3, "placeholder": "e.g. Can't do the 14th, but the 15th works."}
+            attrs={"rows": 3, "placeholder": _("e.g. Can't do the 14th, but the 15th works.")}
         ),
     )
 
@@ -320,17 +320,17 @@ class CounterForm(forms.ModelForm):
         model = Counter
         fields = ["fixed_pay", "gig_hours", "gig_date", "note"]
         labels = {
-            "fixed_pay": "Total pay for the day",
-            "gig_hours": "Hours",
-            "gig_date": "Date",
-            "note": "Why? (optional)",
+            "fixed_pay": _("Total pay for the day"),
+            "gig_hours": _("Hours"),
+            "gig_date": _("Date"),
+            "note": _("Why? (optional)"),
         }
         widgets = {
             "fixed_pay": forms.NumberInput(attrs={"step": "1", "min": "1"}),
             "gig_hours": forms.NumberInput(attrs={"step": "0.5", "min": "0.5"}),
             "gig_date": forms.DateInput(attrs={"type": "date"}),
             "note": forms.TextInput(
-                attrs={"placeholder": "e.g. That's a long day for the price — $280 and it's yours."}
+                attrs={"placeholder": _("e.g. That's a long day for the price — $280 and it's yours.")}
             ),
         }
 
@@ -382,7 +382,7 @@ class ApplicationForm(forms.ModelForm):
             "message": forms.Textarea(
                 attrs={
                     "rows": 5,
-                    "placeholder": "Optional — what makes you right for this one?",
+                    "placeholder": _("Optional — what makes you right for this one?"),
                 }
             )
         }

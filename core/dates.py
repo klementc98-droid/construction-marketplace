@@ -15,10 +15,41 @@ than silently having their date dropped.
 
 from __future__ import annotations
 
+import json
 from datetime import date, datetime
 
 from django import forms
 from django.utils.translation import gettext as _
+
+
+def date_picker_attrs(*, floor: date) -> dict[str, str]:
+    """Widget attrs for the calendar in ``crew.js``.
+
+    The script draws its own calendar, so the words on it have to come from
+    somewhere translatable. They are handed over as one JSON attribute rather
+    than through a JavaScript catalogue: it is a handful of strings on two
+    forms, and a catalogue would be a second request and a second place for
+    the language to be decided.
+
+    ``data-date-list`` carries the server's today, in the app's timezone. Using
+    the browser's clock instead would let someone on a device set to yesterday
+    offer a day the server will reject.
+    """
+    return {
+        "data-date-list": floor.isoformat(),
+        "data-date-list-i18n": json.dumps(
+            {
+                "open": _("Pick days"),
+                "more": _("Add or remove days"),
+                "none": _("No days picked yet."),
+                "done": _("Done"),
+                "remove": _("Remove"),
+                "prev": _("Previous month"),
+                "next": _("Next month"),
+            },
+            ensure_ascii=False,
+        ),
+    }
 
 
 def parse_date_list(raw: str | None, *, today: date) -> list[date]:

@@ -49,9 +49,16 @@ STRING_LITERAL = re.compile(r"(?P<q>[\"'])(?P<text>(?:\\.|(?!(?P=q)).)*)(?P=q)",
 #: Matching only the first one produced a msgid that could never match the
 #: string actually passed at runtime — a catalogue entry translated with care
 #: and never once used.
+#: One literal, either quoting style. Spelled out per style rather than as a
+#: single character class, because "What's the work?" is a double-quoted string
+#: containing a single quote — a class of "not either quote" stops dead on the
+#: apostrophe and the entry never reaches the catalogue. That is a silent miss:
+#: no error, just a label that stays English however carefully it was wrapped.
+_LITERAL = r"""(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')"""
+
 PYTHON_SIMPLE = re.compile(
     r"(?:\b_|\bgettext|\bgettext_lazy|\bpgettext)\s*\(\s*"
-    r"(?P<run>(?:[\"'](?:\\.|[^\"'\\])*[\"']\s*)+)",
+    r"(?P<run>" + _LITERAL + r"(?:\s*" + _LITERAL + r")*)",
     re.S,
 )
 

@@ -149,7 +149,7 @@ class Job(TimestampedModel):
         max_length=16,
         choices=RateType.choices,
         blank=True,
-        help_text="Per hour or per day.",
+        help_text=_("Per hour or per day."),
     )
     rate_min = models.DecimalField(
         max_digits=8,
@@ -164,7 +164,7 @@ class Job(TimestampedModel):
         null=True,
         blank=True,
         validators=[MinValueValidator(Decimal("0"))],
-        help_text="Leave blank for a single flat rate.",
+        help_text=_("Leave blank for a single flat rate."),
     )
     position_type = models.CharField(
         max_length=16, choices=PositionType.choices, blank=True
@@ -178,7 +178,7 @@ class Job(TimestampedModel):
         null=True,
         blank=True,
         validators=[MinValueValidator(Decimal("0.5"))],
-        help_text="Expected length of the day.",
+        help_text=_("Expected length of the day."),
     )
     #: What the client pays, total, for the whole gig. A fixed price rather
     #: than rate x hours: it is the number both sides agree on up front, and
@@ -210,7 +210,7 @@ class Job(TimestampedModel):
     is_private = models.BooleanField(
         default=False,
         db_index=True,
-        help_text="Direct offers are not listed on the public board.",
+        help_text=_("Direct offers are not listed on the public board."),
     )
 
     objects = JobQuerySet.as_manager()
@@ -497,7 +497,7 @@ class Offer(TimestampedModel):
     note = models.TextField(
         max_length=1500,
         blank=True,
-        help_text="Anything they should know before saying yes.",
+        help_text=_("Anything they should know before saying yes."),
     )
     #: The worker's answer in their own words. Optional: "no" is a complete
     #: answer and nobody should have to justify it to get out of the form.
@@ -670,7 +670,7 @@ class Counter(TimestampedModel):
         null=True,
         blank=True,
         validators=[MinValueValidator(Decimal("1"))],
-        help_text="Total for the day.",
+        help_text=_("Total for the day."),
     )
     gig_date = models.DateField(null=True, blank=True)
     gig_hours = models.DecimalField(
@@ -684,7 +684,7 @@ class Counter(TimestampedModel):
     note = models.CharField(
         max_length=300,
         blank=True,
-        help_text="Why — one line is plenty.",
+        help_text=_("Why — one line is plenty."),
     )
 
     status = models.CharField(
@@ -791,7 +791,7 @@ class Application(TimestampedModel):
     message = models.TextField(
         max_length=1500,
         blank=True,
-        help_text="Optional. What makes you right for this one?",
+        help_text=_("Optional. What makes you right for this one?"),
     )
     status = models.CharField(
         max_length=16,

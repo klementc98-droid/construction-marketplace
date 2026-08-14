@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 {% load i18n %}
-{% block title %}Offer {{ worker.user }} a job — Construction's Finest{% endblock %}
+{% block title %}{% blocktranslate with who=worker.user %}Offer {{ who }} a job{% endblocktranslate %} — Construction's Finest{% endblock %}
 
 {% block content %}
-  <h1>Offer {{ worker.user.short_name|default:worker.user }} a job</h1>
+  <h1>{% blocktranslate with who=worker.user.short_name|default:worker.user %}Offer {{ who }} a job{% endblocktranslate %}</h1>
   <p class="lede">
     {% translate "A gig written for them alone. It never goes on the public board — only they can see it, and only they can accept it." %}
   </p>
@@ -25,9 +25,11 @@
         <p class="avail avail-{{ worker.availability_tone }}">
           <span class="avail-dot" aria-hidden="true"></span>{{ worker.availability_headline }}
         </p>
+        {% comment %} Whole clauses, not "yr" and "in the trade" round a number:
+           the count sits in a different place in other languages. {% endcomment %}
         <p class="row-meta" style="margin-top:5px">
-          {{ worker.years_experience }} yr{{ worker.years_experience|pluralize }} in the trade
-          <span class="sep">·</span>{{ worker.jobs_completed }} job{{ worker.jobs_completed|pluralize }} done on Construction's Finest
+          {% blocktranslate count years=worker.years_experience %}{{ years }} yr in the trade{% plural %}{{ years }} yrs in the trade{% endblocktranslate %}
+          <span class="sep">·</span>{% blocktranslate count jobs=worker.jobs_completed %}{{ jobs }} job done here{% plural %}{{ jobs }} jobs done here{% endblocktranslate %}
           <span class="sep">·</span>
           {% if worker.average_rating %}{{ worker.average_rating }}★{% else %}{% translate "New here" %}{% endif %}
         </p>
@@ -43,12 +45,11 @@
       <p class="note">
         {% translate "They've said they're free on" %}
         {% for d in worker.upcoming_dates %}{{ d.date|date:"D j M" }}{% if not forloop.last %}, {% endif %}{% endfor %}.
-        Those are the days to aim for — you can still ask about any other.
+        {% translate "Those are the days to aim for — you can still ask about any other." %}
       </p>
     {% elif worker.available_from %}
       <p class="note">
-        Booked until {{ worker.busy_until|date:"D j M" }}, free from
-        {{ worker.available_from|date:"D j M" }}.
+        {% blocktranslate with until=worker.busy_until|date:"D j M" from_day=worker.available_from|date:"D j M" %}Booked until {{ until }}, free from {{ from_day }}.{% endblocktranslate %}
       </p>
     {% endif %}
   </div>
