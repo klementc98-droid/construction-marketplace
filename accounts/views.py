@@ -63,16 +63,15 @@ def home(request):
 
     context = {"page": page, "total": jobs.count()}
 
-    # Once the open work runs out the feed keeps going rather than stopping at
-    # a blank screen. Everything below the live jobs is clearly labelled as
-    # not-available — a filler card that looked applicable would be worse than
-    # an empty page.
-    if not page.has_next():
-        context["filler_jobs"] = (
-            Job.objects.exclude(state=JobState.POSTED)
-            .select_related("trade", "region", "client__user")
-            .order_by("-created_at")[:6]
-        )
+    # Finished work is not shown here at all. It used to pad the end of the
+    # feed so an empty board did not read as a blank screen, but a board full
+    # of jobs nobody can apply to is worse than a short one — the reader has to
+    # check each card before finding out it is over. The workers tab is what
+    # fills the page now when there is little work on it.
+    #
+    # Nothing is deleted: a finished job stays on both parties' "Mine" and in
+    # the track record on their profiles, which is the whole basis of the trust
+    # display. It simply stops being browsable.
 
     if request.GET.get("partial"):
         return render(request, "accounts/_feed_items.html", context)

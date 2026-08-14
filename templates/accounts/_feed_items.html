@@ -84,30 +84,12 @@ arrived with the page or afterwards.
      the scroll loader appends it once per page, so anything here arrives again
      every time somebody scrolls.
   {% endcomment %}
-  {% if filler_jobs %}
-    <h2>{% translate "Recently filled" %}</h2>
-    <p class="muted" style="margin:-4px 0 12px; font-size:13.5px">
-      {% translate "Closed already — here to show the kind of work that goes up." %}
-    </p>
-    {% for job in filler_jobs %}
-      <a class="job-row faded" href="{% url 'jobs:detail' job.pk %}">
-        <div class="card">
-          <div class="row-top">
-            <span class="title">{{ job.title }}</span>
-            <span class="pay dim">{{ job.pay_display }}</span>
-          </div>
-          <div class="row-meta">
-            <span class="badge state-{{ job.state_tone }}">{{ job.get_state_display }}</span>
-            {{ job.trade }}
-            {% if job.location %} · {{ job.location }}{% endif %}
-            · {{ job.created_at|timesince }} ago
-          </div>
-        </div>
-      </a>
-    {% endfor %}
-  {% endif %}
-
-  {% if page.number > 1 or filler_jobs %}
+  {% comment %} Finished work used to be listed here as "Recently filled", to pad the
+     end of the feed. It is gone: a board carrying jobs nobody can apply to
+     makes the reader check each card before finding out it is over. The
+     records themselves are untouched — see the note in accounts.views.
+  {% endcomment %}
+  {% if page.number > 1 %}
     <p class="empty" style="padding:30px 16px">
       {% translate "That's everything for now." %}
       {% if user.is_authenticated and user.is_client %}

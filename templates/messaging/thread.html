@@ -64,6 +64,22 @@
      printed at the head of each run, because side alone means nothing to a
      screen reader.
   {% endcomment %}
+  {% comment %} Above the thread, because the thread is newest-first: the box you
+     type into and the message you just sent are the same end of the page.
+     #dm-end is what the send redirect anchors to.
+  {% endcomment %}
+  <div id="dm-end"></div>
+
+  <form method="post" class="dm-form">
+    {% csrf_token %}
+    <label class="sr-only" for="{{ form.body.id_for_label }}">{% translate "Message" %}</label>
+    <div class="dm-compose">
+      {{ form.body }}
+      <button class="btn dm-send" type="submit">{% translate "Send" %}</button>
+    </div>
+    {{ form.body.errors }}
+  </form>
+
   <div class="thread">
     {% for message in messages_list %}
       {% ifchanged message.created_at|date:"Y-m-d" %}
@@ -103,16 +119,4 @@
     {% endfor %}
   </div>
 
-  {# What the send redirect anchors to, so you land on your own message. #}
-  <div id="dm-end"></div>
-
-  <form method="post" class="dm-form">
-    {% csrf_token %}
-    <label class="sr-only" for="{{ form.body.id_for_label }}">{% translate "Message" %}</label>
-    <div class="dm-compose">
-      {{ form.body }}
-      <button class="btn dm-send" type="submit">{% translate "Send" %}</button>
-    </div>
-    {{ form.body.errors }}
-  </form>
 {% endblock %}

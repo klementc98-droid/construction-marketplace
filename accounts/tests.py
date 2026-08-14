@@ -514,6 +514,11 @@ class FeedFixture(TestCase):
             for n in range(count)
         ]
 
+
+
+class FeedTests(FeedFixture):
+    """The front page: open work, newest first, endlessly scrollable."""
+
     def test_a_signed_out_visitor_sees_the_work_not_just_a_sign_in_wall(self):
         self.make_jobs(2)
         response = self.client.get(reverse("accounts:home"))
@@ -564,36 +569,44 @@ class FeedFixture(TestCase):
             response, reverse("jobs:apply", args=[job.pk])
         )
 
-    def test_the_feed_falls_back_to_filler_rather_than_going_blank(self):
+    def test_finished_work_is_not_listed(self):
+        """It used to pad the end of the feed as "Recently filled".
+
+        A board carrying jobs nobody can apply to makes the reader check each
+        card to find out it is over. The record itself is untouched — it still
+        counts on both parties' profiles — it just stops being browsable.
+        """
         from core.state_machine import JobState
 
         job = self.make_jobs(1)[0]
         job.state = JobState.ACCEPTED
         job.save(update_fields=["state"])
-        WorkerProfile.objects.create(
-            user=make_user("chippy@example.com"), region=self.region
-        )
 
         response = self.client.get(reverse("accounts:home"))
         self.assertEqual(len(response.context["page"].object_list), 0)
-        # Something to scroll below the feed. Workers are no longer filler
-        # here — they have their own tab, covered by HomeTabsTests.
-        self.assertIn(job, list(response.context["filler_jobs"]))
-        self.assertContains(response, "Recently filled")
+        self.assertNotContains(response, "Recently filled")
+        self.assertNotContains(response, job.title)
+        self.assertNotIn("filler_jobs", response.context)
 
-    def test_filler_only_appears_once_the_open_work_runs_out(self):
-        from accounts.views import FEED_PAGE_SIZE
+    def test_the_finished_job_still_exists(self):
+        """Hidden from the board, not deleted. The trust display needs it."""
+        from core.state_machine import JobState
+        from jobs.models import Job
 
-        self.make_jobs(FEED_PAGE_SIZE + 2)
-        first = self.client.get(reverse("accounts:home"))
-        self.assertNotIn("filler_jobs", first.context)
-
-        last = self.client.get(reverse("accounts:home"), {"page": 2})
-        self.assertIn("filler_jobs", last.context)
+        job = self.make_jobs(1)[0]
+        job.state = JobState.ACCEPTED
+        job.save(update_fields=["state"])
+        self.client.get(reverse("accounts:home"))
+        self.assertTrue(Job.objects.filter(pk=job.pk).exists())
 
     def test_a_truly_empty_platform_says_so_rather_than_rendering_nothing(self):
+        """One message now, not two.
+
+        The second branch covered "nothing open, but there is filler below".
+        With finished work no longer listed, both branches said the same thing.
+        """
         response = self.client.get(reverse("accounts:home"))
-        self.assertContains(response, "Nothing on the board yet")
+        self.assertContains(response, "No open work at the moment")
 
     def test_a_nonsense_page_number_does_not_500(self):
         self.make_jobs(2)
@@ -612,10 +625,6 @@ class FeedFixture(TestCase):
         self.assertEqual(
             self.client.get(reverse("accounts:dashboard")).status_code, 302
         )
-
-
-class FeedTests(FeedFixture):
-    """The front page: open work, newest first, endlessly scrollable."""
 
 
 

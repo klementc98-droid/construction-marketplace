@@ -100,7 +100,14 @@ def thread(request, pk: int):
             "conversation": conversation,
             "job": conversation.job,
             "other": conversation.other_party(request.user),
-            "messages_list": conversation.messages.select_related("sender"),
+            # Newest first. The thread has no jump-to-bottom, so in the usual
+            # order the one message you opened the page to read was the one
+            # furthest from where the page lands. Model ordering stays
+            # chronological — that is the order the data is in, and the unread
+            # sweep and last_message_at both rely on it.
+            "messages_list": conversation.messages.select_related("sender").order_by(
+                "-created_at"
+            ),
             "form": form,
         },
     )

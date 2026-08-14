@@ -102,31 +102,21 @@
       {% translate "Open posts, newest first. Applying is free." %}
     </p>
 
-  {% comment %} Both notices sit above the feed, not after it. What follows an empty board
-     is filler — profiles and closed jobs — and a reader who has scrolled all the
-     way past that has already worked out there is nothing open. The explanation
-     is only useful before they start scrolling.
+  {% comment %} Above the feed, not after it. The explanation is only useful before
+     somebody starts scrolling; a reader who has reached the bottom has already
+     worked out there is nothing open.
+
+     One branch, not two. The second used to cover "no open work, but there is
+     filler below" — there is no filler any more, so both said the same thing.
   {% endcomment %}
-  {% if not page.object_list and not filler_jobs %}
+  {% if not page.object_list %}
     <div class="card empty">
       <svg class="empty-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-jobs"/></svg>
-      <p>{% translate "Nothing on the board yet." %}</p>
+      <p><strong>{% translate "No open work at the moment." %}</strong></p>
       {% if user.is_authenticated and user.is_client %}
-        <a class="btn" href="{% url 'jobs:post_choose' %}">{% translate "Post the first job" %}</a>
+        <a class="btn" href="{% url 'jobs:post_choose' %}">{% translate "Post a job" %}</a>
       {% else %}
         <p class="muted">{% translate "Check back — new gigs go up daily." %}</p>
-      {% endif %}
-    </div>
-  {% elif not page.object_list %}
-    <div class="card">
-      <p class="flush"><strong>{% translate "No open work at the moment." %}</strong></p>
-      <p class="muted" style="margin:8px 0 0">
-        {% translate "Here's who's around and what's been going up lately." %}
-      </p>
-      {% if user.is_authenticated and user.is_client %}
-        <div class="btn-row">
-          <a class="btn" href="{% url 'jobs:post_choose' %}">{% translate "Post a job" %}</a>
-        </div>
       {% endif %}
     </div>
   {% endif %}
