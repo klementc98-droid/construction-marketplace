@@ -494,7 +494,8 @@
 
       function write(list) {
         input.value = list.join(", ");
-        render();
+        renderChips();
+        if (!panel.hidden) drawGrid();
       }
 
       function iso(d) {
@@ -593,8 +594,20 @@
         var value = cell.dataset.date;
         var list = read();
         var at = list.indexOf(value);
-        if (at === -1) list.push(value); else list.splice(at, 1);
-        write(list.sort());
+        var isOn = at === -1;
+        if (isOn) list.push(value); else list.splice(at, 1);
+
+        // Toggled in place, deliberately not by redrawing the grid. Redrawing
+        // replaces the button being clicked while its own click is still
+        // bubbling, and a detached node is inside nothing — so the
+        // outside-click handler below saw it as a click outside the calendar
+        // and shut the panel on the first date. Which is precisely the
+        // behaviour this widget exists to get rid of.
+        cell.classList.toggle("on", isOn);
+        cell.setAttribute("aria-pressed", isOn ? "true" : "false");
+
+        input.value = list.sort().join(", ");
+        renderChips();
         // Deliberately no close here. Booking three days should be three taps,
         // not three rounds of open-pick-close.
       });
@@ -627,7 +640,17 @@
       on(done, "click", function () { close(); toggle.focus(); });
 
       on(doc, "click", function (event) {
-        if (!panel.hidden && !wrap.contains(event.target)) close();
+        if (panel.hidden) return;
+        // Two ways a click is "not outside". The obvious one is that it landed
+        // inside the calendar. The other is that it landed on a node we have
+        // since thrown away: picking a day redraws the grid, so by the time
+        // the click reaches the document the button that was tapped has been
+        // replaced and is no longer in `wrap` — or anywhere in the document.
+        // Reading that as an outside click is what made the panel shut on the
+        // first date, which is the whole thing this widget exists to avoid.
+        if (wrap.contains(event.target)) return;
+        if (!doc.contains(event.target)) return;
+        close();
       });
       on(doc, "keydown", function (event) {
         if (event.key === "Escape" && !panel.hidden) { close(); toggle.focus(); }
@@ -635,7 +658,7 @@
 
       /* --- chips and the button's own label --- */
 
-      function render() {
+      function renderChips() {
         var list = read();
 
         chips.textContent = "";
@@ -665,12 +688,10 @@
         toggle.textContent = list.length
           ? word("more", "Add or remove days") + " (" + list.length + ")"
           : word("open", "Pick days");
-
-        if (!panel.hidden) drawGrid();
       }
 
       drawWeekdays();
-      render();
+      renderChips();
     });
   }
 
