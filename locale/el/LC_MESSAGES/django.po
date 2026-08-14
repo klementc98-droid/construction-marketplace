@@ -934,6 +934,10 @@ msgstr "Νέος εδώ — δεν υπάρχουν ακόμη αρκετές ο
 msgid "New post"
 msgstr "Νέα αγγελία"
 
+#: templates/accounts/feed.html
+msgid "New profiles go up daily — check back."
+msgstr "Νέα προφίλ ανεβαίνουν καθημερινά — ξαναδές το."
+
 #: templates/jobs/mine.html
 msgid "New terms — your move"
 msgstr "Νέοι όροι — η σειρά σου"
@@ -998,6 +1002,7 @@ msgstr "Κανείς δεν έχει κάνει αίτηση ακόμη."
 msgid "Nobody is holding an answer to this. It's still private, so it isn't on the board — post it publicly and anyone can apply."
 msgstr "Κανείς δεν περιμένει απάντηση σε αυτό. Είναι ακόμη ιδιωτικό, οπότε δεν βρίσκεται στον πίνακα — δημοσίευσέ το και μπορεί να κάνει αίτηση οποιοσδήποτε."
 
+#: templates/accounts/feed.html
 #: templates/jobs/worker_list.html
 msgid "Nobody's listed here yet."
 msgstr "Δεν έχει καταχωρηθεί κανείς ακόμη."
@@ -1792,6 +1797,10 @@ msgstr "Τι χρειάζεσαι;"
 #: templates/worklog/workspace.html
 msgid "What gets paid"
 msgstr "Τι πληρώνεται"
+
+#: templates/accounts/feed.html
+msgid "What to browse"
+msgstr "Τι να δεις"
 
 #: templates/core/about.html
 msgid "What we do"

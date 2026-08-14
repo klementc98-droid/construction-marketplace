@@ -44,16 +44,36 @@
   {% endif %}
 
   {% comment %}
-  The two halves of the site, as two sections, in the order someone arriving
-  needs them: people first, then work. Both are previews that link through to
-  their real board — the home page's job is to show that each side is populated
-  and hand you to the right list, not to be the list.
+  The two halves of the site, as a switch at the top left rather than two
+  stacked lists. Only one is on screen at a time, so neither is buried under
+  the other — the job feed is unbounded, and anything placed below it is
+  effectively at the bottom of the page.
 
-  The workers section used to be filler at the bottom of the job feed, which
-  meant it appeared only after the open work ran out. Half of what this site
-  does was therefore invisible on the page most people land on.
+  Links, not buttons: the choice lives in the URL, so it survives a refresh,
+  works with JavaScript off, goes in the back button, and can be sent to
+  somebody. The scroll loader builds its request from window.location, so
+  ?show= carries through to it untouched.
+
+  Workers used to be filler at the end of the job feed, rendered only once the
+  open work ran out — so on any board with something posted, half of what this
+  site does never appeared at all.
   {% endcomment %}
-  {% if preview_workers %}
+  <nav class="home-tabs" aria-label="{% translate "What to browse" %}">
+    <a class="home-tab{% if showing == 'work' %} on{% endif %}"
+       href="{% url 'accounts:home' %}"
+       {% if showing == 'work' %}aria-current="page"{% endif %}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-jobs"/></svg>
+      {% translate "Find work" %}
+    </a>
+    <a class="home-tab{% if showing == 'workers' %} on{% endif %}"
+       href="{% url 'accounts:home' %}?show=workers"
+       {% if showing == 'workers' %}aria-current="page"{% endif %}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-workers"/></svg>
+      {% translate "Find workers" %}
+    </a>
+  </nav>
+
+  {% if showing == 'workers' %}
     <section class="home-section">
       <div class="section-head">
         <h2>{% translate "Find workers" %}</h2>
@@ -62,12 +82,17 @@
       <p class="section-sub">
         {% translate "Available now or free soon. Tap someone to see their full profile and offer them a job." %}
       </p>
-      {% for worker in preview_workers %}
+      {% for worker in workers %}
         {% include "accounts/_worker_card.html" %}
+      {% empty %}
+        <div class="card empty">
+          <svg class="empty-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-workers"/></svg>
+          <p><strong>{% translate "Nobody's listed here yet." %}</strong></p>
+          <p class="muted">{% translate "New profiles go up daily — check back." %}</p>
+        </div>
       {% endfor %}
     </section>
-  {% endif %}
-
+  {% else %}
   <section class="home-section">
     <div class="section-head">
       <h2>{% translate "Find work" %}</h2>
@@ -82,7 +107,7 @@
      way past that has already worked out there is nothing open. The explanation
      is only useful before they start scrolling.
   {% endcomment %}
-  {% if not page.object_list and not filler_jobs and not filler_workers %}
+  {% if not page.object_list and not filler_jobs %}
     <div class="card empty">
       <svg class="empty-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-jobs"/></svg>
       <p>{% translate "Nothing on the board yet." %}</p>
@@ -110,4 +135,5 @@
       {% include "accounts/_feed_items.html" %}
     </div>
   </section>
+  {% endif %}
 {% endblock %}

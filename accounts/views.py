@@ -30,10 +30,15 @@ from .models import ClientProfile, PortfolioPhoto, TradeLicense, WorkerProfile
 #: enough that a fast scroll does not out-run the loader.
 FEED_PAGE_SIZE = 8
 
-#: Workers shown in the home page's own section. Enough to show the board is
-#: populated and to be worth scrolling; the section links through to the full
-#: list, which is where someone actually shopping goes.
-PREVIEW_WORKERS = 4
+#: Workers shown under the home page's "Find workers" tab. The tab links on to
+#: the full list, which is where someone actually shopping goes.
+PREVIEW_WORKERS = 8
+
+#: The two halves of the home page. Held in the query string rather than in the
+#: session so the choice is in the URL: a link to the side you are looking at
+#: still shows that side when you send it to somebody.
+SHOW_WORK = "work"
+SHOW_WORKERS = "workers"
 
 
 def home(request):
@@ -72,20 +77,25 @@ def home(request):
     if request.GET.get("partial"):
         return render(request, "accounts/_feed_items.html", context)
 
-    # The workers preview. A section of its own rather than filler at the end
-    # of the feed, which is where it used to live: finding people is half of
-    # what this site does, and anything that only appears after the job feed
-    # runs out is something most readers never scroll far enough to see.
+    # Which half of the page is showing. Anything that is not the workers tab
+    # is the work tab, so a hand-typed ?show=nonsense lands on the feed rather
+    # than on a blank page.
+    showing = SHOW_WORKERS if request.GET.get("show") == SHOW_WORKERS else SHOW_WORK
+    context["showing"] = showing
+
+    # Only the visible half is queried. The tabs are links, so the other side
+    # costs a request when it is asked for and nothing at all until then.
     #
-    # Outside the partial branch on purpose. The scroll loader appends
-    # _feed_items.html, so anything added there arrives again on every page —
-    # this belongs to the page, not to the feed.
-    context["preview_workers"] = (
-        WorkerProfile.objects.select_related("user", "region")
-        .prefetch_related("trades")
-        .exclude(user=request.user.pk if request.user.is_authenticated else None)
-        .order_by("-created_at")[:PREVIEW_WORKERS]
-    )
+    # Outside the partial branch on purpose: the scroll loader appends
+    # _feed_items.html once per page, so a worker card left in there would
+    # arrive again every time somebody scrolled.
+    if showing == SHOW_WORKERS:
+        context["workers"] = (
+            WorkerProfile.objects.select_related("user", "region")
+            .prefetch_related("trades")
+            .exclude(user=request.user.pk if request.user.is_authenticated else None)
+            .order_by("-created_at")[:PREVIEW_WORKERS]
+        )
 
     return render(request, "accounts/feed.html", context)
 

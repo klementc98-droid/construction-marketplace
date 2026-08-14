@@ -486,8 +486,8 @@ class PublicProfileTests(TestCase):
         self.assertContains(response, "Carpenter wanted, ongoing")
 
 
-class FeedTests(TestCase):
-    """The front page: open work, newest first, endlessly scrollable."""
+class FeedFixture(TestCase):
+    """Shared fixture: a client with a region and a way to make jobs."""
 
     def setUp(self):
         self.region = Region.objects.filter(is_active=True).first()
@@ -576,12 +576,10 @@ class FeedTests(TestCase):
 
         response = self.client.get(reverse("accounts:home"))
         self.assertEqual(len(response.context["page"].object_list), 0)
-        # Something to scroll: closed jobs below the feed, and the workers
-        # section, which now stands on its own rather than being filler.
+        # Something to scroll below the feed. Workers are no longer filler
+        # here — they have their own tab, covered by HomeTabsTests.
         self.assertIn(job, list(response.context["filler_jobs"]))
-        self.assertEqual(len(response.context["preview_workers"]), 1)
         self.assertContains(response, "Recently filled")
-        self.assertContains(response, "Find workers")
 
     def test_filler_only_appears_once_the_open_work_runs_out(self):
         from accounts.views import FEED_PAGE_SIZE
@@ -614,6 +612,11 @@ class FeedTests(TestCase):
         self.assertEqual(
             self.client.get(reverse("accounts:dashboard")).status_code, 302
         )
+
+
+class FeedTests(FeedFixture):
+    """The front page: open work, newest first, endlessly scrollable."""
+
 
 
 class SeekingStatusTests(TestCase):
@@ -881,45 +884,61 @@ class TemplateHygieneTests(TestCase):
             self.assertNotIn("{%", body, f"{url} leaked a tag")
 
 
-class HomeSectionsTests(FeedTests):
-    """The home page is two sections: find workers, then find work."""
+class HomeTabsTests(FeedFixture):
+    """The home page is one of two lists, chosen by a switch at the top."""
 
-    def test_both_sections_are_on_the_page(self):
-        WorkerProfile.objects.create(
-            user=make_user("sparks@example.com"), region=self.region
-        )
+    def test_the_switch_offers_both_sides(self):
         response = self.client.get(reverse("accounts:home"))
-        self.assertContains(response, "<h2>Find workers</h2>")
+        self.assertContains(response, "home-tabs")
+        self.assertContains(response, "?show=workers")
+
+    def test_work_is_the_default(self):
+        response = self.client.get(reverse("accounts:home"))
+        self.assertEqual(response.context["showing"], "work")
         self.assertContains(response, "<h2>Find work</h2>")
-        self.assertContains(response, reverse("jobs:worker_list"))
-        self.assertContains(response, reverse("jobs:list"))
+        self.assertNotContains(response, "<h2>Find workers</h2>")
 
-    def test_workers_show_without_waiting_for_the_job_feed_to_run_out(self):
-        """The bug this section exists to fix.
-
-        As filler they appeared only on the last page of the feed, so on a
-        board with plenty of open work nobody ever saw them.
-        """
-        from accounts.views import FEED_PAGE_SIZE
-
-        self.make_jobs(FEED_PAGE_SIZE + 2)
+    def test_asking_for_workers_shows_workers_instead(self):
         WorkerProfile.objects.create(
             user=make_user("sparks@example.com"), region=self.region
         )
-        first = self.client.get(reverse("accounts:home"))
-        self.assertTrue(first.context["page"].has_next())
-        self.assertEqual(len(first.context["preview_workers"]), 1)
-        self.assertContains(first, "<h2>Find workers</h2>")
+        response = self.client.get(reverse("accounts:home"), {"show": "workers"})
+        self.assertEqual(response.context["showing"], "workers")
+        self.assertContains(response, "<h2>Find workers</h2>")
+        self.assertNotContains(response, "<h2>Find work</h2>")
+        self.assertEqual(len(response.context["workers"]), 1)
 
-    def test_the_workers_section_is_capped(self):
+    def test_the_hidden_side_is_not_queried(self):
+        """The tabs are links, so the other list costs nothing until asked for."""
+        response = self.client.get(reverse("accounts:home"))
+        self.assertNotIn("workers", response.context)
+
+    def test_nonsense_lands_on_the_feed_rather_than_a_blank_page(self):
+        response = self.client.get(reverse("accounts:home"), {"show": "banana"})
+        self.assertEqual(response.context["showing"], "work")
+        self.assertContains(response, "<h2>Find work</h2>")
+
+    def test_the_workers_list_is_capped(self):
         from accounts.views import PREVIEW_WORKERS
 
         for n in range(PREVIEW_WORKERS + 3):
             WorkerProfile.objects.create(
                 user=make_user(f"w{n}@example.com"), region=self.region
             )
-        response = self.client.get(reverse("accounts:home"))
-        self.assertEqual(len(response.context["preview_workers"]), PREVIEW_WORKERS)
+        response = self.client.get(reverse("accounts:home"), {"show": "workers"})
+        self.assertEqual(len(response.context["workers"]), PREVIEW_WORKERS)
+
+    def test_an_empty_workers_tab_says_so(self):
+        response = self.client.get(reverse("accounts:home"), {"show": "workers"})
+        self.assertContains(response, "Nobody's listed here yet.")
+
+    def test_the_workers_tab_carries_no_scroll_sentinel(self):
+        """Nothing to page through here, so the loader must find no target."""
+        from accounts.views import FEED_PAGE_SIZE
+
+        self.make_jobs(FEED_PAGE_SIZE + 2)
+        response = self.client.get(reverse("accounts:home"), {"show": "workers"})
+        self.assertNotContains(response, "feed-sentinel")
 
     def test_the_scroll_partial_carries_no_workers(self):
         """Appended once per page, so a worker card here would repeat forever."""
@@ -929,11 +948,8 @@ class HomeSectionsTests(FeedTests):
         WorkerProfile.objects.create(
             user=make_user("sparks@example.com"), region=self.region
         )
-        response = self.client.get(reverse("accounts:home"), {"partial": "1", "page": 2})
-        self.assertNotIn("preview_workers", response.context)
-        self.assertNotContains(response, "<h2>Find workers</h2>")
-
-    def test_the_section_is_absent_when_nobody_has_signed_up(self):
-        response = self.client.get(reverse("accounts:home"))
-        self.assertEqual(len(response.context["preview_workers"]), 0)
+        response = self.client.get(
+            reverse("accounts:home"), {"partial": "1", "page": 2}
+        )
+        self.assertNotIn("workers", response.context)
         self.assertNotContains(response, "<h2>Find workers</h2>")
