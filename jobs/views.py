@@ -28,6 +28,7 @@ from core.state_machine import Actor, JobState, assert_transition
 
 from .forms import (
     JOB_FORMS,
+    ReviewForm,
     ApplicationForm,
     CounterForm,
     JobFilterForm,
@@ -37,6 +38,7 @@ from .forms import (
 )
 from .models import (
     Application,
+    ReviewDirection,
     ApplicationStatus,
     Counter,
     CounterStatus,
@@ -194,6 +196,10 @@ def job_detail(request, pk: int):
                 if is_owner
                 else None
             ),
+            # Decided here because a template cannot pass the viewer to a
+            # method, and the answer depends on who is looking.
+            "can_review": job.can_be_reviewed_by(request.user),
+            "my_review": job.review_from(request.user),
         },
     )
 
@@ -1045,6 +1051,79 @@ def mine(request):
                 ).select_related("job__trade", "worker__user")
                 if client
                 else None
+            ),
+        },
+    )
+
+
+# ---------------------------------------------------------------------------
+# Reviews
+# ---------------------------------------------------------------------------
+
+
+@login_required
+def review_create(request, pk: int):
+    """Rate the other side of a finished job.
+
+    Both directions use this one view. The direction is derived from who is
+    asking rather than passed in the URL — a parameter saying which way the
+    review points would be a parameter somebody could change.
+
+    Written only once the job is over and its day has passed. Rating before the
+    money has moved would put a thumb on the scale of the payment itself
+    ("five stars and I'll approve"), and rating before the work has happened is
+    a score about nothing.
+    """
+    job = get_object_or_404(
+        Job.objects.select_related("client__user", "assigned_worker__user"), pk=pk
+    )
+    direction = job.review_direction_for(request.user)
+    if direction is None:
+        raise Http404("No job matches the given query.")
+
+    existing = job.review_from(request.user)
+    if existing is not None:
+        messages.info(request, _("You've already rated this one."))
+        return redirect("jobs:detail", pk=job.pk)
+
+    if not job.can_be_reviewed_by(request.user):
+        messages.info(
+            request,
+            _("You can rate this once the job is finished and its day has passed."),
+        )
+        return redirect("jobs:detail", pk=job.pk)
+
+    if request.method == "POST":
+        form = ReviewForm(request.POST)
+        if form.is_valid():
+            with transaction.atomic():
+                review = form.save(commit=False)
+                review.job = job
+                review.author = request.user
+                review.direction = direction
+                review.save()
+                # The running average lives on the profile being rated, folded
+                # in with F() expressions — see WorkerProfile.record_rating.
+                subject = review.subject_profile
+                if subject is not None:
+                    subject.record_rating(review.rating)
+            messages.success(request, _("Thanks — that's on their profile now."))
+            return redirect("jobs:detail", pk=job.pk)
+    else:
+        form = ReviewForm()
+
+    return render(
+        request,
+        "jobs/review_form.html",
+        {
+            "job": job,
+            "form": form,
+            # Who they are rating, for the heading. Derived here rather than in
+            # the template so the template cannot get the direction backwards.
+            "subject": (
+                job.assigned_worker.user
+                if direction == ReviewDirection.CLIENT_ON_WORKER
+                else job.client.user
             ),
         },
     )

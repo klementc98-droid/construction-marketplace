@@ -202,6 +202,30 @@
     </div>
   </div>
 
+  {% comment %} Rating, once the job is over and its day has gone by. Both are
+     required: rating before the money moves puts a thumb on the scale of the
+     payment itself, and rating before the work has happened is a score about
+     nothing. can_be_reviewed_by is the one place that decides.
+  {% endcomment %}
+  {% if can_review %}
+    <div class="card action-panel">
+      <p class="flush"><strong>{% translate "How did it go?" %}</strong></p>
+      <p class="note">
+        {% translate "The job is done. Leave a rating for the other side — theirs for you is written separately, and neither of you sees the other's before writing it." %}
+      </p>
+      <div class="btn-row">
+        <a class="btn" href="{% url 'jobs:review' job.pk %}">{% translate "Leave a rating" %}</a>
+      </div>
+    </div>
+  {% elif my_review %}
+    <div class="card">
+      <p class="flush">
+        <strong>{% translate "You rated this" %}</strong>
+        <span class="badge">{{ my_review.rating }}★</span>
+      </p>
+    </div>
+  {% endif %}
+
   {% if job.assigned_worker %}
     <h2>{% translate "Assigned to" %}</h2>
     <div class="card">

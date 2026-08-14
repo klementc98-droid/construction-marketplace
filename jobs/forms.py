@@ -15,7 +15,7 @@ from django.utils.translation import gettext_lazy as _
 from core.dates import date_picker_attrs, parse_date_list
 from core.models import Region, Trade
 
-from .models import Application, Counter, Job, JobType, PositionType
+from .models import Application, Counter, Job, JobType, PositionType, Review
 
 
 class _RegionDefaultMixin(forms.ModelForm):
@@ -488,3 +488,40 @@ class WorkerFilterForm(BrowseFilterForm):
         label=_("Open to full-time"),
         help_text=_("Workers who said they'd take a permanent position."),
     )
+
+
+class ReviewForm(forms.ModelForm):
+    """One side's verdict on a finished job.
+
+    A score and, if they want, words. The comment is optional on purpose:
+    forcing prose is how a board fills up with "good" a thousand times, and a
+    bare score is still a usable data point.
+    """
+
+    class Meta:
+        model = Review
+        fields = ["rating", "comment"]
+        labels = {
+            "rating": _("How did it go?"),
+            "comment": _("Anything to add? (optional)"),
+        }
+        widgets = {
+            # Radios, not a select or a star widget that needs script. Five
+            # options is few enough to show all of them, and a tap target per
+            # score beats a dropdown on a phone.
+            "rating": forms.RadioSelect(
+                choices=[
+                    (5, _("5 — would work with them again without thinking")),
+                    (4, _("4 — good, no complaints")),
+                    (3, _("3 — the job got done")),
+                    (2, _("2 — problems worth knowing about")),
+                    (1, _("1 — would not work with them again")),
+                ]
+            ),
+            "comment": forms.Textarea(
+                attrs={
+                    "rows": 4,
+                    "placeholder": _("Turned up on time, tidy work, no chasing."),
+                }
+            ),
+        }

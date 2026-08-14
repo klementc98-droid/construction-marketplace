@@ -498,3 +498,96 @@ class PaymentMethodCounterTests(JobFactoryMixin, TestCase):
         self.assertEqual(jobs[0].fixed_pay, Decimal("300"))
         self.assertEqual(jobs[1].fixed_pay, Decimal("240"))   # untouched
         self.assertTrue(jobs[1].use_escrow)                   # but escrow spread
+
+
+class ReviewTests(JobFactoryMixin, TestCase):
+    """Rating the other side, once the job is over and its day has gone."""
+
+    def finished_job(self, *, days_ago=1):
+        from core.state_machine import JobState
+
+        job = self.gig()
+        job.state = JobState.CLOSED
+        job.assigned_worker = self.worker_profile
+        job.gig_date = timezone.localdate() - timedelta(days=days_ago)
+        job.save(update_fields=["state", "assigned_worker", "gig_date"])
+        return job
+
+    def rate(self, job, user, score=5, comment=""):
+        self.client.force_login(user)
+        return self.client.post(
+            reverse("jobs:review", args=[job.pk]),
+            {"rating": str(score), "comment": comment},
+        )
+
+    def test_both_sides_can_rate_and_the_directions_differ(self):
+        from jobs.models import Review, ReviewDirection
+
+        job = self.finished_job()
+        self.rate(job, self.client_user, 5)
+        self.rate(job, self.worker_user, 4)
+
+        directions = set(Review.objects.filter(job=job).values_list("direction", flat=True))
+        self.assertEqual(
+            directions,
+            {ReviewDirection.CLIENT_ON_WORKER, ReviewDirection.WORKER_ON_CLIENT},
+        )
+
+    def test_the_score_lands_on_the_profile_being_rated(self):
+        job = self.finished_job()
+        self.rate(job, self.client_user, 4)
+
+        self.worker_profile.refresh_from_db()
+        self.assertEqual(self.worker_profile.rating_count, 1)
+        self.assertEqual(self.worker_profile.rating_sum, 4)
+        self.assertEqual(self.worker_profile.average_rating, Decimal("4.0"))
+
+    def test_nobody_can_rate_twice(self):
+        from jobs.models import Review
+
+        job = self.finished_job()
+        self.rate(job, self.client_user, 5)
+        self.rate(job, self.client_user, 1)
+        self.assertEqual(Review.objects.filter(job=job).count(), 1)
+        self.assertEqual(Review.objects.get(job=job).rating, 5)
+
+    def test_a_job_still_running_cannot_be_rated(self):
+        """Rating before the money moves is leverage over the payment."""
+        from jobs.models import Review
+
+        job = self.gig()
+        job.assigned_worker = self.worker_profile
+        job.save(update_fields=["assigned_worker"])
+        self.assertFalse(job.can_be_reviewed_by(self.client_user))
+        self.rate(job, self.client_user)
+        self.assertEqual(Review.objects.count(), 0)
+
+    def test_a_job_closed_before_its_day_waits_for_the_day(self):
+        """A client confirming early must not unlock a score about nothing."""
+        from jobs.models import Review
+
+        job = self.finished_job(days_ago=-2)          # closes, day still ahead
+        self.assertFalse(job.can_be_reviewed_by(self.client_user))
+        self.rate(job, self.client_user)
+        self.assertEqual(Review.objects.count(), 0)
+
+    def test_a_stranger_gets_a_404_not_a_refusal(self):
+        """Confirming the job exists would leak who is hiring, and for what."""
+        job = self.finished_job()
+        outsider = make_user("nosy2@example.com")
+        self.client.force_login(outsider)
+        response = self.client.get(reverse("jobs:review", args=[job.pk]))
+        self.assertEqual(response.status_code, 404)
+
+    def test_the_job_page_offers_the_rating_once_it_is_due(self):
+        job = self.finished_job()
+        self.client.force_login(self.client_user)
+        response = self.client.get(reverse("jobs:detail", args=[job.pk]))
+        self.assertContains(response, reverse("jobs:review", args=[job.pk]))
+
+    def test_and_stops_offering_it_afterwards(self):
+        job = self.finished_job()
+        self.rate(job, self.client_user, 5)
+        self.client.force_login(self.client_user)
+        response = self.client.get(reverse("jobs:detail", args=[job.pk]))
+        self.assertNotContains(response, reverse("jobs:review", args=[job.pk]))

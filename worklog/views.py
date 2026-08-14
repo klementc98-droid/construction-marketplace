@@ -192,7 +192,10 @@ def confirm(request, pk: int):
     except services.WorkflowError as exc:
         flash.error(request, str(exc))
         return redirect("worklog:workspace", pk=job.pk)
-    flash.success(request, "Closed. You can both leave a rating now.")
+    flash.success(
+        request,
+        "Closed. Once the day has passed you can both leave a rating.",
+    )
     return redirect("worklog:workspace", pk=job.pk)
 
 

@@ -356,6 +356,47 @@ class Job(TimestampedModel):
         """
         return self.state == JobState.COMPLETED and not self.is_escrowed
 
+    def review_direction_for(self, user):
+        """Which way a review by ``user`` would point, or None if they cannot.
+
+        The subject is never stored on a Review — a job has one client and one
+        assigned worker, so the direction plus the job says who is being rated.
+        This is the other half of that: turning a viewer into a direction.
+        """
+        from .models import ReviewDirection  # local: defined below this class
+
+        if self.client and self.client.user_id == user.pk:
+            return ReviewDirection.CLIENT_ON_WORKER
+        if self.assigned_worker and self.assigned_worker.user_id == user.pk:
+            return ReviewDirection.WORKER_ON_CLIENT
+        return None
+
+    def can_be_reviewed_by(self, user) -> bool:
+        """Is a review from this person due, and not already written?
+
+        Three conditions, and the date is the one worth spelling out: a gig can
+        close before its day — a client confirming early, or a cancelled-then-
+        closed record — and rating somebody for work that has not happened yet
+        is a score about nothing.
+        """
+        if not user.is_authenticated or not self.is_finished:
+            return False
+        direction = self.review_direction_for(user)
+        if direction is None:
+            return False
+        if self.gig_date and self.gig_date > timezone.localdate():
+            return False
+        return not self.reviews.filter(direction=direction).exists()
+
+    def review_from(self, user):
+        """Their review of this job, if they have written one."""
+        if not getattr(user, "is_authenticated", False):
+            return None
+        direction = self.review_direction_for(user)
+        if direction is None:
+            return None
+        return self.reviews.filter(direction=direction).first()
+
     @property
     def is_finished(self) -> bool:
         """Work happened and the job is over, by either route.

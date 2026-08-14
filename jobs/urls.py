@@ -41,5 +41,6 @@ urlpatterns = [
         name="counter_to",
     ),
     path("counters/<int:pk>/respond/", views.counter_respond, name="counter_respond"),
+    path("jobs/<int:pk>/rate/", views.review_create, name="review"),
     path("jobs/<int:pk>/publish/", views.offer_publish, name="offer_publish"),
 ]

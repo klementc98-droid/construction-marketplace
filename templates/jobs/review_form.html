@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% blocktranslate with who=subject %}Rate {{ who }}{% endblocktranslate %} — Construction's Finest{% endblock %}
+
+{% block content %}
+  {% translate "Back to the job" as back %}
+  {% include "_back.html" with href=job.get_absolute_url label=back %}
+
+  <h1>{% blocktranslate with who=subject %}Rate {{ who }}{% endblocktranslate %}</h1>
+  <p class="lede">
+    {% blocktranslate with title=job.title day=job.gig_date|date:"D j M" %}For {{ title }} on {{ day }}.{% endblocktranslate %}
+  </p>
+
+  <form method="post">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+
+    <div class="card">
+      {% include "_field.html" with field=form.rating %}
+      {% include "_field.html" with field=form.comment %}
+
+      <p class="note">
+        {% comment %} Said before they write it, not after. A rating that turns out to
+           be permanent and public once submitted is a nasty surprise, and the
+           one-per-job rule is the reason it cannot be edited away.
+        {% endcomment %}
+        {% translate "This goes on their profile and stays there. One rating per job, from each side — so take a second over it." %}
+      </p>
+    </div>
+
+    <div class="btn-row" style="margin-top:0">
+      <button class="btn" type="submit" data-busy-label="{% translate "Saving…" %}">
+        {% translate "Leave this rating" %}
+      </button>
+      <a class="btn secondary" href="{{ job.get_absolute_url }}">{% translate "Cancel" %}</a>
+    </div>
+  </form>
+{% endblock %}
