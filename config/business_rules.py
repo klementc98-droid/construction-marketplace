@@ -43,7 +43,15 @@ PLATFORM_FEE_PCT: Decimal = _decimal("PLATFORM_FEE_PCT", "0.12")
 
 #: Currency for all amounts. Single-currency in v1; kept here so the
 #: assumption is visible rather than scattered through Stripe calls.
-CURRENCY: str = os.getenv("CURRENCY", "usd")
+CURRENCY: str = os.getenv("CURRENCY", "eur")
+
+#: What the reader sees in front of a number. Derived from CURRENCY rather than
+#: written out again, so the symbol on a page and the code sent to Stripe cannot
+#: disagree — which is the one mistake here nobody would notice until a
+#: statement arrived. An unknown code falls back to the code itself, which is
+#: ugly and correct; a wrong symbol is neither.
+_SYMBOLS = {"eur": "€", "usd": "$", "gbp": "£"}
+CURRENCY_SYMBOL: str = _SYMBOLS.get(CURRENCY.lower(), CURRENCY.upper() + " ")
 
 
 # ---------------------------------------------------------------------------

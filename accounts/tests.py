@@ -104,17 +104,17 @@ class RateDisplayTests(TestCase):
 
     def test_flat_rate(self):
         self.profile.rate_min = Decimal("30")
-        self.assertEqual(self.profile.rate_display, "$30/hr")
+        self.assertEqual(self.profile.rate_display, "€30/hr")
 
     def test_range(self):
         self.profile.rate_min = Decimal("28")
         self.profile.rate_max = Decimal("35")
-        self.assertEqual(self.profile.rate_display, "$28-$35/hr")
+        self.assertEqual(self.profile.rate_display, "€28-€35/hr")
 
     def test_daily_rate_unit(self):
         self.profile.rate_type = "daily"
         self.profile.rate_min = Decimal("240")
-        self.assertEqual(self.profile.rate_display, "$240/day")
+        self.assertEqual(self.profile.rate_display, "€240/day")
 
     def test_unset_rate_does_not_render_as_zero(self):
         self.assertEqual(self.profile.rate_display, "Rate on request")

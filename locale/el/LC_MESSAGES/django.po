@@ -29,11 +29,29 @@ msgstr[1] "%(counter)s τεχνίτες."
 msgid "%(dates)s — that's in the past. Pick days from today onwards."
 msgstr "%(dates)s — αυτό είναι στο παρελθόν. Διάλεξε ημέρες από σήμερα και μετά."
 
+#: templates/jobs/job_detail.html
+msgid "%(done)s job completed"
+msgid_plural "%(done)s jobs completed"
+msgstr[0] "%(done)s ολοκληρωμένη δουλειά"
+msgstr[1] "%(done)s ολοκληρωμένες δουλειές"
+
 #: templates/jobs/offer_form.html
 msgid "%(jobs)s job done here"
 msgid_plural "%(jobs)s jobs done here"
 msgstr[0] "%(jobs)s δουλειά εδώ"
 msgstr[1] "%(jobs)s δουλειές εδώ"
+
+#: templates/accounts/_feed_items.html
+msgid "%(n)s hrs"
+msgstr "%(n)s ώρες"
+
+#: jobs/models.py
+msgid "%(pay)s for %(hours)s hours"
+msgstr "%(pay)s για %(hours)s ώρες"
+
+#: templates/jobs/job_detail.html
+msgid "%(score)s★ from workers"
+msgstr "%(score)s★ από τεχνίτες"
 
 #: core/dates.py
 msgid "%(value)r isn't a date in YYYY-MM-DD form."
@@ -103,8 +121,8 @@ msgid "A one-day gig"
 msgstr "Μεροκάματο μίας ημέρας"
 
 #: templates/jobs/job_post_choose.html
-msgid "A specific date, a set number of hours, one fixed price — &quot;$90 for 8 hours on the 14th&quot;. You pay up front into escrow when you confirm someone, and the money is released after the day's work."
-msgstr "Συγκεκριμένη ημερομηνία, ορισμένες ώρες, μία σταθερή τιμή — &quot;90$ για 8 ώρες στις 14&quot;. Πληρώνεις προκαταβολικά σε μεσεγγύηση όταν επιβεβαιώνεις κάποιον, και τα χρήματα αποδεσμεύονται μετά τη δουλειά της ημέρας."
+msgid "A specific date, a set number of hours, one fixed price — &quot;€90 for 8 hours on the 14th&quot;. You pay up front into escrow when you confirm someone, and the money is released after the day's work."
+msgstr "Συγκεκριμένη ημερομηνία, ορισμένες ώρες, μία σταθερή τιμή — &quot;90€ για 8 ώρες στις 14&quot;. Πληρώνεις προκαταβολικά σε μεσεγγύηση όταν επιβεβαιώνεις κάποιον, και τα χρήματα αποδεσμεύονται μετά τη δουλειά της ημέρας."
 
 #: templates/core/about.html
 #: templates/jobs/job_post_choose.html
@@ -413,10 +431,6 @@ msgstr "Ο πελάτης αξιολογεί τον τεχνίτη"
 msgid "Close assistant"
 msgstr "Κλείσιμο βοηθού"
 
-#: templates/accounts/_feed_items.html
-msgid "Closed already — here to show the kind of work that goes up."
-msgstr "Έχει ήδη κλείσει — μπαίνει εδώ για να δείξει τι είδους δουλειές ανεβαίνουν."
-
 #: accounts/forms.py
 msgid "Company (optional)"
 msgstr "Εταιρεία (προαιρετικό)"
@@ -519,6 +533,10 @@ msgstr "Απόρριψη"
 #: jobs/models.py
 msgid "Declined"
 msgstr "Απορρίφθηκε"
+
+#: jobs/forms.py
+msgid "Describe the work"
+msgstr "Περιγραφή της δουλειάς"
 
 #: templates/payments/payouts.html
 msgid "Details submitted"
@@ -789,6 +807,10 @@ msgstr "Η πληρωμή του μεροκάματου περνά από την
 msgid "Gig pay is held in escrow until the job is signed off."
 msgstr "Η πληρωμή του μεροκάματου κρατείται σε μεσεγγύηση μέχρι να εγκριθεί η δουλειά."
 
+#: jobs/forms.py
+msgid "Give it a short name"
+msgstr "Δώσε ένα σύντομο όνομα"
+
 #: templates/payments/escrow_detail.html
 msgid "Go to the job"
 msgstr "Πήγαινε στη δουλειά"
@@ -812,10 +834,6 @@ msgstr "Βοήθεια"
 #: templates/assistant/_widget.html
 msgid "Help me fill out a form"
 msgstr "Βοήθησέ με να συμπληρώσω μια φόρμα"
-
-#: templates/accounts/feed.html
-msgid "Here's who's around and what's been going up lately."
-msgstr "Δες ποιοι είναι διαθέσιμοι και τι ανεβαίνει τελευταία."
 
 #: templates/accounts/feed.html
 msgid "Hire crew."
@@ -846,10 +864,6 @@ msgstr "Ώρες εργασίας"
 #: templates/assistant/_widget.html
 msgid "How can I help?"
 msgstr "Πώς μπορώ να βοηθήσω;"
-
-#: jobs/forms.py
-msgid "How it appears in the list — be specific."
-msgstr "Έτσι εμφανίζεται στη λίστα — γίνε συγκεκριμένος."
 
 #: templates/base.html
 #: templates/core/whitepaper.html
@@ -927,10 +941,6 @@ msgstr "Η δουλειά ολοκληρώθηκε"
 #: templates/worklog/workspace.html
 msgid "Job post"
 msgstr "Αγγελία εργασίας"
-
-#: jobs/forms.py
-msgid "Job title"
-msgstr "Τίτλος δουλειάς"
 
 #: core/test_i18n.py
 #: templates/base.html
@@ -1234,10 +1244,6 @@ msgstr "Δεν χρεώνεται τίποτα τώρα. Αν δεχτεί, χρ
 msgid "Nothing on the board right now."
 msgstr "Τίποτα στον πίνακα αυτή τη στιγμή."
 
-#: templates/accounts/feed.html
-msgid "Nothing on the board yet."
-msgstr "Τίποτα στον πίνακα ακόμη."
-
 #: templates/accounts/client_detail.html
 msgid "Nothing open at the moment. Their track record below still tells you what they're like to work for."
 msgstr "Τίποτα ανοιχτό αυτή τη στιγμή. Το ιστορικό παρακάτω σου λέει πάντως πώς είναι να δουλεύεις γι' αυτόν."
@@ -1407,6 +1413,10 @@ msgstr "Προηγούμενες δουλειές"
 msgid "Pay"
 msgstr "Πληρωμή"
 
+#: jobs/models.py
+msgid "Pay not set"
+msgstr "Δεν ορίστηκε πληρωμή"
+
 #: templates/payments/escrow_detail.html
 msgid "Payment"
 msgstr "Πληρωμή"
@@ -1511,7 +1521,6 @@ msgstr "Ανέβασέ το"
 msgid "Post it on the board"
 msgstr "Ανέβασέ το στον πίνακα"
 
-#: templates/accounts/feed.html
 #: templates/jobs/job_list.html
 msgid "Post the first job"
 msgstr "Ανέβασε την πρώτη αγγελία"
@@ -1523,6 +1532,10 @@ msgstr "Ανέβασε την αγγελία έτσι κι αλλιώς — οι
 #: core/state_machine.py
 msgid "Posted"
 msgstr "Δημοσιευμένο"
+
+#: templates/jobs/job_detail.html
+msgid "Posted %(ago)s ago"
+msgstr "Δημοσιεύτηκε πριν %(ago)s"
 
 #: templates/jobs/job_detail.html
 msgid "Posted by"
@@ -1583,6 +1596,7 @@ msgid "Rate"
 msgstr "Αμοιβή"
 
 #: accounts/models.py
+#: jobs/models.py
 msgid "Rate on request"
 msgstr "Αμοιβή κατόπιν αιτήματος"
 
@@ -1611,10 +1625,6 @@ msgstr "Διάβασε τη λευκή βίβλο"
 #: templates/payments/payouts.html
 msgid "Ready"
 msgstr "Έτοιμο"
-
-#: templates/accounts/_feed_items.html
-msgid "Recently filled"
-msgstr "Καλύφθηκε πρόσφατα"
 
 #: core/state_machine.py
 msgid "Refunded"
@@ -1875,6 +1885,10 @@ msgstr "Ο πελάτης βλέπει μαζί με αυτό το προφίλ 
 #: templates/worklog/workspace.html
 msgid "The day ended early"
 msgstr "Η ημέρα τελείωσε νωρίτερα"
+
+#: jobs/forms.py
+msgid "The line people see on the board — a few words, not the whole job."
+msgstr "Η γραμμή που βλέπουν στον πίνακα — λίγες λέξεις, όχι όλη η δουλειά."
 
 #: templates/core/whitepaper.html
 msgid "The model behind Construction's Finest: how escrow works, why job and payment state are one machine, and the deliberate limits of v1."
@@ -2151,10 +2165,6 @@ msgid "What's posted"
 msgstr "Τι έχει ανέβει"
 
 #: jobs/forms.py
-msgid "What's the work?"
-msgstr "Ποια είναι η δουλειά;"
-
-#: jobs/forms.py
 msgid "Where in town?"
 msgstr "Πού στην πόλη;"
 
@@ -2250,6 +2260,10 @@ msgstr "Τεχνίτες"
 #: jobs/forms.py
 msgid "Workers who said they'd take a permanent position."
 msgstr "Τεχνίτες που δήλωσαν ότι θα δέχονταν μόνιμη θέση."
+
+#: templates/jobs/job_detail.html
+msgid "Working this job"
+msgstr "Δουλεύει αυτή τη δουλειά"
 
 #: templates/jobs/job_detail.html
 msgid "Works out to"
@@ -2392,6 +2406,10 @@ msgstr "τεχνίτης"
 msgid "am I actually going to get paid?"
 msgstr "θα πληρωθώ τελικά;"
 
+#: templates/jobs/job_detail.html
+msgid "approves in %(hours)s hr"
+msgstr "εγκρίνει σε %(hours)s ώρες"
+
 #: templates/_required_note.html
 msgid "are required."
 msgstr "είναι υποχρεωτικά."
@@ -2401,6 +2419,7 @@ msgid "asked for"
 msgstr "ζήτησε"
 
 #: accounts/models.py
+#: jobs/models.py
 msgid "day"
 msgstr "ημέρα"
 
@@ -2421,6 +2440,7 @@ msgid "e.g. north side, will travel citywide"
 msgstr "π.χ. βόρεια περιοχή, μετακινούμαι σε όλη την πόλη"
 
 #: accounts/models.py
+#: jobs/models.py
 msgid "hr"
 msgstr "ώρα"
 

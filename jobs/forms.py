@@ -44,12 +44,12 @@ class _BaseJobForm(_RegionDefaultMixin):
         fields = ["trade", "title", "description", "region", "location"]
         labels = {
             "trade": _("Trade"),
-            "title": _("Job title"),
-            "description": _("What's the work?"),
+            "title": _("Give it a short name"),
+            "description": _("Describe the work"),
             "location": _("Where in town?"),
         }
         help_texts = {
-            "title": _("How it appears in the list — be specific."),
+            "title": _("The line people see on the board — a few words, not the whole job."),
             "location": _("Neighbourhood, cross streets, or site name."),
         }
         widgets = {

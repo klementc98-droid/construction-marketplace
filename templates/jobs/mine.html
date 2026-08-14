@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load i18n %}
+{% load i18n money_extras %}
 {% block title %}{% translate "Your jobs — Construction's Finest" %}{% endblock %}
 
 {% block content %}
@@ -23,7 +23,7 @@
             <span class="title">{{ offer.job.title }}</span>
             {# The figure on the table, which is the counter's once there is one. #}
             <span class="pay">
-              {% if offer.live_counter.fixed_pay %}${{ offer.live_counter.fixed_pay|floatformat:0 }}
+              {% if offer.live_counter.fixed_pay %}{{ offer.live_counter.fixed_pay|money }}
               {% else %}{{ offer.job.pay_display }}{% endif %}
             </span>
           </div>
@@ -40,7 +40,7 @@
             {% if offer.job.starts_in %}<span class="badge state">{{ offer.job.starts_in }}</span>{% endif %}
             {{ offer.job.gig_date|date:"D j M" }}
             · {{ offer.job.gig_hours|floatformat:"-1" }} hrs
-            {% if offer.job.implied_hourly %} · ≈${{ offer.job.implied_hourly }}/hr{% endif %}
+            {% if offer.job.implied_hourly %} · ≈{{ offer.job.implied_hourly|money }}/hr{% endif %}
             <br>
             From {{ offer.job.client.company_name|default:offer.job.client.user }}
             · {{ offer.job.trade }}

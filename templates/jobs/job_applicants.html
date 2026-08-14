@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load i18n %}
+{% load i18n money_extras %}
 {% block title %}Applicants — {{ job.title }}{% endblock %}
 
 {% block content %}
@@ -125,7 +125,7 @@
               {% csrf_token %}
               <button class="btn" type="submit" name="answer" value="accept"
                       data-confirm="Agree to their terms and give {{ application.worker.user }} the job? The post closes to everyone else.">
-                Accept ${{ application.live_counter.fixed_pay|default:job.fixed_pay|floatformat:0 }} — give them the job
+                Accept {{ application.live_counter.fixed_pay|default:job.fixed_pay|money }} — give them the job
               </button>
             </form>
             <a class="btn secondary" href="{% url 'jobs:counter_to' job.pk application.worker.pk %}">

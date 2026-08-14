@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load i18n %}
+{% load i18n money_extras %}
 {% block title %}{{ job.title }} — Construction's Finest{% endblock %}
 {% block description %}{{ job.description|truncatewords:24 }}{% endblock %}
 
@@ -167,7 +167,7 @@
         {% if job.implied_hourly %}
           <div class="stat">
             <div class="k">{% translate "Works out to" %}</div>
-            <div class="v">${{ job.implied_hourly }}/hr</div>
+            <div class="v">{{ job.implied_hourly|money }}/hr</div>
           </div>
         {% endif %}
       {% endif %}
@@ -190,13 +190,13 @@
             {{ job.client.company_name|default:job.client.user }}</a>
         </p>
         <p class="row-meta" style="margin:2px 0 0">
-          {% if job.client.average_rating %}{{ job.client.average_rating }}★ from workers
+          {% if job.client.average_rating %}{% blocktranslate with score=job.client.average_rating %}{{ score }}★ from workers{% endblocktranslate %}
           {% else %}<span class="badge">{% translate "New" %}</span>{% endif %}
-          · {{ job.client.jobs_completed }} job{{ job.client.jobs_completed|pluralize }} completed
+          · {% blocktranslate count done=job.client.jobs_completed %}{{ done }} job completed{% plural %}{{ done }} jobs completed{% endblocktranslate %}
           {% if job.client.average_approval_hours %}
-            · approves in {{ job.client.average_approval_hours }} hr
+            · {% blocktranslate with hours=job.client.average_approval_hours %}approves in {{ hours }} hr{% endblocktranslate %}
           {% endif %}
-          <br>Posted {{ job.created_at|timesince }} ago
+          <br>{% blocktranslate with ago=job.created_at|timesince %}Posted {{ ago }} ago{% endblocktranslate %}
         </p>
       </div>
     </div>
@@ -205,7 +205,8 @@
   {% if job.assigned_worker %}
     <h2>{% translate "Assigned to" %}</h2>
     <div class="card">
-      {% include "_person.html" with person=job.assigned_worker.user size="md" sub="Working this job" %}
+      {% translate "Working this job" as working_sub %}
+      {% include "_person.html" with person=job.assigned_worker.user size="md" sub=working_sub %}
       <div class="btn-row">
         {% if job.is_gig %}
           <a class="btn" href="{% url 'worklog:workspace' job.pk %}">{% translate "Open the job" %}</a>

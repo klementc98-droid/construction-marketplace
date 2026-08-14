@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load i18n %}
+{% load i18n money_extras %}
 {% block title %}Payment — {{ job.title }}{% endblock %}
 
 {% block content %}
@@ -22,9 +22,9 @@
     <div class="card">
       <div class="stat-row">
         <div class="stat"><div class="k">{% translate "Status" %}</div><div class="v">{{ escrow.get_status_display }}</div></div>
-        <div class="stat"><div class="k">{% translate "Client pays" %}</div><div class="v">${{ escrow.amount }}</div></div>
-        <div class="stat"><div class="k">{% translate "Platform fee" %}</div><div class="v">${{ escrow.platform_fee }}</div></div>
-        <div class="stat"><div class="k">{% translate "Worker gets" %}</div><div class="v">${{ escrow.worker_payout }}</div></div>
+        <div class="stat"><div class="k">{% translate "Client pays" %}</div><div class="v">{{ escrow.amount|money }}</div></div>
+        <div class="stat"><div class="k">{% translate "Platform fee" %}</div><div class="v">{{ escrow.platform_fee|money }}</div></div>
+        <div class="stat"><div class="k">{% translate "Worker gets" %}</div><div class="v">{{ escrow.worker_payout|money }}</div></div>
       </div>
       {% if escrow.is_held %}
         <p class="note">
@@ -47,7 +47,7 @@
     {% else %}
       <div class="card">
         <p style="margin:0 0 12px">
-          You'll pay ${{ job.fixed_pay }} now. It's held — not taken — until the
+          You'll pay {{ job.fixed_pay|money }} now. It's held — not taken — until the
           work is done.
         </p>
         <p class="trust">
@@ -57,7 +57,7 @@
         <form method="post" action="{% url 'payments:fund' job.pk %}">
           {% csrf_token %}
           <button class="btn" type="submit" data-busy-label="Charging…"
-                  data-confirm="Charge ${{ job.fixed_pay }} to your card now? It's held, not taken — it only goes to the worker once the day is signed off.">
+                  data-confirm="Charge {{ job.fixed_pay|money }} to your card now? It's held, not taken — it only goes to the worker once the day is signed off.">
             {% translate "Fund this gig" %}
           </button>
         </form>
@@ -77,7 +77,7 @@
     <div class="card">
       {% if escrow and escrow.is_held %}
         <p style="margin:0">The client has funded this gig. You'll be paid
-          ${{ escrow.worker_payout }} after the work is signed off.</p>
+          {{ escrow.worker_payout|money }} after the work is signed off.</p>
       {% else %}
         <p style="margin:0" class="muted">{% translate "The client hasn't funded this gig yet." %}</p>
       {% endif %}

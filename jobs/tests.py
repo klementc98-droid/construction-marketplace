@@ -125,12 +125,12 @@ class PayDisplayTests(JobFactoryMixin, TestCase):
     def test_gig_shows_the_total_and_what_it_works_out_to_hourly(self):
         """The spec's own example: $90 for 8 hours."""
         job = self.gig()
-        self.assertEqual(job.pay_display, "$90 for 8 hours")
+        self.assertEqual(job.pay_display, "€90 for 8 hours")
         self.assertEqual(job.implied_hourly, Decimal("11.25"))
 
     def test_standing_shows_a_range_or_a_flat_rate(self):
-        self.assertEqual(self.standing().pay_display, "$30-$38/hr")
-        self.assertEqual(self.standing(rate_max=None).pay_display, "$30/hr")
+        self.assertEqual(self.standing().pay_display, "€30-€38/hr")
+        self.assertEqual(self.standing(rate_max=None).pay_display, "€30/hr")
 
     def test_a_standing_position_has_no_implied_hourly(self):
         self.assertIsNone(self.standing().implied_hourly)

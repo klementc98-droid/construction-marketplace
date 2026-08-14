@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load i18n %}
+{% load i18n money_extras %}
 {% block title %}{{ job.title }} — on site{% endblock %}
 
 {% block content %}
@@ -36,7 +36,7 @@
         <div class="step-title">{% translate "Money held" %}</div>
         <div class="step-meta">
           {% if escrow.authorized_at %}
-            ${{ escrow.amount }} secured {{ escrow.authorized_at|date:"j M, H:i" }}
+            {{ escrow.amount|money }} secured {{ escrow.authorized_at|date:"j M, H:i" }}
           {% else %}
             {% translate "Waiting on the client to fund the gig" %}
           {% endif %}
@@ -85,12 +85,12 @@
         </div>
         <div class="step-meta">
           {% if job.state == 'paid_out' %}
-            ${{ completion.payable_amount }} released
+            {{ completion.payable_amount|money }} released
             {{ completion.settled_at|date:"j M, H:i"|default:"" }}
           {% elif dispute %}
             {% translate "Frozen until someone reviews it. Nothing releases automatically from here." %}
           {% elif completion %}
-            ${{ completion.payable_amount }} releases {{ completion.settles_at|date:"j M, H:i" }}
+            {{ completion.payable_amount|money }} releases {{ completion.settles_at|date:"j M, H:i" }}
           {% else %}
             {% translate "Releases after the job is signed off" %}
           {% endif %}
@@ -114,12 +114,12 @@
         </div>
         <div class="stat">
           <div class="k">{% translate "Worker is owed" %}</div>
-          <div class="v">${{ completion.payable_amount }}</div>
+          <div class="v">{{ completion.payable_amount|money }}</div>
         </div>
         {% if completion.payable_amount < escrow.amount %}
           <div class="stat">
             <div class="k">{% translate "Back to client" %}</div>
-            <div class="v">${{ escrow.amount|floatformat:2 }}</div>
+            <div class="v">{{ escrow.amount|floatformat:2|money }}</div>
           </div>
         {% endif %}
       </div>
@@ -218,15 +218,15 @@
         <span class="muted">{% translate "left" %}</span>
       </p>
       <p class="muted" style="margin:0 0 14px">
-        ${{ completion.payable_amount }} releases to
+        {{ completion.payable_amount|money }} releases to
         {{ job.assigned_worker.user }} automatically when this runs out.
         Approving now just does it sooner.
       </p>
       <form method="post" action="{% url 'worklog:approve' job.pk %}">
         {% csrf_token %}
         <button class="btn" type="submit" data-busy-label="Releasing…"
-                data-confirm="Release ${{ completion.payable_amount }} to {{ job.assigned_worker.user }} now? Money that has been released can't be pulled back.">
-          Approve and release ${{ completion.payable_amount }}
+                data-confirm="Release {{ completion.payable_amount|money }} to {{ job.assigned_worker.user }} now? Money that has been released can't be pulled back.">
+          Approve and release {{ completion.payable_amount|money }}
         </button>
       </form>
 
@@ -285,7 +285,7 @@
     <div class="card">
       <p style="margin:0 0 6px">
         <span class="countdown">{{ completion.settles_at|timeuntil }}</span>
-        <span class="muted">until ${{ completion.payable_amount }} lands</span>
+        <span class="muted">until {{ completion.payable_amount|money }} lands</span>
       </p>
       <p class="muted" style="margin:0">
         {% if completion.ended_early %}
@@ -313,7 +313,7 @@
   {% elif job.state == 'paid_out' %}
     <div class="card">
       <p style="margin:0">
-        Settled. ${{ completion.payable_amount }} went to
+        Settled. {{ completion.payable_amount|money }} went to
         {{ job.assigned_worker.user }}.
       </p>
       <p class="note">{% translate "Ratings arrive in phase 6." %}</p>

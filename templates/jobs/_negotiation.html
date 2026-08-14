@@ -1,4 +1,4 @@
-{% load i18n %}{% comment %}
+{% load i18n money_extras %}{% comment %}
 The negotiation panel, rendered for whichever side is looking.
 
 Expects: counter_worker, my_party, live_counter, my_turn, terms,
@@ -33,7 +33,7 @@ of them has seen.
 
     {% if live_counter %}
       {% comment %} Before and after, never the new figure alone. Somebody being asked to
-         agree to "$280" cannot weigh it without knowing it was $240.
+         agree to "€280" cannot weigh it without knowing it was €240.
       {% endcomment %}
       <ul class="terms-diff">
         {% for label, before, after in live_counter.changes %}
@@ -63,7 +63,7 @@ of them has seen.
             {% csrf_token %}
             <button class="btn" type="submit" name="answer" value="accept"
                     data-confirm="Agree to these terms and book the job?">
-              Accept — ${{ live_counter.fixed_pay|default:terms.fixed_pay|floatformat:0 }}
+              Accept — {{ live_counter.fixed_pay|default:terms.fixed_pay|money }}
             </button>
           </form>
           <a class="btn secondary"
@@ -100,7 +100,7 @@ of them has seen.
                 {% if round.proposed_by == 'worker' %}{{ counter_worker.user }}
                 {% else %}{{ job.client.company_name|default:job.client.user }}{% endif %}
                 {% translate "asked for" %}
-                {% if round.fixed_pay %}${{ round.fixed_pay|floatformat:0 }}{% endif %}
+                {% if round.fixed_pay %}{{ round.fixed_pay|money }}{% endif %}
                 {% if round.gig_hours %}· {{ round.gig_hours|floatformat:"-1" }} hrs{% endif %}
                 {% if round.gig_date %}· {{ round.gig_date|date:"D j M" }}{% endif %}
               </div>

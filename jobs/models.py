@@ -31,6 +31,7 @@ from django.utils.translation import gettext_lazy as _
 from accounts.models import ClientProfile, RateType, WorkerProfile
 from config import business_rules as rules
 from core.models import Region, TimestampedModel, Trade
+from core.money import money
 from core.state_machine import JobState, state_tone
 
 
@@ -326,15 +327,18 @@ class Job(TimestampedModel):
         """One string for either kind of post, for list rows and cards."""
         if self.is_gig:
             if self.fixed_pay is None:
-                return "Pay not set"
+                return _("Pay not set")
             hours = (self.gig_hours or Decimal("0")).normalize()
-            return f"${self.fixed_pay:,.0f} for {hours} hours"
+            return _("%(pay)s for %(hours)s hours") % {
+                "pay": money(self.fixed_pay),
+                "hours": hours,
+            }
         if self.rate_min is None:
-            return "Rate on request"
-        unit = "hr" if self.rate_type == RateType.HOURLY else "day"
+            return _("Rate on request")
+        unit = _("hr") if self.rate_type == RateType.HOURLY else _("day")
         if self.rate_max and self.rate_max != self.rate_min:
-            return f"${self.rate_min:,.0f}-${self.rate_max:,.0f}/{unit}"
-        return f"${self.rate_min:,.0f}/{unit}"
+            return f"{money(self.rate_min)}-{money(self.rate_max)}/{unit}"
+        return f"{money(self.rate_min)}/{unit}"
 
     @property
     def implied_hourly(self) -> Decimal | None:

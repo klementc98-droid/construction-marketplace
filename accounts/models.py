@@ -23,6 +23,7 @@ from django.utils import formats, timezone
 from django.utils.translation import gettext_lazy as _
 
 from config import business_rules as rules
+from core.money import money
 from core.models import Region, TimestampedModel, Trade
 
 
@@ -403,8 +404,8 @@ class WorkerProfile(ReputationMixin, TimestampedModel):
         # the surrounding string is only digits and punctuation.
         unit = _("hr") if self.rate_type == RateType.HOURLY else _("day")
         if self.rate_max and self.rate_max != self.rate_min:
-            return f"${self.rate_min:,.0f}-${self.rate_max:,.0f}/{unit}"
-        return f"${self.rate_min:,.0f}/{unit}"
+            return f"{money(self.rate_min)}-{money(self.rate_max)}/{unit}"
+        return f"{money(self.rate_min)}/{unit}"
 
     # -- trust stats -------------------------------------------------------
 

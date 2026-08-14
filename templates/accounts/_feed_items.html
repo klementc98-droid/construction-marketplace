@@ -1,4 +1,4 @@
-{% load i18n %}{% comment %}
+{% load i18n money_extras %}{% comment %}
 One page of feed cards. Rendered on its own for `?partial=1`, which is what
 the scroll loader fetches and appends — so a card looks identical whether it
 arrived with the page or afterwards.
@@ -24,8 +24,8 @@ arrived with the page or afterwards.
             <span class="badge gig">{% translate "Gig" %}</span>
           {% endif %}
           <span class="badge">{{ job.gig_date|date:"D j M" }}</span>
-          <span class="badge">{{ job.gig_hours|floatformat:"-1" }} hrs</span>
-          {% if job.implied_hourly %}<span class="badge">≈${{ job.implied_hourly }}/hr</span>{% endif %}
+          <span class="badge">{% blocktranslate with n=job.gig_hours|floatformat:"-1" %}{{ n }} hrs{% endblocktranslate %}</span>
+          {% if job.implied_hourly %}<span class="badge">≈{{ job.implied_hourly|money }}/hr</span>{% endif %}
         {% else %}
           <span class="badge">{{ job.get_position_type_display }}</span>
         {% endif %}
