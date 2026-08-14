@@ -15,7 +15,7 @@
     {% if job.is_gig %}
       <p class="trust">
         <svg class="trust-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-shield"/></svg>
-        {% translate "If you get this gig, the client funds it before you travel — and escrow releases on its own once the day is signed off." %}
+        {% if job.is_escrowed %}{% translate "This one runs through escrow: the client funds it before you travel, and it releases on its own once the day is signed off." %}{% else %}{% translate "Payment on this one is arranged directly between you and the client." %}{% endif %}
       </p>
     {% endif %}
 

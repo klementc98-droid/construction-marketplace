@@ -5,7 +5,7 @@
 {% block content %}
   <h1>{% if job %}{% translate "Edit this post" %}{% else %}{% if is_gig %}{% translate "Post a gig" %}{% else %}{% translate "Post a position" %}{% endif %}{% endif %}</h1>
   <p class="lede">
-    {% if is_gig %}{% translate "One date, one price. You fund escrow when you confirm a worker." %}
+    {% if is_gig %}{% translate "One date, one price. You choose below how it is paid." %}
     {% else %}{% translate "Ongoing work at a rate. Workers apply and you pick." %}{% endif %}
   </p>
 
@@ -30,7 +30,7 @@
     {% if is_gig %}
       <p class="trust">
         <svg class="trust-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-shield"/></svg>
-        {% translate "You're charged when you confirm a worker, not now. We hold it until the day is signed off." %}
+        {% translate "Nothing is charged by posting. If you choose escrow, you fund it when you confirm a worker; otherwise payment stays between the two of you." %}
       </p>
     {% endif %}
 

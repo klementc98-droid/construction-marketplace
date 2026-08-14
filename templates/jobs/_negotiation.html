@@ -56,7 +56,7 @@ of them has seen.
       {% if my_turn %}
         <p class="note">
           {% translate "Accepting agrees these terms and books the job." %}
-          {% if my_party == 'client' %}{% translate "You fund escrow next." %}{% endif %}
+          {% if my_party == 'client' and job.is_escrowed %}{% translate "You fund escrow next." %}{% endif %}
         </p>
         <div class="btn-row">
           <form method="post" action="{% url 'jobs:counter_respond' live_counter.pk %}">
