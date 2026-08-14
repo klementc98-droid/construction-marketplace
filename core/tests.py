@@ -54,10 +54,16 @@ class StateMachineTests(TestCase):
         for src, dst, actor in path:
             assert_transition(src, dst, actor)  # must not raise
 
-    def test_work_cannot_start_before_escrow_is_funded(self):
-        """The rule the whole design exists to enforce."""
-        with self.assertRaises(IllegalTransition):
-            assert_transition(JobState.ACCEPTED, JobState.IN_PROGRESS, Actor.WORKER)
+    def test_starting_work_from_accepted_is_legal(self):
+        """Because a deal settled directly has no funding step to wait for.
+
+        This used to be refused here, when every gig went through escrow. The
+        rule it enforced — nobody travels to a site on a hold that was never
+        funded — has not gone anywhere; it moved to worklog.services.check_in,
+        which is where it can ask the question the table cannot: does *this*
+        job use escrow? See NoEscrowLifecycleTests and CheckInTests.
+        """
+        assert_transition(JobState.ACCEPTED, JobState.IN_PROGRESS, Actor.WORKER)
 
     def test_job_cannot_skip_straight_to_payout(self):
         for src in (JobState.POSTED, JobState.ACCEPTED, JobState.ESCROW_HELD):

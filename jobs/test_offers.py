@@ -664,9 +664,10 @@ class MutualDoneTests(JobFactoryMixin, TestCase):
         from core.state_machine import JobState
 
         job = self.gig()
+        job.use_escrow = True
         job.state = JobState.ACCEPTED
         job.assigned_worker = self.worker_profile
-        job.save(update_fields=["state", "assigned_worker"])
+        job.save(update_fields=["use_escrow", "state", "assigned_worker"])
         self.client.force_login(self.worker_user)
         response = self.client.get(reverse("jobs:detail", args=[job.pk]))
         self.assertNotContains(response, reverse("worklog:finish", args=[job.pk]))

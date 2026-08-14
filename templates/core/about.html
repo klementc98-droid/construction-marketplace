@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load i18n %}
 {% block title %}{% translate "How it works — Construction's Finest" %}{% endblock %}
-{% block description %}{% translate "Day gigs and standing positions for the trades. The client's money is held before the work starts, and released on a timer once the day is signed off." %}{% endblock %}
+{% block description %}{% translate "Day gigs and standing positions for the building trades. How posting, applying, agreeing terms and getting paid work here." %}{% endblock %}
 
 {% comment %}
 Every figure on this page comes from the view, which reads config/business_rules.py.
@@ -27,8 +27,8 @@ a marketing page that disagrees with the code is a false statement about someone
 
   <h2>{% translate "The two kinds of post" %}</h2>
   <div class="card">
-    <p class="flush"><strong>{% translate "A gig" %}</strong> {% translate "is one dated shift at a fixed price — a day, a price, a site. This is the kind that runs through escrow, because it has a defined end that everyone can agree has happened." %}</p>
-    <p style="margin:12px 0 0"><strong>{% translate "A standing position" %}</strong> {% translate "is an open role paid at a rate rather than a total: full-time, part-time, ongoing. We introduce the two sides and step out of it. There is no escrow here, because there is no single day to sign off." %}</p>
+    <p class="flush"><strong>{% translate "A gig" %}</strong> {% translate "is one dated shift at a fixed price — a day, a price, a site. It has a defined end that both sides can agree has happened, which is what makes it simple to close." %}</p>
+    <p style="margin:12px 0 0"><strong>{% translate "A standing position" %}</strong> {% translate "is an open role paid at a rate rather than a total: full-time, part-time, ongoing. We introduce the two sides and step out of it." %}</p>
   </div>
 
   <h2>{% translate "How the money moves on a gig" %}</h2>
@@ -117,7 +117,7 @@ a marketing page that disagrees with the code is a false statement about someone
   <div class="card" style="margin-top:16px">
     <p class="flush"><strong>{% translate "Want the detail?" %}</strong></p>
     <p class="muted" style="margin:6px 0 0">
-      {% translate "The whitepaper covers the escrow mechanism, why job and payment state are one machine, the trust model, and what v1 deliberately does not do yet." %}
+      {% translate "The whitepaper covers how the job lifecycle is modelled, the optional escrow mechanism, and the trust model behind the ratings." %}
     </p>
     <div class="btn-row">
       <a class="btn secondary" href="{% url 'core:whitepaper' %}">{% translate "Read the whitepaper" %}</a>

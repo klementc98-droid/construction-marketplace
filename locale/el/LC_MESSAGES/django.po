@@ -193,8 +193,8 @@ msgid "A one-day gig"
 msgstr "Μεροκάματο μίας ημέρας"
 
 #: templates/jobs/job_post_choose.html
-msgid "A specific date, a set number of hours, one fixed price — &quot;€90 for 8 hours on the 14th&quot;. You pay up front into escrow when you confirm someone, and the money is released after the day's work."
-msgstr "Συγκεκριμένη ημερομηνία, ορισμένες ώρες, μία σταθερή τιμή — &quot;90€ για 8 ώρες στις 14&quot;. Πληρώνεις προκαταβολικά σε μεσεγγύηση όταν επιβεβαιώνεις κάποιον, και τα χρήματα αποδεσμεύονται μετά τη δουλειά της ημέρας."
+msgid "A specific date, a set number of hours, one fixed price — &quot;€90 for 8 hours on the 14th&quot;. You agree it with the worker and settle it between you."
+msgstr "Συγκεκριμένη ημερομηνία, ορισμένες ώρες, μία σταθερή τιμή — &quot;90€ για 8 ώρες στις 14&quot;. Το συμφωνείς με τον τεχνίτη και το τακτοποιείτε μεταξύ σας."
 
 #: templates/core/about.html
 #: templates/jobs/job_post_choose.html
@@ -261,6 +261,10 @@ msgstr "Διαχειριστής"
 #: templates/jobs/job_detail.html
 msgid "Agree and the job closes. Payment stays between the two of you — then you can both leave a rating."
 msgstr "Συμφώνησε και η δουλειά κλείνει. Η πληρωμή μένει μεταξύ σας — μετά μπορείτε να αφήσετε αξιολόγηση."
+
+#: templates/accounts/feed.html
+msgid "Agree it between you"
+msgstr "Συμφωνήστε μεταξύ σας"
 
 #: jobs/models.py
 msgid "Agreed"
@@ -612,17 +616,21 @@ msgstr "Η ημερομηνία πέρασε"
 msgid "Day finished"
 msgstr "Η ημέρα ολοκληρώθηκε"
 
-#: templates/accounts/feed.html
-msgid "Day gigs and standing positions for the trades, with gig pay held in escrow until the job's done."
-msgstr "Μεροκάματα και μόνιμες θέσεις για τα τεχνικά επαγγέλματα, με την πληρωμή του μεροκάματου σε μεσεγγύηση μέχρι να τελειώσει η δουλειά."
-
 #: templates/base.html
-msgid "Day gigs and standing positions for the trades. Gig pay is held in escrow until the job is signed off."
-msgstr "Μεροκάματα και μόνιμες θέσεις για τα τεχνικά επαγγέλματα. Η πληρωμή του μεροκάματου κρατείται σε μεσεγγύηση μέχρι να εγκριθεί η δουλειά."
+msgid "Day gigs and standing positions for the building trades."
+msgstr "Μεροκάματα και μόνιμες θέσεις για τα τεχνικά επαγγέλματα."
+
+#: templates/accounts/feed.html
+msgid "Day gigs and standing positions for the building trades. Find the work, find the people, agree it between you."
+msgstr "Μεροκάματα και μόνιμες θέσεις για τα τεχνικά επαγγέλματα. Βρες τη δουλειά, βρες τους ανθρώπους, συμφωνήστε μεταξύ σας."
 
 #: templates/core/about.html
-msgid "Day gigs and standing positions for the trades. The client's money is held before the work starts, and released on a timer once the day is signed off."
-msgstr "Μεροκάματα και μόνιμες θέσεις για τα τεχνικά επαγγέλματα. Τα χρήματα του πελάτη κρατούνται πριν ξεκινήσει η δουλειά και αποδεσμεύονται με χρονόμετρο μόλις εγκριθεί η ημέρα."
+msgid "Day gigs and standing positions for the building trades. How posting, applying, agreeing terms and getting paid work here."
+msgstr "Μεροκάματα και μόνιμες θέσεις για τα τεχνικά επαγγέλματα. Πώς λειτουργούν οι αγγελίες, οι αιτήσεις, η συμφωνία όρων και η πληρωμή εδώ."
+
+#: templates/base.html
+msgid "Day gigs and standing positions for the trades. Find work, find people, agree the terms."
+msgstr "Μεροκάματα και μόνιμες θέσεις για τα τεχνικά επαγγέλματα. Βρες δουλειά, βρες ανθρώπους, συμφωνήστε τους όρους."
 
 #: accounts/forms.py
 msgid "Day gigs this week — framing or second fix"
@@ -761,10 +769,6 @@ msgstr "Η μεσεγγύηση σημαίνει ότι τα χρήματα χρ
 #: templates/accounts/dashboard.html
 msgid "Escrow payments, check-in and ratings arrive in phases 4–6. Posting, search, applications and messaging are live."
 msgstr "Οι πληρωμές μέσω μεσεγγύησης, το check-in και οι αξιολογήσεις έρχονται στις φάσεις 4–6. Οι αγγελίες, η αναζήτηση, οι αιτήσεις και τα μηνύματα λειτουργούν ήδη."
-
-#: templates/accounts/feed.html
-msgid "Escrow releases on its own once the day's signed off."
-msgstr "Η μεσεγγύηση αποδεσμεύεται από μόνη της μόλις εγκριθεί η ημέρα."
 
 #: jobs/models.py
 msgid "Expected length of the day."
@@ -920,10 +924,6 @@ msgstr "Μεροκάματο"
 #: templates/payments/payouts.html
 msgid "Gig pay goes through the platform. Set this up once and the money lands in your bank after each job."
 msgstr "Η πληρωμή του μεροκάματου περνά από την πλατφόρμα. Ρύθμισέ το μία φορά και τα χρήματα μπαίνουν στην τράπεζά σου μετά από κάθε δουλειά."
-
-#: templates/base.html
-msgid "Gig pay is held in escrow until the job is signed off."
-msgstr "Η πληρωμή του μεροκάματου κρατείται σε μεσεγγύηση μέχρι να εγκριθεί η δουλειά."
 
 #: jobs/forms.py
 msgid "Give it a short name"
@@ -1225,10 +1225,6 @@ msgstr "Λείπει"
 msgid "Money held"
 msgstr "Χρήματα σε κράτηση"
 
-#: templates/accounts/feed.html
-msgid "Money held first"
-msgstr "Πρώτα κρατούνται τα χρήματα"
-
 #: templates/base.html
 msgid "My profile"
 msgstr "Το προφίλ μου"
@@ -1411,8 +1407,12 @@ msgid "Nothing is booked by sending this. It goes back to the other side, who ca
 msgstr "Δεν κλείνει τίποτα με την αποστολή. Πηγαίνει πίσω στην άλλη πλευρά, που μπορεί να πει ναι, να πει όχι, ή να επανέλθει με κάτι άλλο."
 
 #: templates/jobs/offer_form.html
-msgid "Nothing is charged by sending this. You fund escrow only if they accept."
-msgstr "Δεν χρεώνεται τίποτα με την αποστολή. Χρηματοδοτείς τη μεσεγγύηση μόνο αν δεχτεί."
+msgid "Nothing is charged by sending this. How it is paid is the choice above, and it stays between you unless you both pick escrow."
+msgstr "Δεν χρεώνεται τίποτα με την αποστολή. Ο τρόπος πληρωμής είναι η επιλογή παραπάνω, και μένει μεταξύ σας εκτός αν διαλέξετε μεσεγγύηση."
+
+#: templates/jobs/offer_form.html
+msgid "Nothing is charged now or later — you and the worker settle this between you."
+msgstr "Δεν χρεώνεται τίποτα τώρα ούτε αργότερα — εσύ και ο τεχνίτης το τακτοποιείτε μεταξύ σας."
 
 #: templates/jobs/offer_form.html
 msgid "Nothing is charged now. If they accept, you fund the escrow and the money is held until the day's work is signed off."
@@ -1441,6 +1441,10 @@ msgstr "Πρόσφερε δουλειά στον/στην %(who)s"
 #: jobs/views.py
 msgid "Offer sent to %(worker)s. You'll hear back here and in messages."
 msgstr "Η προσφορά στάλθηκε στον/στην %(worker)s. Θα ενημερωθείς εδώ και στα μηνύματα."
+
+#: templates/accounts/feed.html
+msgid "Offer, counter, message, and settle it the way you both want."
+msgstr "Πρόσφερε, αντιπρότεινε, στείλε μήνυμα και τακτοποιήστε το όπως θέλετε κι οι δύο."
 
 #: templates/jobs/mine.html
 msgid "Offered directly"
@@ -1474,6 +1478,10 @@ msgstr "Στο τραπέζι"
 msgid "On the table now"
 msgstr "Στο τραπέζι τώρα"
 
+#: templates/worklog/workspace.html
+msgid "Once the job is finished you can each leave a rating."
+msgstr "Μόλις ολοκληρωθεί η δουλειά μπορείτε να αφήσετε αξιολόγηση."
+
 #: templates/jobs/job_form.html
 msgid "One date, one price. You fund escrow when you confirm a worker."
 msgstr "Μία ημερομηνία, μία τιμή. Χρηματοδοτείς τη μεσεγγύηση όταν επιβεβαιώνεις τεχνίτη."
@@ -1495,8 +1503,8 @@ msgid "Ongoing"
 msgstr "Συνεχής"
 
 #: templates/jobs/job_post_choose.html
-msgid "Ongoing or longer-term work at an hourly or daily rate. Workers apply, you pick someone, and you settle up directly — no escrow."
-msgstr "Συνεχής ή πιο μακροχρόνια εργασία με ωριαία ή ημερήσια αμοιβή. Οι τεχνίτες κάνουν αίτηση, εσύ διαλέγεις, και τακτοποιείτε απευθείας — χωρίς μεσεγγύηση."
+msgid "Ongoing or longer-term work at an hourly or daily rate. Workers apply, you pick someone, and you settle up directly."
+msgstr "Συνεχής ή πιο μακροχρόνια εργασία με ωριαία ή ημερήσια αμοιβή. Οι τεχνίτες κάνουν αίτηση, εσύ διαλέγεις, και τακτοποιείτε απευθείας."
 
 #: templates/jobs/job_form.html
 msgid "Ongoing work at a rate. Workers apply and you pick."
@@ -1573,10 +1581,6 @@ msgstr "Προαιρετικό. Τι σε κάνει κατάλληλο γι' α
 #: jobs/forms.py
 msgid "Paid by"
 msgstr "Πληρωμή ανά"
-
-#: templates/accounts/feed.html
-msgid "Paid on a timer"
-msgstr "Πληρωμή με χρονόμετρο"
 
 #: core/state_machine.py
 #: templates/worklog/workspace.html
@@ -1768,6 +1772,10 @@ msgstr "Φωτογραφία προφίλ"
 msgid "Profiles show completion and dispute rates only after %(min_jobs_for_stats)s finished jobs. Below that they read \"New\" — one bad first day should not brand someone with a 0% completion rate forever, and a single job at 100% is not evidence of anything either."
 msgstr "Τα προφίλ δείχνουν ποσοστά ολοκλήρωσης και ενστάσεων μόνο μετά από %(min_jobs_for_stats)s ολοκληρωμένες δουλειές. Κάτω από αυτό γράφουν \"Νέο\" — μια κακή πρώτη μέρα δεν πρέπει να σφραγίζει κάποιον με 0% ολοκλήρωση για πάντα, ούτε μία δουλειά στο 100% αποδεικνύει κάτι."
 
+#: templates/accounts/feed.html
+msgid "Profiles with the trade, the rate and the days they are free."
+msgstr "Προφίλ με την ειδικότητα, την αμοιβή και τις ημέρες που είναι ελεύθεροι."
+
 #: core/models.py
 msgid "Prompt for a licence number on worker profiles in this trade."
 msgstr "Ζήτα αριθμό άδειας στα προφίλ τεχνιτών αυτής της ειδικότητας."
@@ -1812,10 +1820,6 @@ msgstr "Αξιολόγηση"
 msgid "Rating from workers"
 msgstr "Αξιολόγηση από τεχνίτες"
 
-#: templates/worklog/workspace.html
-msgid "Ratings arrive in phase 6."
-msgstr "Οι αξιολογήσεις έρχονται στη φάση 6."
-
 #: templates/core/about.html
 msgid "Read the whitepaper"
 msgstr "Διάβασε τη λευκή βίβλο"
@@ -1823,6 +1827,10 @@ msgstr "Διάβασε τη λευκή βίβλο"
 #: templates/payments/payouts.html
 msgid "Ready"
 msgstr "Έτοιμο"
+
+#: templates/accounts/feed.html
+msgid "Real people, named trades"
+msgstr "Πραγματικοί άνθρωποι, συγκεκριμένες ειδικότητες"
 
 #: core/state_machine.py
 msgid "Refunded"
@@ -2078,10 +2086,6 @@ msgstr "Ο πελάτης μπορεί να εγκρίνει νωρίτερα. �
 msgid "The client confirms and it closes"
 msgstr "Ο πελάτης επιβεβαιώνει και κλείνει"
 
-#: templates/accounts/feed.html
-msgid "The client funds a gig before you turn up."
-msgstr "Ο πελάτης χρηματοδοτεί το μεροκάματο πριν εμφανιστείς."
-
 #: templates/jobs/job_detail.html
 msgid "The client funds the escrow after you accept."
 msgstr "Ο πελάτης χρηματοδοτεί τη μεσεγγύηση αφού δεχτείς."
@@ -2135,8 +2139,8 @@ msgid "The two work differently once someone takes it on."
 msgstr "Τα δύο λειτουργούν διαφορετικά μόλις κάποιος αναλάβει."
 
 #: templates/core/about.html
-msgid "The whitepaper covers the escrow mechanism, why job and payment state are one machine, the trust model, and what v1 deliberately does not do yet."
-msgstr "Η λευκή βίβλος καλύπτει τον μηχανισμό μεσεγγύησης, γιατί η κατάσταση δουλειάς και πληρωμής είναι μία μηχανή, το μοντέλο εμπιστοσύνης, και τι σκόπιμα δεν κάνει ακόμη η v1."
+msgid "The whitepaper covers how the job lifecycle is modelled, the optional escrow mechanism, and the trust model behind the ratings."
+msgstr "Η λευκή βίβλος καλύπτει πώς μοντελοποιείται ο κύκλος ζωής της δουλειάς, τον προαιρετικό μηχανισμό μεσεγγύησης και το μοντέλο εμπιστοσύνης πίσω από τις αξιολογήσεις."
 
 #: templates/jobs/job_detail.html
 #: templates/jobs/offer_form.html
@@ -2736,12 +2740,12 @@ msgid "hr"
 msgstr "ώρα"
 
 #: templates/core/about.html
-msgid "is an open role paid at a rate rather than a total: full-time, part-time, ongoing. We introduce the two sides and step out of it. There is no escrow here, because there is no single day to sign off."
-msgstr "είναι μια ανοιχτή θέση που πληρώνεται με αμοιβή αντί για συνολικό ποσό: πλήρης, μερική, συνεχής απασχόληση. Συστήνουμε τις δύο πλευρές και αποσυρόμαστε. Εδώ δεν υπάρχει μεσεγγύηση, γιατί δεν υπάρχει μία ημέρα προς έγκριση."
+msgid "is an open role paid at a rate rather than a total: full-time, part-time, ongoing. We introduce the two sides and step out of it."
+msgstr "είναι μια ανοιχτή θέση που πληρώνεται με αμοιβή αντί για συνολικό ποσό: πλήρης, μερική, συνεχής απασχόληση. Συστήνουμε τις δύο πλευρές και αποσυρόμαστε."
 
 #: templates/core/about.html
-msgid "is one dated shift at a fixed price — a day, a price, a site. This is the kind that runs through escrow, because it has a defined end that everyone can agree has happened."
-msgstr "είναι μία βάρδια με ημερομηνία και σταθερή τιμή — μια μέρα, μια τιμή, ένα εργοτάξιο. Αυτό είναι το είδος που περνά από μεσεγγύηση, γιατί έχει σαφές τέλος που όλοι μπορούν να συμφωνήσουν ότι συνέβη."
+msgid "is one dated shift at a fixed price — a day, a price, a site. It has a defined end that both sides can agree has happened, which is what makes it simple to close."
+msgstr "είναι μία βάρδια με ημερομηνία και σταθερή τιμή — μια μέρα, μια τιμή, ένα εργοτάξιο. Έχει σαφές τέλος που και οι δύο πλευρές μπορούν να συμφωνήσουν ότι συνέβη, κι αυτό το κάνει απλό να κλείσει."
 
 #: templates/worklog/workspace.html
 msgid "left"

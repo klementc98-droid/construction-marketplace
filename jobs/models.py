@@ -254,17 +254,16 @@ class Job(TimestampedModel):
 
     #: Whether the platform holds the money for this gig.
     #:
-    #: Default True, because escrow is the reason this board exists and an
-    #: unfunded gig is the arrangement everyone already had. Off is for the
-    #: pair who would rather settle it themselves — cash on the day, an
-    #: invoice, a regular they have worked with for years — and who otherwise
-    #: message each other and leave the platform entirely, which loses the
-    #: record along with the money.
+    #: Off by default. Most work here is arranged between two people who settle
+    #: it themselves — cash on the day, an invoice, a regular they have worked
+    #: with for years — and a deal does not need us in the middle of the money
+    #: to be a deal. Escrow is offered to the pair who want it and is otherwise
+    #: not in the way: nothing in the ordinary lifecycle of a job consults it.
     #:
     #: Only meaningful on a gig. A standing position never had escrow: it is
     #: paid at a rate over an open period with no single day to sign off.
     use_escrow = models.BooleanField(
-        default=True,
+        default=False,
         help_text=_("Hold the client's payment until the day is signed off."),
     )
 

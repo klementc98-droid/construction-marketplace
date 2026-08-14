@@ -10,7 +10,7 @@
 {% endcomment %}
 <meta name="theme-color" content="#f5f5f2" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#171a1c" media="(prefers-color-scheme: dark)">
-<meta name="description" content="{% block description %}{% translate "Day gigs and standing positions for the trades. Gig pay is held in escrow until the job is signed off." %}{% endblock %}">
+<meta name="description" content="{% block description %}{% translate "Day gigs and standing positions for the trades. Find work, find people, agree the terms." %}{% endblock %}">
 <title>{% block title %}Construction's Finest{% endblock %}</title>
 
 {% comment %}
@@ -246,7 +246,7 @@ correct answer anyway.
       <a href="{% url 'core:whitepaper' %}"
          {% if nav == 'whitepaper' %}aria-current="page"{% endif %}>{% translate "Whitepaper" %}</a>
       <span class="spacer"></span>
-      <span>{% translate "Gig pay is held in escrow until the job is signed off." %}</span>
+      <span>{% translate "Day gigs and standing positions for the building trades." %}</span>
     {% endblock %}
   </div>
 </footer>

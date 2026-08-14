@@ -66,7 +66,7 @@
       {% endfor %}
       <p class="trust">
         <svg class="trust-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-shield"/></svg>
-        {% translate "Nothing is charged by sending this. You fund escrow only if they accept." %}
+        {% translate "Nothing is charged by sending this. How it is paid is the choice above, and it stays between you unless you both pick escrow." %}
       </p>
     </div>
 
@@ -89,6 +89,6 @@
   </form>
 
   <p class="note">
-    {% translate "Nothing is charged now. If they accept, you fund the escrow and the money is held until the day's work is signed off." %}
+    {% if form.instance.use_escrow %}{% translate "Nothing is charged now. If they accept, you fund the escrow and the money is held until the day's work is signed off." %}{% else %}{% translate "Nothing is charged now or later — you and the worker settle this between you." %}{% endif %}
   </p>
 {% endblock %}

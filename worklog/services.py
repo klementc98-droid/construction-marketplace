@@ -73,6 +73,19 @@ def check_in(
         return job.check_in
 
     locked = Job.objects.select_for_update().get(pk=job.pk)
+
+    # The row-level half of the rule the transition table cannot state. Once
+    # ACCEPTED -> IN_PROGRESS became legal — it has to be, or a deal settled
+    # directly could never start — the table stopped being able to say "not
+    # until the money is in". That guarantee only ever applied to a job with
+    # escrow on it, and it still holds: nobody travels to a site on the promise
+    # of a hold that was never funded.
+    if locked.is_escrowed and locked.state == JobState.ACCEPTED:
+        raise WorkflowError(
+            "The client hasn't funded this gig yet — you'll be able to check "
+            "in once the money is held."
+        )
+
     assert_transition(locked.state, JobState.IN_PROGRESS, Actor.WORKER)
 
     record = CheckIn(

@@ -55,6 +55,10 @@ class WorkTestCase(TestCase):
         )
 
     def make_job(self, *, state=JobState.ESCROW_HELD, hours="8", pay="90", **extra):
+        # Escrow on by default in this fixture: these tests are about the
+        # escrow path. The model default is off — most deals are settled
+        # directly — so the ones exercising that path say so explicitly.
+        extra.setdefault("use_escrow", True)
         job = Job.objects.create(
             client=self.client_profile,
             job_type=JobType.GIG,
@@ -180,9 +184,24 @@ class CheckInTests(WorkTestCase):
             services.check_in(job, intruder)
 
     def test_cannot_check_in_before_the_money_is_held(self):
-        job = self.make_job(state=JobState.ACCEPTED)
-        with self.assertRaises(IllegalTransition):
+        """Still refused — by the service now, not the transition table.
+
+        The table had to start allowing ACCEPTED -> IN_PROGRESS, or a job
+        settled directly could never start. Only the service knows whether
+        this particular job has escrow on it.
+        """
+        job = self.make_job(state=JobState.ACCEPTED)          # use_escrow=True
+        with self.assertRaises(services.WorkflowError):
             services.check_in(job, self.worker_profile)
+        job.refresh_from_db()
+        self.assertEqual(job.state, JobState.ACCEPTED)
+
+    def test_a_job_without_escrow_can_start_straight_away(self):
+        """Nothing to wait for when nobody is holding the money."""
+        job = self.make_job(state=JobState.ACCEPTED, use_escrow=False)
+        services.check_in(job, self.worker_profile)
+        job.refresh_from_db()
+        self.assertEqual(job.state, JobState.IN_PROGRESS)
 
     def test_distance_maths_is_sane(self):
         # Rough NYC-to-Philadelphia, ~130 km.

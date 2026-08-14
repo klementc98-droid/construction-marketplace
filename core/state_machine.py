@@ -22,7 +22,8 @@ class this design exists to prevent.
 
     without escrow (Job.use_escrow is False — the two settle it themselves):
 
-    posted ─→ accepted ─→ completed ─→ closed
+    posted ─→ accepted ─┬─→ in_progress ─→ completed ─→ closed
+                        └────────────────→ completed ─→ closed
 
     The short path has no funding step, no check-in and no timer, because none
     of those mean anything when we are not holding the money. What it keeps is
@@ -181,10 +182,20 @@ TRANSITIONS: dict[str, tuple[Transition, ...]] = {
     JobState.ACCEPTED: (
         _t(JobState.ESCROW_HELD, "Client funds escrow", Actor.CLIENT, Actor.SYSTEM),
         # The no-escrow path. Whether a given job may take it is not a question
-        # about the state — it is a question about the row, so the view checks
-        # use_escrow exactly as the check-in view checks who is assigned. The
-        # table has never encoded which row a move applies to, only who may
-        # make it; see the note on direct offers above.
+        # about the state — it is a question about the row, so the service
+        # checks use_escrow exactly as the check-in service checks who is
+        # assigned. The table has never encoded which row a move applies to,
+        # only who may make it; see the note on direct offers above.
+        #
+        # Checking in without a hold is the same act as checking in with one:
+        # the worker is on site and the day has started. Only the reason for
+        # ESCROW_HELD sitting in between differs, and on a deal settled
+        # directly there is no hold to wait for.
+        _t(JobState.IN_PROGRESS, "Worker checks in — nothing held", Actor.WORKER),
+        # And straight to done for anyone who never bothers checking in. A
+        # check-in is useful, not compulsory; refusing to let somebody say the
+        # work is finished because they did not press "arrived" first would
+        # invent an obligation the deal never had.
         _t(JobState.COMPLETED, "Worker marks the work finished", Actor.WORKER),
         # Either side can still walk away before money is committed. This is a
         # feature: an unfunded acceptance is not yet a promise worth enforcing.
