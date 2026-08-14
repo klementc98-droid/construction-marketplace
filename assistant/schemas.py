@@ -124,6 +124,17 @@ def _json_type(name: str, bound: forms.Field) -> dict[str, Any]:
         return {"type": "string", "enum": [v for v, _ in pairs]}
     if isinstance(bound, forms.DateField):
         return {"type": "string", "description": "Date as YYYY-MM-DD."}
+    # A set of days behind a text field. The type carries no hint that these
+    # are dates at all, and a model left to guess sends "next Tuesday" — which
+    # the form then rejects, in a conversation designed to avoid exactly that.
+    if name.endswith("_dates"):
+        return {
+            "type": "string",
+            "description": (
+                "One or more dates as YYYY-MM-DD, comma separated — "
+                "e.g. 2026-08-04, 2026-08-05. One is fine."
+            ),
+        }
     if isinstance(bound, forms.IntegerField) and not isinstance(bound, forms.DecimalField):
         return {"type": "integer"}
     if isinstance(bound, (forms.DecimalField, forms.FloatField)):

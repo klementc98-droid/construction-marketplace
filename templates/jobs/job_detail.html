@@ -39,7 +39,7 @@
         <p class="note">
           Offered {{ my_offer.created_at|timesince }} ago. Accepting books you in
           for {{ job.gig_date|date:"D j M" }} and closes the job to anyone else.
-          The client funds the escrow after you accept.
+          {% if job.is_escrowed %}{% translate "The client funds the escrow after you accept." %}{% else %}{% translate "Payment is arranged directly between you two — nothing is held here." %}{% endif %}
         </p>
 
         <form method="post" action="{% url 'jobs:offer_respond' my_offer.pk %}">
@@ -210,7 +210,9 @@
       <div class="btn-row">
         {% if job.is_gig %}
           <a class="btn" href="{% url 'worklog:workspace' job.pk %}">{% translate "Open the job" %}</a>
-          <a class="btn secondary" href="{% url 'payments:escrow' job.pk %}">{% translate "Payment detail" %}</a>
+          {% if job.is_escrowed %}
+            <a class="btn secondary" href="{% url 'payments:escrow' job.pk %}">{% translate "Payment detail" %}</a>
+          {% endif %}
         {% endif %}
         {% if is_owner %}
           <form method="post" action="{% url 'messaging:start' job.pk job.assigned_worker.pk %}">
@@ -221,7 +223,7 @@
       </div>
       {% if job.is_gig %}
         <p class="note">
-          {% translate "Check-in, finishing up and the approval window all live on the job page." %}
+          {% if job.is_escrowed %}{% translate "Check-in, finishing up and the approval window all live on the job page." %}{% else %}{% translate "Marking the work finished and confirming it live on the job page." %}{% endif %}
         </p>
       {% endif %}
     </div>

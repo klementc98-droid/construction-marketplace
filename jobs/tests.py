@@ -170,7 +170,7 @@ class PostingPermissionTests(JobFactoryMixin, TestCase):
                 "description": "Slab, one day.",
                 "region": self.region.pk,
                 "location": "North side",
-                "gig_date": (timezone.localdate() + timedelta(days=5)).isoformat(),
+                "gig_dates": (timezone.localdate() + timedelta(days=5)).isoformat(),
                 "gig_hours": "8",
                 "fixed_pay": "180",
             },

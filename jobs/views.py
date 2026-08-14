@@ -230,15 +230,45 @@ def job_post(request, job_type: str):
     if request.method == "POST":
         form = form_class(request.POST)
         if form.is_valid():
-            job = form.save(commit=False)
-            job.client = client
-            job.job_type = job_type
-            if job.region_id is None:
-                job.region = Region.objects.filter(is_active=True).first()
-            job.full_clean()
-            job.save()
-            messages.success(request, "Posted. Workers can see it now.")
-            return redirect("jobs:detail", pk=job.pk)
+            region = Region.objects.filter(is_active=True).first()
+
+            # A gig form asks for days, plural, and each one becomes its own
+            # gig — same as a direct offer, and for the same reason: a gig is
+            # one dated shift with its own escrow and its own sign-off. A
+            # standing position has no date at all and takes the single path.
+            days = form.cleaned_data.get("gig_dates") or [None]
+            group = uuid4() if len(days) > 1 else None
+
+            with transaction.atomic():
+                posted = []
+                for day in days:
+                    job = form.save(commit=False)
+                    # save(commit=False) returns the same instance each time, so
+                    # it carries the previous day's key. Clearing both makes the
+                    # next save an INSERT rather than an overwrite.
+                    job.pk = None
+                    job._state.adding = True
+                    job.client = client
+                    job.job_type = job_type
+                    job.offer_group = group
+                    if day is not None:
+                        job.gig_date = day
+                    if job.region_id is None:
+                        job.region = region
+                    job.full_clean()
+                    job.save()
+                    posted.append(job)
+
+            if len(posted) == 1:
+                messages.success(request, _("Posted. Workers can see it now."))
+                return redirect("jobs:detail", pk=posted[0].pk)
+
+            messages.success(
+                request,
+                _("%(count)s days posted, one gig each. Workers can see them now.")
+                % {"count": len(posted)},
+            )
+            return redirect("jobs:mine")
     else:
         # Arriving from the chat assistant. Still an ordinary unbound form:
         # nothing is written yet, corrections are made by typing into the

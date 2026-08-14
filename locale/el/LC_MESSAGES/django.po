@@ -9,6 +9,10 @@ msgid ""
 msgstr "Project-Id-Version: constructions-finest\nReport-Msgid-Bugs-To: \nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\nLanguage: el\nPlural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: jobs/views.py
+msgid "%(count)s days posted, one gig each. Workers can see them now."
+msgstr "%(count)s ημέρες δημοσιεύτηκαν, ένα μεροκάματο η καθεμία. Οι τεχνίτες μπορούν να τις δουν τώρα."
+
+#: jobs/views.py
 msgid "%(count)s offers sent to %(worker)s, one for each day. They can take all of them or only the days that suit."
 msgstr "%(count)s προσφορές στάλθηκαν στον/στην %(worker)s, μία για κάθε ημέρα. Μπορεί να τις δεχτεί όλες ή μόνο τις ημέρες που τον/την βολεύουν."
 
@@ -1053,6 +1057,10 @@ msgstr "Ψάχνεις εσύ για δουλειά;"
 msgid "Mark it finished and the client confirms. Payment is between the two of you — we record that the job happened, nothing more."
 msgstr "Σήμανέ τη ως ολοκληρωμένη και ο πελάτης επιβεβαιώνει. Η πληρωμή είναι μεταξύ σας — εμείς καταγράφουμε ότι η δουλειά έγινε, τίποτα άλλο."
 
+#: templates/jobs/job_detail.html
+msgid "Marking the work finished and confirming it live on the job page."
+msgstr "Η σήμανση της δουλειάς ως ολοκληρωμένης και η επιβεβαίωση βρίσκονται στη σελίδα της δουλειάς."
+
 #: core/models.py
 msgid "Mason/Concrete"
 msgstr "Χτίστης/Μπετόν"
@@ -1466,6 +1474,14 @@ msgstr "Πληρωμή"
 msgid "Payment detail"
 msgstr "Λεπτομέρειες πληρωμής"
 
+#: templates/jobs/job_detail.html
+msgid "Payment is arranged directly between you two — nothing is held here."
+msgstr "Η πληρωμή κανονίζεται απευθείας μεταξύ σας — δεν κρατείται τίποτα εδώ."
+
+#: templates/worklog/workspace.html
+msgid "Payment is between the two of you. We record that the job happened — nothing is held and nothing is released."
+msgstr "Η πληρωμή είναι μεταξύ σας. Εμείς καταγράφουμε ότι η δουλειά έγινε — τίποτα δεν κρατείται και τίποτα δεν αποδεσμεύεται."
+
 #: templates/payments/escrow_detail.html
 msgid "Payments aren't switched on in this install."
 msgstr "Οι πληρωμές δεν είναι ενεργοποιημένες σε αυτή την εγκατάσταση."
@@ -1584,6 +1600,10 @@ msgstr "Δημοσιεύτηκε από"
 #: templates/jobs/mine.html
 msgid "Posted by you"
 msgstr "Δημοσιεύτηκε από σένα"
+
+#: jobs/views.py
+msgid "Posted. Workers can see it now."
+msgstr "Δημοσιεύτηκε. Οι τεχνίτες μπορούν να τη δουν τώρα."
 
 #: templates/jobs/job_applicants.html
 msgid "Posts with a clear title and a real rate get picked up fastest — and you don't have to wait. Find someone in this trade and offer it to them by name."
@@ -1883,8 +1903,8 @@ msgid "Temporary / short term"
 msgstr "Προσωρινή / βραχυπρόθεσμη"
 
 #: jobs/forms.py
-msgid "That's %(count)s days — %(limit)s at a time is the limit. Send these and write the rest as a second offer."
-msgstr "Αυτές είναι %(count)s ημέρες — το όριο είναι %(limit)s κάθε φορά. Στείλε αυτές και γράψε τις υπόλοιπες ως δεύτερη προσφορά."
+msgid "That's %(count)s days — %(limit)s at a time is the limit. Post these and write the rest as a second batch."
+msgstr "Αυτές είναι %(count)s ημέρες — το όριο είναι %(limit)s κάθε φορά. Δημοσίευσε αυτές και γράψε τις υπόλοιπες σε δεύτερη παρτίδα."
 
 #: assistant/views.py
 msgid "That's a lot of messages in one go — give it a few minutes and try again."
@@ -1906,9 +1926,17 @@ msgstr "Ο πίνακας είναι δημόσιος και διαβάζετα�
 msgid "The client can approve sooner. If they do nothing, it releases anyway."
 msgstr "Ο πελάτης μπορεί να εγκρίνει νωρίτερα. Αν δεν κάνει τίποτα, αποδεσμεύεται έτσι κι αλλιώς."
 
+#: templates/worklog/workspace.html
+msgid "The client confirms and it closes"
+msgstr "Ο πελάτης επιβεβαιώνει και κλείνει"
+
 #: templates/accounts/feed.html
 msgid "The client funds a gig before you turn up."
 msgstr "Ο πελάτης χρηματοδοτεί το μεροκάματο πριν εμφανιστείς."
+
+#: templates/jobs/job_detail.html
+msgid "The client funds the escrow after you accept."
+msgstr "Ο πελάτης χρηματοδοτεί τη μεσεγγύηση αφού δεχτείς."
 
 #: templates/core/about.html
 msgid "The client funds the job"
@@ -1978,6 +2006,10 @@ msgstr "Ο τεχνίτης κάνει check-in στο εργοτάξιο"
 #: templates/core/about.html
 msgid "The worker is paid"
 msgstr "Ο τεχνίτης πληρώνεται"
+
+#: templates/worklog/workspace.html
+msgid "The worker marks it finished"
+msgstr "Ο τεχνίτης τη σημαίνει ως ολοκληρωμένη"
 
 #: templates/worklog/workspace.html
 msgid "The worker marks this when the day is done"

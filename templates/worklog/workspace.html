@@ -21,6 +21,24 @@
       {% if job.assigned_worker %}
         {% include "_person.html" with person=job.assigned_worker.user size="md" sub="Worker" %}
       {% endif %}
+
+  {% if not job.is_escrowed %}
+    <div class="card">
+      <ul class="timeline">
+        <li class="{% if job.state != 'accepted' %}done{% else %}current{% endif %}">
+          <span class="dot"></span>
+          <div class="step-title">{% translate "The worker marks it finished" %}</div>
+        </li>
+        <li class="{% if job.state == 'closed' %}done{% elif job.awaiting_client_confirmation %}current{% endif %}">
+          <span class="dot"></span>
+          <div class="step-title">{% translate "The client confirms and it closes" %}</div>
+          <p class="step-note">
+            {% translate "Payment is between the two of you. We record that the job happened — nothing is held and nothing is released." %}
+          </p>
+        </li>
+      </ul>
+    </div>
+  {% endif %}
     </div>
     <p style="margin:14px 0 0">
       <a href="{% url 'messaging:inbox' %}">{% translate "Messages" %}</a> ·
@@ -28,7 +46,13 @@
     </p>
   </div>
 
-  {# ---- the record so far ------------------------------------------------ #}
+  {% comment %} The record so far. Escrow only: every step below is about money we
+     are holding — funded, checked in, signed off, released — and none of it
+     happens on a job the two sides are settling themselves. Shown anyway it
+     told a client who chose cash-in-hand that they were waiting to fund an
+     escrow, which is the wrong instruction as well as the wrong fact.
+  {% endcomment %}
+  {% if job.is_escrowed %}
   <div class="card">
     <ul class="timeline">
       <li class="{% if escrow.is_held or escrow.status == 'released' %}done{% elif job.state == 'accepted' %}current{% endif %}">
@@ -98,6 +122,7 @@
       </li>
     </ul>
   </div>
+  {% endif %}
 
   {# ---- the money -------------------------------------------------------- #}
   {% if completion %}

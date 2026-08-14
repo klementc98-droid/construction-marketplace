@@ -302,7 +302,7 @@ class CollectionTests(AssistantFixture):
             "title": "Framing help",
             "trade": self.carpentry.name,
             "description": "Two-storey rebuild, first floor.",
-            "gig_date": (timezone.localdate() + timedelta(days=3)).isoformat(),
+            "gig_dates": (timezone.localdate() + timedelta(days=3)).isoformat(),
             "gig_hours": 8,
             "fixed_pay": 240,
         }
@@ -341,7 +341,7 @@ class ReadyForReviewTests(AssistantFixture):
             "title": "Framing help",
             "trade": self.carpentry.name,
             "description": "First floor.",
-            "gig_date": (timezone.localdate() + timedelta(days=3)).isoformat(),
+            "gig_dates": (timezone.localdate() + timedelta(days=3)).isoformat(),
             "gig_hours": 8,
             "fixed_pay": 240,
         }
@@ -409,7 +409,7 @@ class HandoffTests(AssistantFixture):
                 "region": self.region.pk,
                 "description": "First floor.",
                 # Yesterday: the form must refuse it however it was collected.
-                "gig_date": (timezone.localdate() - timedelta(days=1)).isoformat(),
+                "gig_dates": (timezone.localdate() - timedelta(days=1)).isoformat(),
                 "gig_hours": "8",
                 "fixed_pay": "240",
             },
