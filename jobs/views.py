@@ -13,7 +13,7 @@ from uuid import uuid4
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db import transaction
+from django.db import models, transaction
 from django.db.models import Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
@@ -1106,6 +1106,20 @@ def mine(request):
         "jobs/mine.html",
         {
             "waiting": waiting_for(request.user),
+            # The jobs this person still owes a rating on, from either side.
+            # The "waiting on you" panel counts these and sends the reader
+            # here; without the list to land on, the count was a dead end and
+            # the rating page may as well not have existed.
+            "to_rate": [
+                job
+                for job in Job.objects.filter(
+                    models.Q(client=client) | models.Q(assigned_worker=worker),
+                    state__in=[JobState.PAID_OUT, JobState.CLOSED],
+                )
+                .select_related("trade", "client__user", "assigned_worker__user")
+                .order_by("-gig_date")
+                if job.can_be_reviewed_by(request.user)
+            ],
             # Collapsed, so a four-day booking is one line here too. The
             # client posted one thing and should see one thing.
             "posted": (

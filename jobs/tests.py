@@ -623,3 +623,57 @@ class BookingTotalsTests(JobFactoryMixin, TestCase):
         self.gig(fixed_pay=Decimal("95"))
         response = self.client.get(reverse("accounts:home"))
         self.assertNotContains(response, "total for")
+
+
+class RatingIsReachableTests(JobFactoryMixin, TestCase):
+    """The count in "waiting on you" has to land somewhere.
+
+    It said "2 finished jobs to rate" and linked to Mine, and Mine offered no
+    way to rate anything — the only route to the page was knowing to open the
+    job itself. A notice pointing at a page that does not answer it is worse
+    than no notice.
+    """
+
+    def finished(self):
+        from core.state_machine import JobState
+
+        job = self.gig()
+        job.state = JobState.CLOSED
+        job.assigned_worker = self.worker_profile
+        job.save(update_fields=["state", "assigned_worker"])
+        return job
+
+    def test_mine_offers_the_rating_to_the_client(self):
+        job = self.finished()
+        self.client.force_login(self.client_user)
+        response = self.client.get(reverse("jobs:mine"))
+        self.assertContains(response, reverse("jobs:review", args=[job.pk]))
+
+    def test_mine_offers_the_rating_to_the_worker(self):
+        job = self.finished()
+        self.client.force_login(self.worker_user)
+        response = self.client.get(reverse("jobs:mine"))
+        self.assertContains(response, reverse("jobs:review", args=[job.pk]))
+
+    def test_it_disappears_once_that_side_has_rated(self):
+        job = self.finished()
+        self.client.force_login(self.client_user)
+        self.client.post(reverse("jobs:review", args=[job.pk]), {"rating": "5"})
+        response = self.client.get(reverse("jobs:mine"))
+        self.assertNotContains(response, reverse("jobs:review", args=[job.pk]))
+
+    def test_the_other_side_is_still_asked(self):
+        """One rating per side, so the worker's is still owed."""
+        job = self.finished()
+        self.client.force_login(self.client_user)
+        self.client.post(reverse("jobs:review", args=[job.pk]), {"rating": "5"})
+
+        self.client.force_login(self.worker_user)
+        response = self.client.get(reverse("jobs:mine"))
+        self.assertContains(response, reverse("jobs:review", args=[job.pk]))
+
+    def test_unfinished_work_is_not_listed_for_rating(self):
+        self.gig()
+        self.client.force_login(self.client_user)
+        response = self.client.get(reverse("jobs:mine"))
+        self.assertNotContains(response, "Rate these")

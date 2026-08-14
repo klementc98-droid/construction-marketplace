@@ -5,6 +5,30 @@
 {% block content %}
   {% include "jobs/_waiting.html" %}
 
+  {% comment %} Finished work still owed a rating. The panel above counts these and
+     links here, so the list has to exist here or the count is a dead end —
+     which is exactly what it was: the only way to a rating was to know to open
+     the job itself.
+  {% endcomment %}
+  {% if to_rate %}
+    <h2>{% translate "Rate these" %}</h2>
+    {% for job in to_rate %}
+      <div class="card action-panel">
+        <div class="row-top">
+          <span class="title">{{ job.title }}</span>
+          <span class="badge state-{{ job.state_tone }}">{{ job.get_state_display }}</span>
+        </div>
+        <div class="row-meta">
+          {{ job.trade }}{% if job.gig_date %} · {{ job.gig_date|date:"D j M" }}{% endif %}
+        </div>
+        <div class="btn-row">
+          <a class="btn" href="{% url 'jobs:review' job.pk %}">{% translate "Leave a rating" %}</a>
+          <a class="btn secondary" href="{% url 'jobs:detail' job.pk %}">{% translate "See the job" %}</a>
+        </div>
+      </div>
+    {% endfor %}
+  {% endif %}
+
   <h1>{% translate "Your jobs" %}</h1>
 
   {% comment %} Offers first, above everything. A gig offered for Thursday is worth nothing

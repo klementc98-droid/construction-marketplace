@@ -1120,6 +1120,7 @@ msgid "Landscaping/Excavation"
 msgstr "Διαμόρφωση/Εκσκαφές"
 
 #: templates/jobs/job_detail.html
+#: templates/jobs/mine.html
 msgid "Leave a rating"
 msgstr "Άφησε αξιολόγηση"
 
@@ -1818,6 +1819,10 @@ msgstr "Αξιολόγησε τον/την %(who)s"
 msgid "Rate on request"
 msgstr "Αμοιβή κατόπιν αιτήματος"
 
+#: templates/jobs/mine.html
+msgid "Rate these"
+msgstr "Αξιολόγησε αυτές"
+
 #: templates/assistant/_form_offer.html
 msgid "Rather just answer a few questions?"
 msgstr "Προτιμάς απλώς να απαντήσεις μερικές ερωτήσεις;"
@@ -1933,6 +1938,7 @@ msgid "See all"
 msgstr "Δες όλα"
 
 #: templates/accounts/_feed_items.html
+#: templates/jobs/mine.html
 msgid "See the job"
 msgstr "Δες τη δουλειά"
 
