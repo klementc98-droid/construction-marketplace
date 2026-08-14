@@ -9,6 +9,7 @@ the afternoon.
 from __future__ import annotations
 
 from types import SimpleNamespace
+from uuid import uuid4
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -496,6 +497,12 @@ def offer_create(request, worker_pk: int):
             #
             # All of them in one transaction — a client who picked three days
             # and got two is worse off than one who got an error.
+            # One group id across the days, so an answer about the arrangement
+            # rather than the day — "escrow, not cash" — can find its siblings.
+            # Only when there is more than one: a single-day offer has no group
+            # to belong to and a stray id would imply otherwise.
+            group = uuid4() if len(days) > 1 else None
+
             with transaction.atomic():
                 jobs = []
                 for day in days:
@@ -508,6 +515,7 @@ def offer_create(request, worker_pk: int):
                     job.gig_date = day
                     job.client = client
                     job.is_private = True
+                    job.offer_group = group
                     job.save()
                     jobs.append(job)
 
@@ -640,6 +648,11 @@ def _effective_terms(job, worker):
         fixed_pay=(counter.fixed_pay if counter and counter.fixed_pay is not None else job.fixed_pay),
         gig_hours=(counter.gig_hours if counter and counter.gig_hours is not None else job.gig_hours),
         gig_date=(counter.gig_date if counter and counter.gig_date is not None else job.gig_date),
+        use_escrow=(
+            counter.use_escrow
+            if counter and counter.use_escrow is not None
+            else job.use_escrow
+        ),
     )
 
 
@@ -705,6 +718,21 @@ def _seal(job_id, worker, counter, now, offer=None, actor=Actor.WORKER):
     job.assigned_worker = worker
     job.filled_at = now
     job.save(update_fields=list(dict.fromkeys(fields)))
+
+    # An agreed payment method covers the whole offer, not the one day being
+    # accepted. Escrow on Tuesday and cash on Wednesday is not an arrangement
+    # anybody asked for, and it is what a per-day answer would produce on a
+    # three-day offer. The price and the hours stay per day — those genuinely
+    # can differ, and countering one day's money says nothing about another's.
+    #
+    # Only the days still open: a sibling already accepted or cancelled has its
+    # own settled terms and is none of this decision's business.
+    if counter is not None and counter.use_escrow is not None and job.offer_group:
+        Job.objects.filter(
+            offer_group=job.offer_group, state=JobState.POSTED
+        ).exclude(pk=job.pk).update(
+            use_escrow=counter.use_escrow, updated_at=now
+        )
 
     # A definite "no" beats an application that just goes quiet — the same
     # courtesy application_select has always paid, now owed by every route.

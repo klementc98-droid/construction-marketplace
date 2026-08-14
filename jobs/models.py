@@ -192,6 +192,17 @@ class Job(TimestampedModel):
         validators=[MinValueValidator(Decimal("0"))],
     )
 
+    #: Which multi-day offer wrote this row, if one did.
+    #:
+    #: A three-day offer is three gigs — each day has its own escrow and its own
+    #: sign-off, and cannot share a row with another. But some answers are about
+    #: the arrangement rather than the day: a worker asked for cash who wants
+    #: escrow instead means all three days, not Tuesday only. This is what lets
+    #: such an answer find its siblings.
+    #:
+    #: NULL for anything posted on its own, which is most jobs.
+    offer_group = models.UUIDField(null=True, blank=True, db_index=True)
+
     #: Whether the platform holds the money for this gig.
     #:
     #: Default True, because escrow is the reason this board exists and an
@@ -734,6 +745,13 @@ class Counter(TimestampedModel):
         blank=True,
         validators=[MinValueValidator(Decimal("0.5"))],
     )
+    #: The third thing worth haggling over, alongside the money and the day.
+    #: A worker offered cash-in-hand can come back asking for escrow without
+    #: touching the price — which is the answer "yes, but not on trust", and
+    #: the one a board built around held money should make easy to give.
+    #:
+    #: NULL means "not part of this counter", exactly like the others.
+    use_escrow = models.BooleanField(null=True, blank=True)
 
     note = models.CharField(
         max_length=300,
@@ -813,7 +831,7 @@ class Counter(TimestampedModel):
         assigns the worker — the price and the person are one decision.
         """
         changed = []
-        for field in ("fixed_pay", "gig_date", "gig_hours"):
+        for field in ("fixed_pay", "gig_date", "gig_hours", "use_escrow"):
             value = getattr(self, field)
             if value is not None and value != getattr(job, field):
                 setattr(job, field, value)

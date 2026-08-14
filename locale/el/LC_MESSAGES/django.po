@@ -2492,8 +2492,8 @@ msgid "e.g. Framing carpenter, 2-storey rebuild"
 msgstr "π.χ. Ξυλουργός σκελετών, ανακατασκευή διώροφου"
 
 #: jobs/forms.py
-msgid "e.g. That's a long day for the price — $280 and it's yours."
-msgstr "π.χ. Είναι μεγάλη μέρα για την τιμή — 280$ και είναι δική σου."
+msgid "e.g. That's a long day for the price — €280 and it's yours."
+msgstr ""
 
 #: accounts/forms.py
 msgid "e.g. north side, will travel citywide"

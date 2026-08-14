@@ -25,6 +25,7 @@ from .models import Application, Job, JobType, Offer, OfferStatus
 from decimal import Decimal
 
 from .forms import OfferForm
+from .models import Counter, CounterStatus
 from .tests import JobFactoryMixin, make_user
 
 
@@ -381,3 +382,119 @@ class MultiDayOfferTests(JobFactoryMixin, TestCase):
         self.send(bad)
         self.assertEqual(Job.objects.filter(is_private=True).count(), 0)
         self.assertEqual(Offer.objects.count(), 0)
+
+
+class PaymentMethodCounterTests(JobFactoryMixin, TestCase):
+    """A worker offered cash-in-hand can come back asking for escrow.
+
+    The answer "yes, but not on trust" — which a board built around held money
+    should make easy to give. And it is an answer about the arrangement, not
+    about one day, so on a multi-day offer it covers all of them.
+    """
+
+    def days(self, count):
+        start = timezone.localdate() + timedelta(days=3)
+        return [start + timedelta(days=n) for n in range(count)]
+
+    def send_offer(self, dates, *, escrow=False):
+        self.client.force_login(self.client_user)
+        return self.client.post(
+            reverse("jobs:offer", args=[self.worker_profile.pk]),
+            {
+                "trade": self.carpentry.pk,
+                "region": self.region.pk,
+                "title": "Second fix",
+                "description": "Doors on the first floor.",
+                "gig_dates": ", ".join(d.isoformat() for d in dates),
+                "gig_hours": "8",
+                "fixed_pay": "240",
+                "use_escrow": str(escrow),
+                "note": "",
+            },
+        )
+
+    def counter_asking_for_escrow(self, job):
+        self.client.force_login(self.worker_user)
+        return self.client.post(
+            reverse("jobs:counter", args=[job.pk]),
+            {"fixed_pay": "240", "gig_hours": "8",
+             "gig_date": job.gig_date.isoformat(),
+             "use_escrow": "True", "note": "Rather have it held."},
+        )
+
+    def test_an_offer_can_be_written_without_escrow(self):
+        self.send_offer(self.days(1))
+        job = Job.objects.filter(is_private=True).get()
+        self.assertFalse(job.use_escrow)
+        self.assertFalse(job.is_escrowed)
+
+    def test_the_worker_can_counter_asking_for_escrow_alone(self):
+        """Nothing else moves — the price and the day are agreed already."""
+        self.send_offer(self.days(1))
+        job = Job.objects.filter(is_private=True).get()
+        self.counter_asking_for_escrow(job)
+
+        counter = Counter.objects.get(job=job)
+        self.assertIs(counter.use_escrow, True)
+        self.assertEqual(counter.fixed_pay, Decimal("240"))
+        # A counter that changes nothing is refused, so this one being here at
+        # all proves the payment method counts as a change.
+        self.assertEqual(counter.status, CounterStatus.PENDING)
+
+    def test_accepting_it_puts_the_job_on_escrow(self):
+        self.send_offer(self.days(1))
+        job = Job.objects.filter(is_private=True).get()
+        self.counter_asking_for_escrow(job)
+        counter = Counter.objects.get(job=job)
+
+        self.client.force_login(self.client_user)
+        self.client.post(reverse("jobs:counter_respond", args=[counter.pk]), {"answer": "accept"})
+
+        job.refresh_from_db()
+        self.assertTrue(job.use_escrow)
+        self.assertTrue(job.is_escrowed)
+
+    def test_a_multi_day_offer_shares_one_group(self):
+        self.send_offer(self.days(3))
+        groups = {j.offer_group for j in Job.objects.filter(is_private=True)}
+        self.assertEqual(len(groups), 1)
+        self.assertIsNotNone(groups.pop())
+
+    def test_a_single_day_offer_has_no_group(self):
+        """A group of one implies siblings that do not exist."""
+        self.send_offer(self.days(1))
+        self.assertIsNone(Job.objects.filter(is_private=True).get().offer_group)
+
+    def test_agreeing_escrow_on_one_day_covers_every_day(self):
+        """Escrow on Tuesday and cash on Wednesday is nobody's arrangement."""
+        self.send_offer(self.days(3))
+        jobs = list(Job.objects.filter(is_private=True).order_by("gig_date"))
+        self.counter_asking_for_escrow(jobs[0])
+        counter = Counter.objects.get(job=jobs[0])
+
+        self.client.force_login(self.client_user)
+        self.client.post(reverse("jobs:counter_respond", args=[counter.pk]), {"answer": "accept"})
+
+        for job in jobs:
+            job.refresh_from_db()
+            self.assertTrue(job.use_escrow, f"{job.gig_date} missed the change")
+
+    def test_the_price_stays_per_day(self):
+        """Money genuinely can differ by day; the payment method cannot."""
+        self.send_offer(self.days(2))
+        jobs = list(Job.objects.filter(is_private=True).order_by("gig_date"))
+        self.client.force_login(self.worker_user)
+        self.client.post(
+            reverse("jobs:counter", args=[jobs[0].pk]),
+            {"fixed_pay": "300", "gig_hours": "8",
+             "gig_date": jobs[0].gig_date.isoformat(),
+             "use_escrow": "True", "note": ""},
+        )
+        counter = Counter.objects.get(job=jobs[0])
+        self.client.force_login(self.client_user)
+        self.client.post(reverse("jobs:counter_respond", args=[counter.pk]), {"answer": "accept"})
+
+        jobs[0].refresh_from_db(); jobs[1].refresh_from_db()
+        self.assertEqual(jobs[0].fixed_pay, Decimal("300"))
+        self.assertEqual(jobs[1].fixed_pay, Decimal("240"))   # untouched
+        self.assertTrue(jobs[1].use_escrow)                   # but escrow spread

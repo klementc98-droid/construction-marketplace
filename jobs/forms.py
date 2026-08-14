@@ -334,7 +334,7 @@ class CounterForm(forms.ModelForm):
 
     class Meta:
         model = Counter
-        fields = ["fixed_pay", "gig_hours", "gig_date", "note"]
+        fields = ["fixed_pay", "gig_hours", "gig_date", "use_escrow", "note"]
         labels = {
             "fixed_pay": _("Total pay for the day"),
             "gig_hours": _("Hours"),
@@ -356,7 +356,7 @@ class CounterForm(forms.ModelForm):
                 ]
             ),
             "note": forms.TextInput(
-                attrs={"placeholder": _("e.g. That's a long day for the price — $280 and it's yours.")}
+                attrs={"placeholder": _("e.g. That's a long day for the price — €280 and it's yours.")}
             ),
         }
 
@@ -369,8 +369,8 @@ class CounterForm(forms.ModelForm):
 
         self.fields["gig_date"].widget.attrs["min"] = timezone.localdate().isoformat()
         if not self.is_bound:
-            for name in ("fixed_pay", "gig_hours", "gig_date"):
-                self.fields[name].initial = getattr(terms, name)
+            for name in ("fixed_pay", "gig_hours", "gig_date", "use_escrow"):
+                self.fields[name].initial = getattr(terms, name, None)
 
     def clean_gig_date(self):
         day = self.cleaned_data.get("gig_date")
@@ -388,8 +388,8 @@ class CounterForm(forms.ModelForm):
         # had already been offered, which reads as a bug and wastes a round.
         moved = any(
             cleaned.get(name) is not None
-            and cleaned.get(name) != getattr(self.terms, name)
-            for name in ("fixed_pay", "gig_hours", "gig_date")
+            and cleaned.get(name) != getattr(self.terms, name, None)
+            for name in ("fixed_pay", "gig_hours", "gig_date", "use_escrow")
         )
         if not moved:
             raise forms.ValidationError(
