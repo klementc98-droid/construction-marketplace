@@ -270,3 +270,82 @@ class InboxTests(MessagingTestCase):
         response = self.client.get(reverse("messaging:inbox"))
         conversations = list(response.context["conversations"])
         self.assertEqual(conversations, [mine])
+
+
+class InboxOrderTests(MessagingTestCase):
+    """Whoever wrote to you last is at the top.
+
+    This did not hold, and nothing caught it: with_unread_for annotates a
+    Count, which makes the query a GROUP BY, and Django drops a model's
+    default Meta.ordering on those. The inbox came back in whatever order the
+    database chose, so the ordering declared on the model was decorative.
+    """
+
+    def conversation_with(self, worker_email, when):
+        from datetime import timedelta
+
+        worker = WorkerProfile.objects.create(
+            user=User.objects.create_user(email=worker_email, full_name=worker_email),
+            region=self.region,
+        )
+        job = self.make_gig()
+        Application.objects.create(job=job, worker=worker)
+        conversation = Conversation.objects.create(job=job, worker=worker)
+        message = Message.objects.create(
+            conversation=conversation, sender=worker.user, body="hi"
+        )
+        Message.objects.filter(pk=message.pk).update(created_at=when)
+        conversation.last_message_at = when
+        conversation.save(update_fields=["last_message_at"])
+        return conversation
+
+    def test_the_most_recent_conversation_comes_first(self):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        now = timezone.now()
+        yesterday = self.conversation_with("x@example.com", now - timedelta(days=1))
+        today = self.conversation_with("y@example.com", now)
+
+        self.client.force_login(self.client_user)
+        listed = list(self.client.get(reverse("messaging:inbox")).context["conversations"])
+        self.assertEqual(listed[0].pk, today.pk)
+        self.assertEqual(listed[1].pk, yesterday.pk)
+
+    def test_a_thread_nobody_has_written_in_sorts_last(self):
+        """No last_message_at at all — "never used", not "just now"."""
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        old = self.conversation_with("x@example.com", timezone.now() - timedelta(days=9))
+        silent_worker = WorkerProfile.objects.create(
+            user=User.objects.create_user(email="quiet@example.com", full_name="Quiet"),
+            region=self.region,
+        )
+        job = self.make_gig()
+        Application.objects.create(job=job, worker=silent_worker)
+        silent = Conversation.objects.create(job=job, worker=silent_worker)
+
+        self.client.force_login(self.client_user)
+        listed = list(self.client.get(reverse("messaging:inbox")).context["conversations"])
+        self.assertEqual(listed[0].pk, old.pk)
+        self.assertEqual(listed[-1].pk, silent.pk)
+
+    def test_a_new_reply_moves_its_thread_to_the_top(self):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        now = timezone.now()
+        older = self.conversation_with("x@example.com", now - timedelta(days=2))
+        newer = self.conversation_with("y@example.com", now - timedelta(days=1))
+
+        self.client.force_login(self.client_user)
+        self.client.post(
+            reverse("messaging:thread", args=[older.pk]), {"body": "back to you"}
+        )
+        listed = list(self.client.get(reverse("messaging:inbox")).context["conversations"])
+        self.assertEqual(listed[0].pk, older.pk)
+        self.assertEqual(listed[1].pk, newer.pk)

@@ -5,7 +5,7 @@ from __future__ import annotations
 from django import forms
 from django.contrib import messages as flash
 from django.contrib.auth.decorators import login_required
-from django.db import transaction
+from django.db import models, transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -50,6 +50,17 @@ def inbox(request):
         .with_unread_for(request.user)
         .with_preview()
         .select_related("job__trade", "job__client__user", "worker__user")
+        # Ordered here, not left to Meta.ordering, which does not survive this
+        # chain: with_unread_for annotates a Count, that makes it a GROUP BY
+        # query, and Django drops a model's default ordering on those. The
+        # inbox came back in whatever order the database chose — so whoever
+        # wrote to you most recently was not reliably at the top, which is the
+        # one thing an inbox has to get right.
+        #
+        # nulls_last because a thread opened with no message yet has no
+        # last_message_at, and "never used" belongs at the bottom rather than
+        # sorted among today's.
+        .order_by(models.F("last_message_at").desc(nulls_last=True), "-created_at")
     )
     return render(request, "messaging/inbox.html", {"conversations": conversations})
 
@@ -100,14 +111,7 @@ def thread(request, pk: int):
             "conversation": conversation,
             "job": conversation.job,
             "other": conversation.other_party(request.user),
-            # Newest first. The thread has no jump-to-bottom, so in the usual
-            # order the one message you opened the page to read was the one
-            # furthest from where the page lands. Model ordering stays
-            # chronological — that is the order the data is in, and the unread
-            # sweep and last_message_at both rely on it.
-            "messages_list": conversation.messages.select_related("sender").order_by(
-                "-created_at"
-            ),
+            "messages_list": conversation.messages.select_related("sender"),
             "form": form,
         },
     )
