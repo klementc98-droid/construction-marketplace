@@ -41,12 +41,41 @@
         </li>
       </ul>
     </section>
-  {% else %}
-    <div class="feed-head">
-      <h1>{% translate "Latest work" %}</h1>
-      <a class="muted" href="{% url 'jobs:list' %}">{% translate "Filter&nbsp;→" %}</a>
-    </div>
   {% endif %}
+
+  {% comment %}
+  The two halves of the site, as two sections, in the order someone arriving
+  needs them: people first, then work. Both are previews that link through to
+  their real board — the home page's job is to show that each side is populated
+  and hand you to the right list, not to be the list.
+
+  The workers section used to be filler at the bottom of the job feed, which
+  meant it appeared only after the open work ran out. Half of what this site
+  does was therefore invisible on the page most people land on.
+  {% endcomment %}
+  {% if preview_workers %}
+    <section class="home-section">
+      <div class="section-head">
+        <h2>{% translate "Find workers" %}</h2>
+        <a class="section-more" href="{% url 'jobs:worker_list' %}">{% translate "See all" %}&nbsp;→</a>
+      </div>
+      <p class="section-sub">
+        {% translate "Available now or free soon. Tap someone to see their full profile and offer them a job." %}
+      </p>
+      {% for worker in preview_workers %}
+        {% include "accounts/_worker_card.html" %}
+      {% endfor %}
+    </section>
+  {% endif %}
+
+  <section class="home-section">
+    <div class="section-head">
+      <h2>{% translate "Find work" %}</h2>
+      <a class="section-more" href="{% url 'jobs:list' %}">{% translate "See all" %}&nbsp;→</a>
+    </div>
+    <p class="section-sub">
+      {% translate "Open posts, newest first. Applying is free." %}
+    </p>
 
   {% comment %} Both notices sit above the feed, not after it. What follows an empty board
      is filler — profiles and closed jobs — and a reader who has scrolled all the
@@ -77,7 +106,8 @@
     </div>
   {% endif %}
 
-  <div id="feed" data-feed>
-    {% include "accounts/_feed_items.html" %}
-  </div>
+    <div id="feed" data-feed>
+      {% include "accounts/_feed_items.html" %}
+    </div>
+  </section>
 {% endblock %}

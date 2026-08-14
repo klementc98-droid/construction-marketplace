@@ -1988,6 +1988,47 @@ a.job-row.pick:hover .card::after {
 }
 .feed-head h1 { margin-bottom: 10px; }
 
+/* --- the home page's two sections ---------------------------------------
+   Find workers, then find work. Each is a heading, a line of context and a
+   way through to the full board. The rule under the heading is what makes
+   them read as two halves of a page rather than one long scroll that changes
+   subject partway down. */
+
+.home-section + .home-section { margin-top: 34px; }
+
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid var(--line);
+}
+.section-head h2 {
+  margin: 0;
+  font-size: 19px;
+  letter-spacing: -0.02em;
+}
+
+/* Kept quiet: the cards below are the thing to read, and a second bright
+   control beside the heading competes with them for the same glance. */
+.section-more {
+  flex: none;
+  color: var(--dim);
+  font-size: 13.5px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.section-more:hover { color: var(--accent); }
+
+.section-sub {
+  margin: 9px 0 13px;
+  color: var(--dim);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
 /* --- the card ------------------------------------------------------------
    The feed is the front page and it is read on a phone, thumb-first, at
    speed. So the cards sit close enough to scan as one column, they answer to

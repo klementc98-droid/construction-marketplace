@@ -30,6 +30,11 @@ from .models import ClientProfile, PortfolioPhoto, TradeLicense, WorkerProfile
 #: enough that a fast scroll does not out-run the loader.
 FEED_PAGE_SIZE = 8
 
+#: Workers shown in the home page's own section. Enough to show the board is
+#: populated and to be worth scrolling; the section links through to the full
+#: list, which is where someone actually shopping goes.
+PREVIEW_WORKERS = 4
+
 
 def home(request):
     """The feed. Open work, newest first, for everyone.
@@ -63,15 +68,24 @@ def home(request):
             .select_related("trade", "region", "client__user")
             .order_by("-created_at")[:6]
         )
-        context["filler_workers"] = (
-            WorkerProfile.objects.select_related("user", "region")
-            .prefetch_related("trades")
-            .exclude(user=request.user.pk if request.user.is_authenticated else None)
-            .order_by("-created_at")[:6]
-        )
 
     if request.GET.get("partial"):
         return render(request, "accounts/_feed_items.html", context)
+
+    # The workers preview. A section of its own rather than filler at the end
+    # of the feed, which is where it used to live: finding people is half of
+    # what this site does, and anything that only appears after the job feed
+    # runs out is something most readers never scroll far enough to see.
+    #
+    # Outside the partial branch on purpose. The scroll loader appends
+    # _feed_items.html, so anything added there arrives again on every page —
+    # this belongs to the page, not to the feed.
+    context["preview_workers"] = (
+        WorkerProfile.objects.select_related("user", "region")
+        .prefetch_related("trades")
+        .exclude(user=request.user.pk if request.user.is_authenticated else None)
+        .order_by("-created_at")[:PREVIEW_WORKERS]
+    )
 
     return render(request, "accounts/feed.html", context)
 

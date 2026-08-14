@@ -197,7 +197,7 @@ msgstr "Διαθέσιμος τώρα"
 msgid "Available now only"
 msgstr "Μόνο διαθέσιμοι τώρα"
 
-#: templates/accounts/_feed_items.html
+#: templates/accounts/feed.html
 msgid "Available now or free soon. Tap someone to see their full profile and offer them a job."
 msgstr "Διαθέσιμοι τώρα ή σύντομα. Πάτα κάποιον για να δεις το πλήρες προφίλ και να του προσφέρεις δουλειά."
 
@@ -555,15 +555,12 @@ msgstr "Τα πεδία με σήμανση"
 msgid "Fill it in by chat"
 msgstr "Συμπλήρωσέ το με συνομιλία"
 
-#: templates/accounts/feed.html
-msgid "Filter&nbsp;→"
-msgstr "Φίλτρο&nbsp;→"
-
 #: templates/jobs/_filters.html
 msgid "Filters"
 msgstr "Φίλτρα"
 
 #: templates/accounts/dashboard.html
+#: templates/accounts/feed.html
 #: templates/base.html
 #: templates/jobs/job_list.html
 msgid "Find work"
@@ -574,6 +571,7 @@ msgid "Find work."
 msgstr "Βρες δουλειά."
 
 #: templates/accounts/dashboard.html
+#: templates/accounts/feed.html
 #: templates/base.html
 #: templates/jobs/worker_list.html
 msgid "Find workers"
@@ -821,10 +819,6 @@ msgstr "Να μένει τίμιο"
 #: core/models.py
 msgid "Landscaping/Excavation"
 msgstr "Διαμόρφωση/Εκσκαφές"
-
-#: templates/accounts/feed.html
-msgid "Latest work"
-msgstr "Πρόσφατες δουλειές"
 
 #: templates/accounts/client_edit.html
 msgid "Leave blank if you're hiring as an individual."
@@ -1139,6 +1133,10 @@ msgstr "Συνεχής εργασία με αμοιβή. Οι τεχνίτες �
 msgid "Open a thread"
 msgstr "Άνοιξε συνομιλία"
 
+#: templates/accounts/feed.html
+msgid "Open posts, newest first. Applying is free."
+msgstr "Ανοιχτές αγγελίες, πρώτα οι νεότερες. Η αίτηση είναι δωρεάν."
+
 #: templates/accounts/client_detail.html
 msgid "Open right now"
 msgstr "Ανοιχτό αυτή τη στιγμή"
@@ -1208,10 +1206,6 @@ msgstr "Οι πληρωμές δεν έχουν ενεργοποιηθεί ακ�
 #: templates/payments/payouts.html
 msgid "Payouts enabled"
 msgstr "Οι πληρωμές ενεργοποιήθηκαν"
-
-#: templates/accounts/_feed_items.html
-msgid "People on Construction's Finest"
-msgstr "Άνθρωποι στο Construction's Finest"
 
 #: accounts/models.py
 msgid "Per day"
@@ -1431,6 +1425,10 @@ msgstr "Αναζήτηση"
 #: templates/base.html
 msgid "Sections"
 msgstr "Ενότητες"
+
+#: templates/accounts/feed.html
+msgid "See all"
+msgstr "Δες όλα"
 
 #: templates/accounts/_feed_items.html
 msgid "See the job"

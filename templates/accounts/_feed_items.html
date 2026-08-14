@@ -79,16 +79,11 @@ arrived with the page or afterwards.
      labelled hard, with no Apply button, because a filler card that looked
      applicable would waste somebody's afternoon.
   {% endcomment %}
-  {% if filler_workers %}
-    <h2>{% translate "People on Construction's Finest" %}</h2>
-    <p class="muted" style="margin:-4px 0 12px; font-size:13.5px">
-      {% translate "Available now or free soon. Tap someone to see their full profile and offer them a job." %}
-    </p>
-    {% for worker in filler_workers %}
-      {% include "accounts/_worker_card.html" %}
-    {% endfor %}
-  {% endif %}
-
+  {% comment %} Workers used to be filler here. They have their own section on the
+     home page now — see feed.html. Nothing worker-shaped belongs in this file:
+     the scroll loader appends it once per page, so anything here arrives again
+     every time somebody scrolls.
+  {% endcomment %}
   {% if filler_jobs %}
     <h2>{% translate "Recently filled" %}</h2>
     <p class="muted" style="margin:-4px 0 12px; font-size:13.5px">
@@ -112,7 +107,7 @@ arrived with the page or afterwards.
     {% endfor %}
   {% endif %}
 
-  {% if page.number > 1 or filler_jobs or filler_workers %}
+  {% if page.number > 1 or filler_jobs %}
     <p class="empty" style="padding:30px 16px">
       {% translate "That's everything for now." %}
       {% if user.is_authenticated and user.is_client %}
