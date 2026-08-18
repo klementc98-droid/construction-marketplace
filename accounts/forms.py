@@ -33,13 +33,17 @@ class AccountDetailsForm(forms.ModelForm):
 
     class Meta:
         model = User
-        fields = ["full_name", "avatar", "headline", "phone", "date_of_birth"]
+        fields = [
+            "full_name", "avatar", "headline", "phone", "date_of_birth",
+            "email_notifications",
+        ]
         labels = {
             "full_name": _("Name"),
             "avatar": _("Profile photo"),
             "headline": _("One-line intro"),
             "phone": _("Phone"),
             "date_of_birth": _("Date of birth"),
+            "email_notifications": _("Email me about my jobs"),
         }
         help_texts = {
             "full_name": _("How you appear to everyone else on the platform."),
@@ -47,6 +51,10 @@ class AccountDetailsForm(forms.ModelForm):
             "headline": _("Shown under your name — e.g. “Framing and finish carpentry, own tools”."),
             "phone": _("Only shown to people you're working with on a job."),
             "date_of_birth": _("Only your age is ever shown, never the date."),
+            "email_notifications": _(
+                "Offers, applications, messages and anything waiting on your "
+                "answer. Never marketing, and one switch turns off the lot."
+            ),
         }
         widgets = {
             "date_of_birth": forms.DateInput(attrs={"type": "date"}),

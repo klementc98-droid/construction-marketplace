@@ -242,6 +242,9 @@ msgstr "Πρόσθεσε φωτογραφία. Τα προφίλ που έχου
 msgid "Add or remove days"
 msgstr "Πρόσθεσε ή αφαίρεσε ημέρες"
 
+msgid "Change the day"
+msgstr "Άλλαξε την ημέρα"
+
 #: templates/accounts/worker_edit.html
 msgid "Add photo"
 msgstr "Προσθήκη φωτογραφίας"
@@ -1303,6 +1306,9 @@ msgstr "Καμία συνομιλία ακόμη."
 msgid "No days picked yet."
 msgstr "Δεν έχεις διαλέξει ημέρες ακόμη."
 
+msgid "No day picked yet."
+msgstr "Δεν έχεις διαλέξει ημέρα ακόμη."
+
 #: templates/messaging/_dm_row.html
 msgid "No messages yet"
 msgstr "Κανένα μήνυμα ακόμη"
@@ -1668,6 +1674,9 @@ msgstr "Διάλεξε τουλάχιστον μία ημέρα."
 #: core/dates.py
 msgid "Pick days"
 msgstr "Διάλεξε ημέρες"
+
+msgid "Pick a day"
+msgstr "Διάλεξε ημέρα"
 
 #: jobs/forms.py
 msgid "Pick one or more. Each day is booked and paid separately."
@@ -2796,3 +2805,265 @@ msgstr "· η τοποθεσία ταίριαξε με το εργοτάξιο"
 #: templates/core/whitepaper.html
 msgid "← How it works"
 msgstr "← Πώς λειτουργεί"
+
+#: jobs/forms.py jobs/views.py templates/jobs/offer_choose.html
+msgid "Send them something you already have up, or write a new one. Either way only they can accept it."
+msgstr "Στείλ’ τους κάτι που έχεις ήδη ανεβάσει, ή γράψε καινούργιο. Και στις δύο περιπτώσεις μόνο αυτοί μπορούν να το δεχτούν."
+
+#: jobs/forms.py jobs/views.py templates/jobs/offer_choose.html
+msgid "Which job?"
+msgstr "Ποια δουλειά;"
+
+#: jobs/forms.py jobs/views.py templates/jobs/offer_choose.html
+msgid "Nothing is retyped and nothing is copied — they are being sent this post as it stands, and it stays on the board while they decide."
+msgstr "Τίποτα δεν ξαναγράφεται και τίποτα δεν αντιγράφεται — τους στέλνεται αυτή η αγγελία όπως είναι, και μένει στον πίνακα όσο αποφασίζουν."
+
+#: jobs/forms.py jobs/views.py templates/jobs/offer_choose.html
+msgid "None of these the right work?"
+msgstr "Καμία από αυτές δεν κάνει;"
+
+#: jobs/forms.py jobs/views.py templates/jobs/offer_choose.html
+msgid "Write them a new job instead."
+msgstr "Γράψ’ τους καινούργια δουλειά."
+
+#: jobs/forms.py jobs/views.py templates/jobs/offer_choose.html
+msgid "Already have the work posted?"
+msgstr "Έχεις ήδη ανεβάσει τη δουλειά;"
+
+#: jobs/forms.py jobs/views.py templates/jobs/offer_choose.html
+msgid "Offer them one of your open jobs instead."
+msgstr "Πρότεινέ τους μία από τις ανοιχτές σου δουλειές."
+
+#: jobs/forms.py jobs/views.py templates/jobs/offer_choose.html
+msgid "Pick one of your open jobs, or write a new one."
+msgstr "Διάλεξε μία από τις ανοιχτές σου δουλειές, ή γράψε καινούργια."
+
+#: jobs/forms.py jobs/views.py templates/jobs/offer_choose.html
+msgid "That job isn't open to offer any more — it may have been taken or already sent to somebody."
+msgstr "Αυτή η δουλειά δεν είναι πλέον διαθέσιμη — μπορεί να κλείστηκε ή να στάλθηκε ήδη σε κάποιον."
+
+#: jobs/forms.py jobs/views.py templates/jobs/offer_choose.html
+msgid "Only this worker sees it. The post itself stays as it is."
+msgstr "Μόνο αυτός ο μάστορας το βλέπει. Η αγγελία μένει όπως είναι."
+
+#: jobs/forms.py jobs/views.py templates/jobs/offer_choose.html
+msgid "Offered to %(who)s — all %(count)s days."
+msgstr "Στάλθηκε στον/στην %(who)s — και τις %(count)s ημέρες."
+
+#: jobs/forms.py jobs/views.py templates/jobs/offer_choose.html
+msgid "Offered to %(who)s."
+msgstr "Στάλθηκε στον/στην %(who)s."
+
+#: jobs/views.py
+msgid "Accepted — all %(count)s days are yours."
+msgstr "Έγινε αποδεκτό — και οι %(count)s ημέρες είναι δικές σου."
+
+#: jobs/views.py
+msgid "Accepted — the job is yours."
+msgstr "Έγινε αποδεκτό — η δουλειά είναι δική σου."
+
+#: notifications/mail.py templates/notifications/email/
+msgid "You're getting this because something on the site needs your answer. Turn these off any time from your profile:"
+msgstr "Το λαμβάνεις επειδή κάτι στο σάιτ περιμένει την απάντησή σου. Μπορείς να τα κλείσεις οποτεδήποτε από το προφίλ σου:"
+
+#: notifications/mail.py templates/notifications/email/
+msgid "%(sender)s sent you a message about %(title)s:"
+msgstr "Ο/Η %(sender)s σου έστειλε μήνυμα για το %(title)s:"
+
+#: notifications/mail.py templates/notifications/email/
+msgid "Reply in the thread — they'll see it there."
+msgstr "Απάντησε στη συνομιλία — εκεί θα το δουν."
+
+#: notifications/mail.py templates/notifications/email/
+msgid "%(client)s has offered you work: %(title)s."
+msgstr "Ο/Η %(client)s σου πρόσφερε δουλειά: %(title)s."
+
+#: notifications/mail.py templates/notifications/email/
+msgid "They wrote:"
+msgstr "Έγραψαν:"
+
+#: notifications/mail.py templates/notifications/email/
+msgid "Nothing is agreed until you accept it, and declining needs no reason."
+msgstr "Τίποτα δεν κλείνει μέχρι να το δεχτείς, και η άρνηση δεν χρειάζεται αιτιολογία."
+
+#: notifications/mail.py templates/notifications/email/
+msgid "%(worker)s accepted your offer for %(title)s."
+msgstr "Ο/Η %(worker)s δέχτηκε την προσφορά σου για το %(title)s."
+
+#: notifications/mail.py templates/notifications/email/
+msgid "%(worker)s turned down your offer for %(title)s."
+msgstr "Ο/Η %(worker)s απέρριψε την προσφορά σου για το %(title)s."
+
+#: notifications/mail.py templates/notifications/email/
+msgid "%(worker)s applied for %(title)s."
+msgstr "Ο/Η %(worker)s έκανε αίτηση για το %(title)s."
+
+#: notifications/mail.py templates/notifications/email/
+msgid "Open the applicants list to see who else is in, and to pick somebody."
+msgstr "Άνοιξε τη λίστα υποψηφίων για να δεις ποιοι άλλοι ενδιαφέρονται και να διαλέξεις."
+
+#: notifications/mail.py templates/notifications/email/
+msgid "%(client)s picked you for %(title)s."
+msgstr "Ο/Η %(client)s σε διάλεξε για το %(title)s."
+
+#: notifications/mail.py templates/notifications/email/
+msgid "%(worker)s marked the work finished on %(title)s."
+msgstr "Ο/Η %(worker)s δήλωσε τη δουλειά ολοκληρωμένη στο %(title)s."
+
+#: notifications/mail.py templates/notifications/email/
+msgid "Confirm it when you agree and the job is closed."
+msgstr "Επιβεβαίωσέ το όταν συμφωνείς και η δουλειά κλείνει."
+
+#: notifications/mail.py templates/notifications/email/
+msgid "%(title)s is closed — you both agreed the work was done."
+msgstr "Το %(title)s έκλεισε — συμφωνήσατε και οι δύο ότι η δουλειά έγινε."
+
+#: notifications/mail.py templates/notifications/email/
+msgid "You can leave a rating now. It's the only thing on this site that tells the next person what you were like to work with."
+msgstr "Μπορείς να αφήσεις αξιολόγηση. Είναι το μόνο πράγμα εδώ που λέει στον επόμενο πώς ήταν να δουλέψει μαζί σου."
+
+#: notifications/mail.py templates/notifications/email/
+msgid "The money for %(title)s is now held by the platform."
+msgstr "Τα χρήματα για το %(title)s κρατούνται πλέον από την πλατφόρμα."
+
+#: notifications/mail.py templates/notifications/email/
+msgid "It is released when the day is signed off."
+msgstr "Αποδεσμεύονται όταν η μέρα εγκριθεί."
+
+#: notifications/mail.py templates/notifications/email/
+msgid "%(amount)s has been released to you for %(title)s."
+msgstr "Σου αποδεσμεύθηκαν %(amount)s για το %(title)s."
+
+#: notifications/mail.py templates/notifications/email/
+msgid "It lands in your account on your payout provider's usual schedule."
+msgstr "Φτάνουν στον λογαριασμό σου με το συνηθισμένο πρόγραμμα του παρόχου πληρωμών."
+
+#: notifications/mail.py templates/notifications/email/
+msgid "A dispute was raised on %(title)s."
+msgstr "Ανοίχτηκε διαφορά στο %(title)s."
+
+#: notifications/mail.py templates/notifications/email/
+msgid "The reason given:"
+msgstr "Η αιτιολογία:"
+
+#: notifications/mail.py templates/notifications/email/
+msgid "Nothing moves on its own from here — somebody reads it and decides."
+msgstr "Από εδώ και πέρα τίποτα δεν προχωράει μόνο του — κάποιος το διαβάζει και αποφασίζει."
+
+#: notifications/mail.py templates/notifications/email/
+msgid "%(author)s rated you %(rating)s out of %(maximum)s for %(title)s."
+msgstr "Ο/Η %(author)s σε βαθμολόγησε %(rating)s στα %(maximum)s για το %(title)s."
+
+#: notifications/mail.py templates/notifications/email/
+msgid "Email me about my jobs"
+msgstr "Στείλτε μου email για τις δουλειές μου"
+
+#: notifications/mail.py templates/notifications/email/
+msgid "Offers, applications, messages and anything waiting on your answer. Never marketing, and one switch turns off the lot."
+msgstr "Προσφορές, αιτήσεις, μηνύματα και ό,τι περιμένει απάντησή σου. Ποτέ διαφημίσεις, και ένας διακόπτης τα κλείνει όλα."
+
+#: templates/notifications/email/
+msgid "%(amount)s for %(h)s hours"
+msgstr "%(amount)s για %(h)s ώρες"
+
+#: notifications/mail.py
+msgid "New message about %(job)s"
+msgstr "Νέο μήνυμα για το %(job)s"
+
+#: notifications/mail.py
+msgid "You've been offered work: %(job)s"
+msgstr "Σου προσφέρθηκε δουλειά: %(job)s"
+
+#: notifications/mail.py
+msgid "Your offer was answered: %(job)s"
+msgstr "Απαντήθηκε η προσφορά σου: %(job)s"
+
+#: notifications/mail.py
+msgid "Somebody applied for %(job)s"
+msgstr "Κάποιος έκανε αίτηση για το %(job)s"
+
+#: notifications/mail.py
+msgid "You got the job: %(job)s"
+msgstr "Πήρες τη δουλειά: %(job)s"
+
+#: notifications/mail.py
+msgid "Work marked finished: %(job)s"
+msgstr "Η δουλειά δηλώθηκε ολοκληρωμένη: %(job)s"
+
+#: notifications/mail.py
+msgid "Job closed: %(job)s"
+msgstr "Η δουλειά έκλεισε: %(job)s"
+
+#: notifications/mail.py
+msgid "The money is held for %(job)s"
+msgstr "Τα χρήματα κρατούνται για το %(job)s"
+
+#: notifications/mail.py
+msgid "You've been paid for %(job)s"
+msgstr "Πληρώθηκες για το %(job)s"
+
+#: notifications/mail.py
+msgid "A dispute was raised on %(job)s"
+msgstr "Ανοίχτηκε διαφορά στο %(job)s"
+
+#: notifications/mail.py
+msgid "You were rated for %(job)s"
+msgstr "Αξιολογήθηκες για το %(job)s"
+
+#: notifications/mail.py
+msgid "Update on %(job)s"
+msgstr "Ενημέρωση για το %(job)s"
+
+#: notifications/mail.py
+msgid "your job"
+msgstr "τη δουλειά σου"
+
+#: notifications/
+msgid "New work posted: %(job)s"
+msgstr "Νέα δουλειά: %(job)s"
+
+#: notifications/
+msgid "You've got something waiting"
+msgstr "Κάτι περιμένει την απάντησή σου"
+
+#: notifications/
+msgid "New work in your trade"
+msgstr "Νέα δουλειά στην ειδικότητά σου"
+
+#: notifications/
+msgid "Something is waiting for you"
+msgstr "Κάτι περιμένει εσένα"
+
+#: notifications/
+msgid "New work in %(trade)s: %(title)s."
+msgstr "Νέα δουλειά σε %(trade)s: %(title)s."
+
+#: notifications/
+msgid "Nobody has been picked yet. Apply, or name your own price if the money isn't right."
+msgstr "Δεν έχει επιλεγεί κανείς ακόμη. Κάνε αίτηση, ή πες τη δική σου τιμή αν τα λεφτά δεν σε καλύπτουν."
+
+#: notifications/
+msgid "Some things on your list are still waiting on you:"
+msgstr "Κάποια πράγματα στη λίστα σου περιμένουν ακόμη εσένα:"
+
+#: notifications/
+msgid "Each of these has somebody on the other end of it waiting for an answer."
+msgstr "Σε καθένα από αυτά υπάρχει κάποιος από την άλλη πλευρά που περιμένει απάντηση."
+
+#: templates/notifications/email/reminder.txt
+msgid "%(n)s job offer to answer"
+msgid_plural "%(n)s job offers to answer"
+msgstr[0] "%(n)s προσφορά δουλειάς για απάντηση"
+msgstr[1] "%(n)s προσφορές δουλειάς για απάντηση"
+
+#: templates/notifications/email/reminder.txt
+msgid "%(n)s finished job to confirm"
+msgid_plural "%(n)s finished jobs to confirm"
+msgstr[0] "%(n)s ολοκληρωμένη δουλειά για επιβεβαίωση"
+msgstr[1] "%(n)s ολοκληρωμένες δουλειές για επιβεβαίωση"
+
+#: templates/notifications/email/reminder.txt
+msgid "%(n)s job to rate"
+msgid_plural "%(n)s jobs to rate"
+msgstr[0] "%(n)s δουλειά για αξιολόγηση"
+msgstr[1] "%(n)s δουλειές για αξιολόγηση"

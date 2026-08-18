@@ -134,11 +134,27 @@ and safe to run often.
 ```bash
 python manage.py settle_due_jobs      # release payments past their window
 python manage.py expire_stale_gigs    # retire gigs whose day passed unfilled
+python manage.py send_notifications   # post queued emails
+python manage.py send_reminders       # nudge people holding somebody else up
 ```
 
 `settle_due_jobs` is the one that moves money. Without it, a client who says
 nothing after a job is marked complete strands the worker's pay indefinitely —
 silence is meant to be approval.
+
+`send_notifications` drains the notification table. Emails are written to it
+inside the transaction that caused them and never sent from a request, so a
+slow or unreachable SMTP host cannot make somebody's job application hang and
+nothing is lost while it is being fixed. Run it every few minutes.
+
+`send_reminders` chases what people are sitting on — an unanswered offer, a
+finished job nobody confirmed, a rating nobody left. It queues at most one
+email per person per week however often you run it, because the interval is
+part of the deduplication key rather than a property of the schedule.
+
+Leave the mail settings unset and email goes to the console — which is the
+right default for a machine with no business talking to an SMTP server, and
+lets you read exactly what a user would have received.
 
 ---
 

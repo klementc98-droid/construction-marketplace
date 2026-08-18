@@ -79,6 +79,7 @@ INSTALLED_APPS = [
     "payments",
     "worklog",
     "assistant",
+    "notifications",
 ]
 
 MIDDLEWARE = [
@@ -91,6 +92,9 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    # Below both of the things it needs: the language locale resolved for this
+    # request, and the user auth attached to it.
+    "accounts.middleware.RememberLanguage",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     # Required by allauth.
@@ -269,6 +273,44 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
+
+
+# ---------------------------------------------------------------------------
+# Email
+# ---------------------------------------------------------------------------
+#
+# Nothing here is required to run the app. Unset, mail goes to the console —
+# which is the right default for a machine that has no business talking to an
+# SMTP server, and means a developer can read exactly what a user would have
+# received without configuring anything.
+#
+# Notifications are never sent from a request. They are written to a table and
+# posted by ``manage.py send_notifications`` on a timer, so an SMTP host that
+# is slow, down or wrong cannot make somebody's job application hang, and
+# nothing is lost while it is being fixed.
+
+EMAIL_HOST = os.getenv("EMAIL_HOST", "")
+EMAIL_BACKEND = (
+    "django.core.mail.backends.smtp.EmailBackend"
+    if EMAIL_HOST
+    else "django.core.mail.backends.console.EmailBackend"
+)
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = _env_bool("EMAIL_USE_TLS", True)
+#: Seconds. Without it a wedged SMTP connection hangs the sending command
+#: forever, and the next cron run stacks up behind it.
+EMAIL_TIMEOUT = int(os.getenv("EMAIL_TIMEOUT", "20"))
+
+DEFAULT_FROM_EMAIL = os.getenv(
+    "DEFAULT_FROM_EMAIL", "Construction's Finest <no-reply@localhost>"
+)
+
+#: Where links in an email point. An email is read outside the browser session
+#: that caused it, so a relative URL is useless — and this is the only place
+#: the app has to know its own public address.
+SITE_URL = os.getenv("SITE_URL", "http://127.0.0.1:8000").rstrip("/")
 
 
 # ---------------------------------------------------------------------------

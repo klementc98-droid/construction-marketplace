@@ -1,0 +1,4 @@
+{% load i18n %}{% blocktranslate %}{{ author }} rated you {{ rating }} out of {{ maximum }} for {{ title }}.{% endblocktranslate %}
+{% if comment %}
+  {{ comment }}
+{% endif %}

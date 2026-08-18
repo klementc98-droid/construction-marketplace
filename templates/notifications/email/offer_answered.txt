@@ -1,0 +1,8 @@
+{% load i18n %}{% if accepted %}{% blocktranslate %}{{ worker }} accepted your offer for {{ title }}.{% endblocktranslate %}
+{% else %}{% blocktranslate %}{{ worker }} turned down your offer for {{ title }}.{% endblocktranslate %}
+{% endif %}
+{% if note %}
+{% translate "They wrote:" %}
+
+  {{ note }}
+{% endif %}

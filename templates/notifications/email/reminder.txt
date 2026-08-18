@@ -1,0 +1,7 @@
+{% load i18n %}{% translate "Some things on your list are still waiting on you:" %}
+{% if offers %}
+{% blocktranslate count n=offers %}{{ n }} job offer to answer{% plural %}{{ n }} job offers to answer{% endblocktranslate %}{% endif %}{% if confirmations %}
+{% blocktranslate count n=confirmations %}{{ n }} finished job to confirm{% plural %}{{ n }} finished jobs to confirm{% endblocktranslate %}{% endif %}{% if ratings %}
+{% blocktranslate count n=ratings %}{{ n }} job to rate{% plural %}{{ n }} jobs to rate{% endblocktranslate %}{% endif %}
+
+{% translate "Each of these has somebody on the other end of it waiting for an answer." %}

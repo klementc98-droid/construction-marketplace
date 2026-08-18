@@ -89,6 +89,23 @@ class User(AbstractUser):
     #: "Framing and finish carpentry, own tools."
     headline = models.CharField(max_length=120, blank=True)
 
+    #: The language they last chose in the header switcher. The session already
+    #: remembers it for the browser; this remembers it for everything sent to
+    #: them, because an email is written by a background command that has no
+    #: session and no Accept-Language header to read.
+    #:
+    #: Blank means never chose — fall back to the site default rather than
+    #: guessing from whoever happened to trigger the message.
+    language = models.CharField(max_length=8, blank=True)
+
+    #: One switch, not a page of them. Somebody who does not want email wants
+    #: none of it, and a preferences grid with eleven rows in it is a way of
+    #: making people give up rather than choose.
+    email_notifications = models.BooleanField(
+        default=True,
+        help_text=_("Email me when something needs my answer."),
+    )
+
     #: Which dashboard to land on for a user who holds both roles. A UI
     #: convenience only — it grants nothing. Permission always derives from
     #: whether the corresponding profile exists.

@@ -1,0 +1,5 @@
+{% load i18n money_extras %}{% blocktranslate %}The money for {{ title }} is now held by the platform.{% endblocktranslate %}
+
+{% blocktranslate with amount=pay|money h=hours|floatformat:"-2" %}{{ amount }} for {{ h }} hours{% endblocktranslate %}
+
+{% translate "It is released when the day is signed off." %}
