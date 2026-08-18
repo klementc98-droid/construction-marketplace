@@ -349,3 +349,68 @@ class InboxOrderTests(MessagingTestCase):
         listed = list(self.client.get(reverse("messaging:inbox")).context["conversations"])
         self.assertEqual(listed[0].pk, older.pk)
         self.assertEqual(listed[1].pk, newer.pk)
+
+
+class InboxBookingTests(MessagingTestCase):
+    """A booking is one conversation in the list, however many days it is.
+
+    Four days is four threads underneath, because a thread belongs to a job and
+    each day is its own job. That is storage. An inbox showing the same person
+    and the same trade four times is not.
+    """
+
+    def booking(self, count=4):
+        from uuid import uuid4
+
+        group = uuid4()
+        days = []
+        for n in range(count):
+            job = self.make_gig(
+                offer_group=group,
+                gig_date=timezone.localdate() + timedelta(days=3 + n),
+            )
+            days.append(job)
+            Conversation.objects.create(job=job, worker=self.worker_profile)
+        return group, days
+
+    def test_a_four_day_booking_is_one_row(self):
+        self.booking(4)
+        self.client.force_login(self.worker_user)
+        response = self.client.get(reverse("messaging:inbox"))
+
+        self.assertEqual(len(response.context["conversations"]), 1)
+
+    def test_the_row_says_how_many_days_it_stands_for(self):
+        self.booking(4)
+        self.client.force_login(self.worker_user)
+        response = self.client.get(reverse("messaging:inbox"))
+
+        self.assertEqual(response.context["conversations"][0].job.group_days, 4)
+
+    def test_separate_jobs_stay_separate_rows(self):
+        """The collapse is about one booking, not about one pair of people."""
+        for _ in range(3):
+            job = self.make_gig()
+            Conversation.objects.create(job=job, worker=self.worker_profile)
+
+        self.client.force_login(self.worker_user)
+        response = self.client.get(reverse("messaging:inbox"))
+
+        self.assertEqual(len(response.context["conversations"]), 3)
+
+    def test_unread_on_any_day_counts_on_the_row(self):
+        """Otherwise a booking whose only unread question sat on Wednesday
+        showed a clean row and the question went unanswered."""
+        _group, days = self.booking(3)
+        # Not the first day, which is the one the row is most likely to be.
+        conversation = Conversation.objects.get(job=days[2])
+        Message.objects.create(
+            conversation=conversation, sender=self.client_user, body="You about?"
+        )
+
+        self.client.force_login(self.worker_user)
+        response = self.client.get(reverse("messaging:inbox"))
+
+        rows = response.context["conversations"]
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].unread_count, 1)

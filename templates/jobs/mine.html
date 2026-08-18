@@ -19,7 +19,11 @@
           <span class="badge state-{{ job.state_tone }}">{{ job.get_state_display }}</span>
         </div>
         <div class="row-meta">
-          {{ job.trade }}{% if job.gig_date %} · {{ job.gig_date|date:"D j M" }}{% endif %}
+          {{ job.trade }}
+          {% if job.group_days > 1 %}
+            · {{ job.group_dates.0|date:"j M" }} – {{ job.group_dates|last|date:"j M" }}
+            · {% blocktranslate count n=job.group_days %}{{ n }} day{% plural %}{{ n }} days{% endblocktranslate %}
+          {% elif job.gig_date %} · {{ job.gig_date|date:"D j M" }}{% endif %}
         </div>
         <div class="btn-row">
           <a class="btn" href="{% url 'jobs:review' job.pk %}">{% translate "Leave a rating" %}</a>
@@ -50,6 +54,8 @@
             {# The figure on the table, which is the counter's once there is one. #}
             <span class="pay">
               {% if offer.live_counter.fixed_pay %}{{ offer.live_counter.fixed_pay|money }}
+              {% elif offer.job.group_days > 1 %}
+                {% blocktranslate with pay=offer.job.fixed_pay|money %}{{ pay }} per day{% endblocktranslate %}
               {% else %}{{ offer.job.pay_display }}{% endif %}
             </span>
           </div>
@@ -63,10 +69,21 @@
             {% else %}
               <span class="badge gig">{% translate "Offer" %}</span>
             {% endif %}
-            {% if offer.job.starts_in %}<span class="badge state">{{ offer.job.starts_in }}</span>{% endif %}
-            {{ offer.job.gig_date|date:"D j M" }}
-            · {{ offer.job.gig_hours|floatformat:"-1" }} hrs
-            {% if offer.job.implied_hourly %} · ≈{{ offer.job.implied_hourly|money }}/{% translate "hr" %}{% endif %}
+            {% comment %} A week offered is one offer, so it reads as the week: the count,
+               the span, and what it comes to in all. Naming only the first day
+               would describe a smaller job than the one being offered.
+            {% endcomment %}
+            {% if offer.job.group_days > 1 %}
+              <span class="badge gig">{% blocktranslate count n=offer.job.group_days %}{{ n }} day{% plural %}{{ n }} days{% endblocktranslate %}</span>
+              {{ offer.job.group_dates.0|date:"j M" }} – {{ offer.job.group_dates|last|date:"j M" }}
+              · {% blocktranslate with total=offer.job.group_pay|money n=offer.job.group_days %}{{ total }} total for {{ n }} days{% endblocktranslate %}
+              · {% blocktranslate with h=offer.job.group_hours|floatformat:"-1" %}{{ h }} hrs in all{% endblocktranslate %}
+            {% else %}
+              {% if offer.job.starts_in %}<span class="badge state">{{ offer.job.starts_in }}</span>{% endif %}
+              {{ offer.job.gig_date|date:"D j M" }}
+              · {{ offer.job.gig_hours|floatformat:"-1" }} hrs
+              {% if offer.job.implied_hourly %} · ≈{{ offer.job.implied_hourly|money }}/{% translate "hr" %}{% endif %}
+            {% endif %}
             <br>
             From {{ offer.job.client.company_name|default:offer.job.client.user }}
             · {{ offer.job.trade }}
@@ -96,7 +113,13 @@
             {% else %}
               <span class="badge">Waiting on {{ offer.worker.user }}</span>
             {% endif %}
-            {{ offer.job.gig_date|date:"D j M" }} · {{ offer.job.trade }}
+            {% if offer.job.group_days > 1 %}
+              <span class="badge gig">{% blocktranslate count n=offer.job.group_days %}{{ n }} day{% plural %}{{ n }} days{% endblocktranslate %}</span>
+              {{ offer.job.group_dates.0|date:"j M" }} – {{ offer.job.group_dates|last|date:"j M" }}
+            {% else %}
+              {{ offer.job.gig_date|date:"D j M" }}
+            {% endif %}
+            · {{ offer.job.trade }}
             · sent {{ offer.created_at|timesince }} ago
           </div>
         </div>
@@ -151,11 +174,22 @@
         <div class="card">
           <div class="row-top">
             <span class="title">{{ application.job.title }}</span>
-            <span class="pay">{{ application.job.pay_display }}</span>
+            <span class="pay">
+              {% if application.job.group_days > 1 %}
+                {% blocktranslate with pay=application.job.fixed_pay|money %}{{ pay }} per day{% endblocktranslate %}
+              {% else %}{{ application.job.pay_display }}{% endif %}
+            </span>
           </div>
           <div class="row-meta">
             <span class="badge {% if application.status == 'selected' %}gig{% endif %}">
               {{ application.get_status_display }}</span>
+            {% comment %} One application covers every day of the booking, so it says so
+               here rather than listing the days as separate applications.
+            {% endcomment %}
+            {% if application.job.group_days > 1 %}
+              <span class="badge gig">{% blocktranslate count n=application.job.group_days %}{{ n }} day{% plural %}{{ n }} days{% endblocktranslate %}</span>
+              {{ application.job.group_dates.0|date:"j M" }} – {{ application.job.group_dates|last|date:"j M" }} ·
+            {% endif %}
             {{ application.job.trade }} ·
             {{ application.job.client.company_name|default:application.job.client.user }}
           </div>

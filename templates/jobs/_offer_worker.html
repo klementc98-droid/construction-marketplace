@@ -1,0 +1,49 @@
+{% load i18n %}{% comment %}
+Who you are writing to, kept in front of the person writing. It is easy to open
+three profiles and lose track of which tab you are in, and the price you are
+about to agree depends on whose rate you have in mind.
+
+Shared by both ways of making an offer — picking a post you already have and
+writing a new one — so the person you are addressing looks the same on either.
+{% endcomment %}
+<div class="card">
+  <div class="media">
+    {% include "_avatar.html" with person=worker.user size="md" %}
+    <div class="media-body">
+      <div class="row-top">
+        <span class="title">
+          <a href="{% url 'accounts:worker_detail' worker.pk %}">{{ worker.user }}</a>
+        </span>
+        <span class="pay">{{ worker.rate_display }}</span>
+      </div>
+      <p class="avail avail-{{ worker.availability_tone }}">
+        <span class="avail-dot" aria-hidden="true"></span>{{ worker.availability_headline }}
+      </p>
+      {% comment %} Whole clauses, not "yr" and "in the trade" round a number:
+         the count sits in a different place in other languages. {% endcomment %}
+      <p class="row-meta" style="margin-top:5px">
+        {% blocktranslate count years=worker.years_experience %}{{ years }} yr in the trade{% plural %}{{ years }} yrs in the trade{% endblocktranslate %}
+        <span class="sep">·</span>{% blocktranslate count jobs=worker.jobs_completed %}{{ jobs }} job done here{% plural %}{{ jobs }} jobs done here{% endblocktranslate %}
+        <span class="sep">·</span>
+        {% if worker.average_rating %}{{ worker.average_rating }}★{% else %}{% translate "New here" %}{% endif %}
+      </p>
+      {% if worker.trades.all %}
+        <p class="worker-trades">
+          {% for t in worker.trades.all %}<span class="pill">{{ t }}</span>{% endfor %}
+        </p>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if worker.upcoming_dates %}
+    <p class="note">
+      {% translate "They've said they're free on" %}
+      {% for d in worker.upcoming_dates %}{{ d.date|date:"D j M" }}{% if not forloop.last %}, {% endif %}{% endfor %}.
+      {% translate "Those are the days to aim for — you can still ask about any other." %}
+    </p>
+  {% elif worker.available_from %}
+    <p class="note">
+      {% blocktranslate with until=worker.busy_until|date:"D j M" from_day=worker.available_from|date:"D j M" %}Booked until {{ until }}, free from {{ from_day }}.{% endblocktranslate %}
+    </p>
+  {% endif %}
+</div>

@@ -30,6 +30,7 @@ from .models import (
     JobType,
     Offer,
     OfferStatus,
+    Review,
     Party,
 )
 from .tests import JobFactoryMixin, make_user
@@ -358,6 +359,235 @@ class PublicBoardTests(CounterFixture):
                 status=ApplicationStatus.APPLIED,
             ).exists()
         )
+
+    def test_naming_a_price_reaches_the_client_as_a_message(self):
+        """An applicant list is somewhere you go. A thread comes to you.
+
+        The unread badge in the header is the only thing in this app that tells
+        a client something happened, so a counter that never becomes a message
+        waits to be stumbled on.
+        """
+        from messaging.models import Conversation, Message
+
+        self.as_worker()
+        self.post_counter(Party.WORKER, fixed_pay="280", note="Long day for that.")
+
+        conversation = Conversation.objects.get(
+            job=self.job, worker=self.worker_profile
+        )
+        message = Message.objects.get(conversation=conversation)
+        # The worker sends it, so the client can answer the terms by replying.
+        self.assertEqual(message.sender, self.worker_user)
+        self.assertIsNone(message.read_at)
+        self.assertIn("280", message.body)
+        self.assertIn("Long day for that.", message.body)
+
+    def test_the_message_says_how_the_proposed_terms_would_be_paid(self):
+        """The one term that decides whose money is held has to be in the
+        sentence, not left for the client to go and look up."""
+        from messaging.models import Message
+
+        self.as_worker()
+        self.post_counter(Party.WORKER, fixed_pay="280", use_escrow="False")
+
+        body = Message.objects.get().body
+        self.assertIn("settled directly", body)
+
+    def test_the_gig_goes_to_whoever_claims_it_first(self):
+        """Two people answering the same gig in the same second.
+
+        The loser has to be told, and the winner has to keep the job. The
+        failure this guards is not an error page — it is both workers being
+        told the job is theirs, because the second write overwrote the first.
+        """
+        from unittest import mock
+
+        from core.state_machine import Actor
+
+        from .views import _seal
+
+        now = timezone.now()
+
+        # The interleaving, forced open. assert_transition runs after _seal has
+        # read the job and before it writes, which is exactly the window a
+        # second request would land in — so a rival claiming the gig from
+        # inside it reproduces the race without threads or a real database
+        # scheduler, both of which make a test that fails once a fortnight.
+        real = _seal.__globals__["assert_transition"]
+
+        def steal(*args, **kwargs):
+            result = real(*args, **kwargs)
+            Job.objects.filter(pk=self.job.pk, state=JobState.POSTED).update(
+                state=JobState.ACCEPTED,
+                assigned_worker=self.rival,
+                filled_at=now,
+                updated_at=now,
+            )
+            return result
+
+        with mock.patch("jobs.views.assert_transition", side_effect=steal):
+            with transaction.atomic():
+                sealed = _seal(
+                    self.job.pk, self.worker_profile, None, now, actor=Actor.CLIENT
+                )
+
+        # Nought rows updated, so the caller is told rather than guessing.
+        self.assertIsNone(sealed)
+
+        self.job.refresh_from_db()
+        self.assertEqual(self.job.assigned_worker, self.rival)
+        self.assertEqual(self.job.state, JobState.ACCEPTED)
+
+    def test_nothing_is_written_when_the_claim_is_lost(self):
+        """Returning early inside the caller's atomic block still commits, so
+        the counter must not be marked accepted for a job somebody else won."""
+        from unittest import mock
+
+        from core.state_machine import Actor
+
+        from .views import _seal
+
+        now = timezone.now()
+        counter = self.counter(
+            Party.WORKER, worker=self.worker_profile, fixed_pay=Decimal("280")
+        )
+
+        real = _seal.__globals__["assert_transition"]
+
+        def steal(*args, **kwargs):
+            result = real(*args, **kwargs)
+            Job.objects.filter(pk=self.job.pk, state=JobState.POSTED).update(
+                state=JobState.ACCEPTED, assigned_worker=self.rival, updated_at=now
+            )
+            return result
+
+        with mock.patch("jobs.views.assert_transition", side_effect=steal):
+            with transaction.atomic():
+                sealed = _seal(
+                    self.job.pk, self.worker_profile, counter, now, actor=Actor.CLIENT
+                )
+
+        self.assertIsNone(sealed)
+        counter.refresh_from_db()
+        self.assertEqual(counter.status, CounterStatus.PENDING)
+        # And the price on the counter never reached the job.
+        self.job.refresh_from_db()
+        self.assertEqual(self.job.fixed_pay, Decimal("240"))
+
+    def test_agreeing_terms_takes_the_whole_booking_off_the_board(self):
+        """Two people agreed. Nobody else should still be able to apply to it.
+
+        The counter was made on one day because that is where the numbers live,
+        but it was answered once, and a booking half agreed leaves days on the
+        board that are no longer available.
+        """
+        from uuid import uuid4
+
+        group = uuid4()
+        self.job.offer_group = group
+        self.job.save(update_fields=["offer_group"])
+        siblings = [
+            Job.objects.create(
+                client=self.client_profile,
+                job_type=JobType.GIG,
+                trade=self.carpentry,
+                region=self.region,
+                title="Second fix, Tuesday",
+                description="Hanging doors on the first floor.",
+                gig_date=self.job.gig_date + timedelta(days=n),
+                gig_hours=Decimal("8"),
+                fixed_pay=Decimal("240"),
+                is_private=self.private,
+                offer_group=group,
+            )
+            for n in (1, 2)
+        ]
+
+        counter = self.counter(Party.WORKER, fixed_pay=Decimal("280"))
+        self.as_client()
+        self.respond(counter, "accept")
+
+        self.assertEqual(Job.objects.public().filter(offer_group=group).count(), 0)
+        for job in [self.job, *siblings]:
+            job.refresh_from_db()
+            self.assertEqual(job.state, JobState.ACCEPTED)
+            self.assertEqual(job.assigned_worker, self.worker_profile)
+
+    def test_the_agreed_price_is_written_to_the_day_it_was_agreed_on(self):
+        """And not smeared across the booking: countering one day's money says
+        nothing about another's, and the dates differ by definition."""
+        from uuid import uuid4
+
+        group = uuid4()
+        self.job.offer_group = group
+        self.job.save(update_fields=["offer_group"])
+        other = Job.objects.create(
+            client=self.client_profile,
+            job_type=JobType.GIG,
+            trade=self.carpentry,
+            region=self.region,
+            title="Second fix, Tuesday",
+            description="Hanging doors on the first floor.",
+            gig_date=self.job.gig_date + timedelta(days=1),
+            gig_hours=Decimal("8"),
+            fixed_pay=Decimal("240"),
+            is_private=self.private,
+            offer_group=group,
+        )
+
+        counter = self.counter(Party.WORKER, fixed_pay=Decimal("280"))
+        self.as_client()
+        self.respond(counter, "accept")
+
+        self.job.refresh_from_db()
+        other.refresh_from_db()
+        self.assertEqual(self.job.fixed_pay, Decimal("280"))
+        self.assertEqual(other.fixed_pay, Decimal("240"))
+        self.assertEqual(other.gig_date, self.job.gig_date + timedelta(days=1))
+
+    def test_a_booking_is_rated_once_however_many_days_it_ran(self):
+        """Five days for one client is one opinion, not five — and five would
+        count five times towards a rating average that is meant to say how many
+        jobs somebody has been rated on."""
+        from uuid import uuid4
+
+        group = uuid4()
+        self.job.offer_group = group
+        self.job.state = JobState.CLOSED
+        self.job.assigned_worker = self.worker_profile
+        self.job.save(update_fields=["offer_group", "state", "assigned_worker"])
+        later = Job.objects.create(
+            client=self.client_profile,
+            job_type=JobType.GIG,
+            trade=self.carpentry,
+            region=self.region,
+            title="Second fix, Tuesday",
+            description="Hanging doors on the first floor.",
+            gig_date=self.job.gig_date + timedelta(days=1),
+            gig_hours=Decimal("8"),
+            fixed_pay=Decimal("240"),
+            is_private=self.private,
+            offer_group=group,
+            state=JobState.CLOSED,
+            assigned_worker=self.worker_profile,
+        )
+
+        self.as_client()
+        first = self.client.post(
+            reverse("jobs:review", kwargs={"pk": self.job.pk}),
+            {"rating": 5, "comment": "Good week."},
+        )
+        self.assertEqual(first.status_code, 302)
+
+        # Arriving from another day of the same booking is the same rating.
+        self.client.post(
+            reverse("jobs:review", kwargs={"pk": later.pk}),
+            {"rating": 1, "comment": "Second bite."},
+        )
+
+        self.assertEqual(Review.objects.count(), 1)
+        self.worker_profile.refresh_from_db()
+        self.assertEqual(self.worker_profile.rating_count, 1)
 
     def test_the_negotiate_button_is_offered_on_an_open_gig(self):
         self.as_worker()

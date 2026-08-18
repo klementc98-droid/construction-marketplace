@@ -16,7 +16,8 @@ from accounts.models import ClientProfile, WorkerProfile
 from core.models import Region, Trade
 from core.state_machine import JobState
 
-from .models import Application, ApplicationStatus, Job, JobType
+from .models import Application, ApplicationStatus, Job, JobType, Offer
+from .waiting import waiting_for
 
 User = get_user_model()
 
@@ -428,6 +429,64 @@ class BookingDisplayTests(JobFactoryMixin, TestCase):
         self.assertEqual(Job.objects.filter(offer_group=made[0].offer_group).count(), 3)
         self.assertEqual(len({j.pk for j in made}), 3)
 
+    def test_offered_to_you_lists_the_booking_once(self):
+        """A week offered is one decision, not five sitting in a row."""
+        made = self.booking(5)
+        for job in made:
+            job.is_private = True
+            job.save(update_fields=["is_private"])
+            Offer.objects.create(job=job, worker=self.worker_profile)
+
+        self.client.force_login(self.worker_user)
+        response = self.client.get(reverse("jobs:mine"))
+        self.assertEqual(len(response.context["offers"]), 1)
+        self.assertEqual(response.context["offers"][0].job.group_days, 5)
+
+    def test_offers_you_sent_list_the_booking_once(self):
+        made = self.booking(4)
+        for job in made:
+            job.is_private = True
+            job.save(update_fields=["is_private"])
+            Offer.objects.create(job=job, worker=self.worker_profile)
+
+        self.client.force_login(self.client_user)
+        response = self.client.get(reverse("jobs:mine"))
+        self.assertEqual(len(response.context["offers_sent"]), 1)
+
+    def test_you_applied_to_lists_the_booking_once(self):
+        """Applying once applied to every day, so it shows as one thing."""
+        made = self.booking(4)
+        for job in made:
+            Application.objects.create(job=job, worker=self.worker_profile)
+
+        self.client.force_login(self.worker_user)
+        response = self.client.get(reverse("jobs:mine"))
+        self.assertEqual(len(response.context["applications"]), 1)
+        self.assertEqual(response.context["applications"][0].job.group_days, 4)
+
+    def test_the_waiting_count_agrees_with_the_collapsed_list(self):
+        """A badge saying four over a list holding one is a dead end."""
+        made = self.booking(4)
+        for job in made:
+            job.is_private = True
+            job.save(update_fields=["is_private"])
+            Offer.objects.create(job=job, worker=self.worker_profile)
+
+        self.assertEqual(waiting_for(self.worker_user).offers, 1)
+
+    def test_separate_bookings_still_count_separately(self):
+        """Collapsing must not fold two unrelated bookings into one."""
+        for _ in range(2):
+            for job in self.booking(3):
+                job.is_private = True
+                job.save(update_fields=["is_private"])
+                Offer.objects.create(job=job, worker=self.worker_profile)
+
+        self.assertEqual(waiting_for(self.worker_user).offers, 2)
+        self.client.force_login(self.worker_user)
+        response = self.client.get(reverse("jobs:mine"))
+        self.assertEqual(len(response.context["offers"]), 2)
+
 
 class WaitingPanelTests(JobFactoryMixin, TestCase):
     """"Waiting on you", on both the home page and Mine.
@@ -677,3 +736,57 @@ class RatingIsReachableTests(JobFactoryMixin, TestCase):
         self.client.force_login(self.client_user)
         response = self.client.get(reverse("jobs:mine"))
         self.assertNotContains(response, "Rate these")
+
+
+class ProfileBookingRowTests(JobFactoryMixin, TestCase):
+    """A booking reads as one job on a client's profile too.
+
+    The board collapsed and the profile did not, so the same week of work was
+    one row in one place and five in another. Worse, the list was sliced to
+    five before collapsing, so a single five-day booking filled it and every
+    other job this client had open was pushed off the page.
+    """
+
+    def booking(self, count=5):
+        from uuid import uuid4
+
+        group = uuid4()
+        return [
+            self.gig(
+                title="Plumber's mate",
+                offer_group=group,
+                gig_date=timezone.localdate() + timedelta(days=3 + n),
+            )
+            for n in range(count)
+        ]
+
+    def rows(self, key="open_jobs"):
+        response = self.client.get(
+            reverse("accounts:client_detail", args=[self.client_profile.pk])
+        )
+        return response.context[key]
+
+    def test_a_five_day_booking_is_one_row(self):
+        self.booking(5)
+        rows = self.rows()
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].group_days, 5)
+
+    def test_the_slice_counts_bookings_rather_than_days(self):
+        """Five days used to be the whole list. The other work still shows."""
+        self.booking(5)
+        self.gig(title="A different job")
+        rows = self.rows()
+        self.assertEqual(len(rows), 2)
+        self.assertIn("A different job", [r.title for r in rows])
+
+    def test_work_under_way_collapses_the_same_way(self):
+        days = self.booking(3)
+        for job in days:
+            job.state = JobState.ACCEPTED
+            job.assigned_worker = self.worker_profile
+            job.save(update_fields=["state", "assigned_worker"])
+
+        rows = self.rows("current_jobs")
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].group_days, 3)

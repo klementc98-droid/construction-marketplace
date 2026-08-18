@@ -322,13 +322,21 @@ def client_detail(request, pk: int):
             "is_own": profile.user_id == request.user.pk,
             # What they have open right now says more about a client than any
             # of the counters do.
-            "open_jobs": profile.jobs.public().select_related("trade", "region")[:5],
+            #
+            # Collapsed, and sliced after rather than before: a booking is one
+            # thing this client is hiring for, and five days of it took the
+            # whole list while looking like five separate jobs going spare. The
+            # slice counts bookings now, which is what "five open jobs" was
+            # always meant to mean.
+            "open_jobs": collapse_groups(
+                list(profile.jobs.public().select_related("trade", "region"))
+            )[:5],
             # And what is under way. Without this a job disappeared from its own
             # client's profile the moment they confirmed somebody — the page
             # listed only open posts, so accepting an applicant looked like
             # losing the job. Work in hand is also the more useful signal: a
             # client with three jobs running is plainly hiring.
-            "current_jobs": (
+            "current_jobs": collapse_groups(list(
                 profile.jobs.filter(
                     state__in=[
                         JobState.ACCEPTED,
@@ -339,8 +347,8 @@ def client_detail(request, pk: int):
                     ]
                 )
                 .select_related("trade", "region", "assigned_worker__user")
-                .order_by("gig_date")[:5]
-            ),
+                .order_by("gig_date")
+            ))[:5],
         },
     )
 

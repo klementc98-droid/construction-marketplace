@@ -108,6 +108,27 @@ class JobQuerySet(models.QuerySet):
         )
 
 
+def booking_of(job, *, states=None):
+    """Every job in this booking, oldest day first — or just this one.
+
+    The counterpart to :func:`collapse_groups`. That one makes a booking read
+    as one entry; this one makes it *behave* as one. Both exist because the
+    split into a row per day is storage — each day carries its own escrow and
+    its own sign-off — and nothing a person does to "the job" should have to
+    know that. They agreed one booking, they finish one booking, they rate one
+    booking.
+
+    ``states`` narrows to the days a particular step may touch. Left off, every
+    day of the booking comes back, whatever state it is in.
+    """
+    if not job.offer_group:
+        return [job]
+    jobs = Job.objects.filter(offer_group=job.offer_group)
+    if states is not None:
+        jobs = jobs.filter(state__in=states)
+    return list(jobs.order_by("gig_date", "pk"))
+
+
 def collapse_groups(jobs):
     """One entry per multi-day booking, rather than one per day.
 
@@ -126,35 +147,93 @@ def collapse_groups(jobs):
 
     Ungrouped jobs pass through untouched with ``group_days`` of 1.
     """
-    def start(job):
-        job.group_days = 1
-        job.group_dates = [job.gig_date] if job.gig_date else []
-        # Summed rather than multiplied out from the first day: the days of a
-        # booking can end up on different numbers, because a counter is agreed
-        # per day. Multiplying the representative would quietly under- or
-        # over-state a total the reader is about to rely on.
-        job.group_pay = job.fixed_pay or Decimal("0")
-        job.group_hours = job.gig_hours or Decimal("0")
-        return job
-
     seen: dict = {}
     out = []
     for job in jobs:
         if not job.offer_group:
-            out.append(start(job))
+            out.append(_group_start(job))
             continue
         first = seen.get(job.offer_group)
         if first is None:
-            seen[job.offer_group] = start(job)
+            seen[job.offer_group] = _group_start(job)
             out.append(job)
         else:
-            first.group_days += 1
-            first.group_pay += job.fixed_pay or Decimal("0")
-            first.group_hours += job.gig_hours or Decimal("0")
-            if job.gig_date:
-                first.group_dates.append(job.gig_date)
-                first.group_dates.sort()
+            _group_absorb(first, job)
     return out
+
+
+def _group_start(job):
+    """Make this day the representative of its booking."""
+    job.group_days = 1
+    job.group_dates = [job.gig_date] if job.gig_date else []
+    # Summed rather than multiplied out from the first day: the days of a
+    # booking can end up on different numbers, because a counter is agreed
+    # per day. Multiplying the representative would quietly under- or
+    # over-state a total the reader is about to rely on.
+    job.group_pay = job.fixed_pay or Decimal("0")
+    job.group_hours = job.gig_hours or Decimal("0")
+    return job
+
+
+def _group_absorb(first, job):
+    """Fold another day into the representative already standing for it."""
+    first.group_days += 1
+    first.group_pay += job.fixed_pay or Decimal("0")
+    first.group_hours += job.gig_hours or Decimal("0")
+    if job.gig_date:
+        first.group_dates.append(job.gig_date)
+        first.group_dates.sort()
+
+
+def collapse_rows(rows, job_of):
+    """The same collapse, for lists whose rows *wrap* a job rather than are one.
+
+    An application and an offer are written per day, because the day is what
+    carries the escrow and the sign-off. But nobody applied five times and
+    nobody was offered five things: applying once applies to the booking, and a
+    client who offered somebody a week offered them one week. So "You applied
+    to" and "Offered to you" have to collapse for the same reason the board
+    does — five rows differing only by date read as five jobs.
+
+    The surviving row keeps everything of its own — status, who sent it, when —
+    and the job it points at gains the ``group_*`` attributes the templates
+    already read, so a collapsed row can say "5 days" instead of naming one.
+
+    ``job_of`` pulls the job out of a row; the caller knows the shape.
+    """
+    seen: dict = {}
+    out = []
+    for row in rows:
+        job = job_of(row)
+        if not job.offer_group:
+            _group_start(job)
+            out.append(row)
+            continue
+        first = seen.get(job.offer_group)
+        if first is None:
+            seen[job.offer_group] = _group_start(job)
+            out.append(row)
+        else:
+            _group_absorb(first, job)
+    return out
+
+
+def count_bookings(group_ids) -> int:
+    """How many bookings these per-day rows amount to.
+
+    A count shown beside a collapsed list has to be counted the same way the
+    list is, or the badge promises four things and the page holds one. Rows
+    without a group are their own booking and each count once.
+    """
+    seen = set()
+    total = 0
+    for group in group_ids:
+        if group is None:
+            total += 1
+        elif group not in seen:
+            seen.add(group)
+            total += 1
+    return total
 
 
 class Job(TimestampedModel):

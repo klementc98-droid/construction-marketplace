@@ -13,15 +13,21 @@ from uuid import uuid4
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db import models, transaction
+from django.db import IntegrityError, models, transaction
 from django.db.models import Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.template.defaultfilters import floatformat
 from django.utils import timezone
+from django.utils.formats import date_format
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 
 from accounts.models import AvailabilityStatus, WorkerProfile
+from notifications.models import Kind
+from notifications.services import audience_for, booking_key, notify
+from config import business_rules as rules
 from assistant.conversation import take_handoff
 from core.models import Region
 from core.state_machine import Actor, JobState, assert_transition
@@ -32,6 +38,7 @@ from .forms import (
     ApplicationForm,
     CounterForm,
     JobFilterForm,
+    OfferExistingForm,
     OfferForm,
     OfferResponseForm,
     WorkerFilterForm,
@@ -39,7 +46,9 @@ from .forms import (
 from .waiting import waiting_for
 from .models import (
     Application,
+    booking_of,
     collapse_groups,
+    collapse_rows,
     ReviewDirection,
     ApplicationStatus,
     Counter,
@@ -244,6 +253,38 @@ def job_detail(request, pk: int):
 # ---------------------------------------------------------------------------
 
 
+def _announce(job, *, actor) -> int:
+    """Tell the trade that this work exists. Returns how many were told.
+
+    The board is only useful to somebody who opens it, and the people this is
+    for spend their day on a site rather than refreshing a page. This is the
+    one notification that reaches out rather than answering something the
+    recipient already did — which is why the audience rule lives in
+    ``notifications.services.audience_for`` with its reasoning written down,
+    and why it is deliberately narrow.
+
+    Keyed on the booking, so posting four days announces one job rather than
+    mailing every plumber in the city four times.
+    """
+    told = 0
+    for worker in audience_for(job):
+        if notify(
+            worker.user,
+            Kind.JOB_POSTED,
+            job=job,
+            actor=actor,
+            dedupe=booking_key("posted", job, worker.pk),
+            job_title=job.title,
+            trade=str(job.trade),
+            pay=str(job.fixed_pay or ""),
+            hours=str(job.gig_hours or ""),
+            when=date_format(job.gig_date, "D j M") if job.gig_date else "",
+            where=job.location or "",
+        ):
+            told += 1
+    return told
+
+
 @login_required
 def job_post_choose(request):
     """Pick the kind of post before filling anything in.
@@ -299,6 +340,13 @@ def job_post(request, job_type: str):
                     job.full_clean()
                     job.save()
                     posted.append(job)
+
+            # Told once, about the booking, to the people whose trade it is.
+            # Outside the transaction above on purpose: this is a fan-out over
+            # every matching worker, and holding a write transaction open for
+            # the length of it would make posting a job slower the more people
+            # there are to tell — exactly backwards.
+            _announce(posted[0], actor=request.user)
 
             if len(posted) == 1:
                 messages.success(request, _("Posted. Workers can see it now."))
@@ -420,6 +468,21 @@ def job_apply(request, pk: int):
                             "responded_at": None,
                         },
                     )
+            notify(
+                job.client.user,
+                Kind.APPLICATION,
+                job=job,
+                actor=request.user,
+                # The applicant is in the key: two people applying to one
+                # booking is two pieces of news, and collapsing them would tell
+                # the client about the first and swallow the second.
+                dedupe=booking_key("application", job, worker.pk),
+                worker=str(request.user),
+                job_title=job.title,
+                note=form.cleaned_data.get("message", "")[:300],
+                path=reverse("jobs:applicants", args=[job.pk]),
+            )
+
             if len(days) > 1:
                 messages.success(
                     request,
@@ -543,6 +606,18 @@ def application_select(request, pk: int):
         messages.error(request, _("Someone has already been selected for this job."))
         return redirect("jobs:applicants", pk=application.job_id)
 
+    notify(
+        application.worker.user,
+        Kind.SELECTED,
+        job=sealed[0],
+        actor=request.user,
+        dedupe=booking_key("selected", sealed[0], application.worker_id),
+        client=str(request.user),
+        job_title=sealed[0].title,
+        pay=str(sealed[0].fixed_pay),
+        hours=str(sealed[0].gig_hours),
+    )
+
     if len(sealed) > 1:
         messages.success(
             request,
@@ -564,6 +639,139 @@ def application_select(request, pk: int):
 # escrow, same lifecycle — it is simply flagged private so it never reaches the
 # board. Accepting is then a state transition on a job that already exists,
 # rather than a conversion step that copies six fields and could get one wrong.
+
+
+def _offerable_jobs(client):
+    """The client's own open gigs, as candidates to send somebody directly.
+
+    Two filters, and the second is the one that is easy to miss. ``POSTED``
+    because a gig that is taken, expired or cancelled is not work to offer.
+    And nothing already holding a pending offer: ``one_pending_offer_per_job``
+    exists so two people cannot both be sitting on an answer to the same gig,
+    so listing one here would be offering a button that fails on submit.
+
+    Gigs only. An offer is a dated shift with a price on it — that is what the
+    worker is being asked to say yes to, and what the accept path writes. A
+    standing position has neither, and inviting somebody into one is a
+    different conversation than this screen is having.
+
+    A job already offered to this worker and declined stays in the list. Asking
+    again after a no is a normal thing to do, and the offer row is reused
+    rather than stacked — see the unique constraint.
+    """
+    return (
+        Job.objects.filter(
+            client=client, state=JobState.POSTED, job_type=JobType.GIG
+        )
+        .exclude(offers__status=OfferStatus.PENDING)
+        .select_related("trade")
+        .order_by("gig_date", "pk")
+    )
+
+
+def _offer_existing(request, *, worker, offerable, bookings):
+    """Send one of the client's existing posts, note and all.
+
+    The whole point is that nothing is copied. The gig keeps its own title,
+    date, hours and price; all this adds is an Offer row against it and the
+    covering note as the first message. A retyped gig would be a second job
+    meaning the same work, and the two would drift the first time either was
+    edited.
+
+    A booking is offered whole. Somebody sent Tuesday of a four-day job and
+    left wondering about Wednesday is the exact confusion ``_booking_days``
+    exists to prevent, and it is the same rule applying already follows.
+
+    The post stays public. This is an invitation, not a withdrawal from the
+    board: other people can still apply, and whoever the client ends up
+    confirming, ``_seal`` gives the rest a definite answer.
+    """
+    from messaging.models import Conversation, Message
+
+    if request.method != "POST":
+        return render(
+            request,
+            "jobs/offer_choose.html",
+            {"form": OfferExistingForm(offerable=offerable), "worker": worker,
+             "bookings": bookings},
+        )
+
+    form = OfferExistingForm(request.POST, offerable=offerable)
+    if not form.is_valid():
+        return render(
+            request,
+            "jobs/offer_choose.html",
+            {"form": form, "worker": worker, "bookings": bookings},
+        )
+
+    job = form.cleaned_data["job"]
+    note = form.cleaned_data["note"]
+    days = _booking_days(job)
+
+    try:
+        with transaction.atomic():
+            for day in days:
+                # update_or_create, because asking again after a decline should
+                # reuse that row rather than stack a second one — the same rule
+                # re-applying follows, and the same unique constraint behind it.
+                Offer.objects.update_or_create(
+                    job=day,
+                    worker=worker,
+                    defaults={
+                        "note": note,
+                        "status": OfferStatus.PENDING,
+                        "response_note": "",
+                        "responded_at": None,
+                    },
+                )
+                conversation, _created = Conversation.objects.get_or_create(
+                    job=day, worker=worker
+                )
+                if note:
+                    message = Message.objects.create(
+                        conversation=conversation, sender=request.user, body=note
+                    )
+                    conversation.last_message_at = message.created_at
+                    conversation.save(
+                        update_fields=["last_message_at", "updated_at"]
+                    )
+    except IntegrityError:
+        # one_pending_offer_per_job, lost between rendering the list and
+        # submitting it. Somebody else is holding an answer to this gig now.
+        messages.error(
+            request,
+            "That job already has an offer out with somebody. Withdraw it "
+            "first, or pick another.",
+        )
+        return redirect("jobs:offer", worker_pk=worker.pk)
+
+    notify(
+        worker.user,
+        Kind.OFFER_RECEIVED,
+        job=days[0],
+        actor=request.user,
+        dedupe=booking_key("offer", days[0], worker.pk),
+        client=str(request.user),
+        job_title=days[0].title,
+        # The figures, not a sentence built from them. A rendered "€50 for 8
+        # hours" would be frozen in whichever language the client happened to
+        # be using, and read back to a Greek worker in English. Numbers survive
+        # the trip; the words are chosen when it is sent.
+        pay=str(days[0].fixed_pay),
+        hours=str(days[0].gig_hours),
+        note=note[:300],
+    )
+
+    who = worker.user.short_name or worker.user
+    if len(days) > 1:
+        messages.success(
+            request,
+            _("Offered to %(who)s — all %(count)s days.")
+            % {"who": who, "count": len(days)},
+        )
+    else:
+        messages.success(request, _("Offered to %(who)s.") % {"who": who})
+    return redirect("jobs:detail", pk=days[0].pk)
 
 
 @login_required
@@ -589,6 +797,28 @@ def offer_create(request, worker_pk: int):
             f"{worker.user.short_name or worker.user} isn't taking work right now.",
         )
         return redirect("accounts:worker_detail", pk=worker.pk)
+
+    # Two ways to reach one person, and the shorter one first. A client with
+    # posts already up is usually trying to put one of those in front of
+    # somebody rather than to write a second copy of it, so the list is what
+    # opens and writing a new gig is a link off it rather than the only door.
+    #
+    # One URL, and a submit says outright which of the two it is: the chooser
+    # sends ``pick``, the writer sends a whole gig. Inferring it from the query
+    # string instead would make the answer depend on a round trip surviving,
+    # and would quietly reroute anything that posted here without one.
+    #
+    # ``?new=`` only steers a GET — it is how somebody leaves the list, and it
+    # has to stay on the URL so that a form which fails validation redisplays
+    # as the writer rather than bouncing back to the list.
+    offerable = _offerable_jobs(client)
+    bookings = collapse_groups(list(offerable))
+    choosing = "pick" in request.POST or (
+        request.method == "GET" and bookings and not request.GET.get("new")
+    )
+    if choosing:
+        return _offer_existing(request, worker=worker, offerable=offerable,
+                               bookings=bookings)
 
     if request.method == "POST":
         form = OfferForm(request.POST, worker=worker)
@@ -666,7 +896,7 @@ def offer_create(request, worker_pk: int):
     return render(
         request,
         "jobs/offer_form.html",
-        {"form": form, "worker": worker},
+        {"form": form, "worker": worker, "has_open_jobs": bool(bookings)},
     )
 
 
@@ -698,11 +928,33 @@ def offer_respond(request, pk: int):
     now = timezone.now()
 
     if not accepting:
-        offer.status = OfferStatus.DECLINED
-        offer.response_note = note
-        offer.responded_at = now
-        offer.save(update_fields=["status", "response_note", "responded_at", "updated_at"])
-        messages.success(request, "Declined. The client has been told.")
+        # No answers the booking, the same as yes does. They were shown one
+        # offer and turned it down once; leaving the other days pending meant
+        # the app went on saying a job was waiting for them after they had
+        # said no to it, and the client went on waiting for an answer that had
+        # already been given.
+        Offer.objects.filter(
+            job__in=_booking_days(job),
+            worker=worker,
+            status=OfferStatus.PENDING,
+        ).update(
+            status=OfferStatus.DECLINED,
+            response_note=note,
+            responded_at=now,
+            updated_at=now,
+        )
+        notify(
+            job.client.user,
+            Kind.OFFER_ANSWERED,
+            job=job,
+            actor=request.user,
+            dedupe=booking_key("answered", job, worker.pk),
+            worker=str(request.user),
+            job_title=job.title,
+            accepted=False,
+            note=note[:300],
+        )
+        messages.success(request, _("Declined. The client has been told."))
         return redirect("jobs:mine")
 
     if not job.is_open:
@@ -713,25 +965,68 @@ def offer_respond(request, pk: int):
         messages.error(request, "That offer is no longer available.")
         return redirect("jobs:mine")
 
-    # Accepting the offer as it stands also accepts whatever the client last
-    # put on the table, so the terms the worker is looking at are the terms
-    # that get written. Shared with the counter path — see _seal.
-    with transaction.atomic():
-        offer.response_note = note
-        job = _seal(
-            job.pk, worker, offer.live_counter, now, offer=offer, actor=Actor.WORKER
-        )
+    # Yes to the booking, not to one day of it. A four-day offer is four rows
+    # because each day carries its own escrow and its own sign-off, but nobody
+    # was offered four things — they were offered a week, answered once, and
+    # the answer has to reach every day of it. Otherwise the client is left
+    # holding three live offers nobody will ever answer and three days still
+    # sitting on the board, which is exactly what a "yes" was meant to end.
+    #
+    # The same rule the applying side has always followed; see the note in
+    # application_select, and collapse_rows for why the reader only ever saw
+    # one offer to say yes to in the first place.
+    #
+    # Each day's own offer row is the one that gets answered — status, note and
+    # timestamp belong to the day — and each day's own counter is what gets
+    # written, because terms are agreed per day.
+    days = _booking_days(job)
+    day_offers = {
+        o.job_id: o
+        for o in Offer.objects.filter(job__in=days, worker=worker, status=OfferStatus.PENDING)
+    }
 
-    if job is None:
+    sealed = []
+    with transaction.atomic():
+        for day in days:
+            day_offer = day_offers.get(day.pk)
+            if day_offer is None:
+                continue
+            day_offer.response_note = note
+            result = _seal(
+                day.pk,
+                worker,
+                day_offer.live_counter,
+                now,
+                offer=day_offer,
+                actor=Actor.WORKER,
+            )
+            if result is not None:
+                sealed.append(result)
+
+    if not sealed:
         messages.error(request, "That offer is no longer available.")
         return redirect("jobs:mine")
 
-    messages.success(
-        request,
-        "Accepted — the job is yours. The client funds escrow next; "
-        "you'll see it on the job page when the money is held.",
+    notify(
+        job.client.user,
+        Kind.OFFER_ANSWERED,
+        job=sealed[0],
+        actor=request.user,
+        dedupe=booking_key("answered", sealed[0], worker.pk),
+        worker=str(request.user),
+        job_title=sealed[0].title,
+        accepted=True,
+        note=note[:300],
     )
-    return redirect("jobs:detail", pk=job.pk)
+
+    if len(sealed) > 1:
+        messages.success(
+            request,
+            _("Accepted — all %(count)s days are yours.") % {"count": len(sealed)},
+        )
+    else:
+        messages.success(request, _("Accepted — the job is yours."))
+    return redirect("jobs:detail", pk=sealed[0].pk)
 
 
 # ---------------------------------------------------------------------------
@@ -752,12 +1047,7 @@ def _booking_days(job):
     — applying, being confirmed — has to reach all of them, or the reader ends
     up half in and half out of something they answered once.
     """
-    if not job.offer_group:
-        return [job]
-    return list(
-        Job.objects.filter(offer_group=job.offer_group, state=JobState.POSTED)
-        .order_by("gig_date")
-    )
+    return booking_of(job, states=[JobState.POSTED])
 
 
 def _effective_terms(job, worker):
@@ -818,12 +1108,35 @@ def _seal(job_id, worker, counter, now, offer=None, actor=Actor.WORKER):
     always happen: the state transition, the losing applicants getting a
     definite answer, and any agreed terms being written before the job closes.
 
-    The job is re-read under ``select_for_update`` inside the caller's
-    transaction. Between rendering the button and this running, the gig may
-    have been cancelled or taken, and the state machine has to judge the row as
-    it is now rather than as it was on the page.
+    The job is re-read inside the caller's transaction. Between rendering the
+    button and this running, the gig may have been cancelled or taken, and the
+    state machine has to judge the row as it is now rather than as it was on
+    the page.
+
+    Two people can be answering the same gig in the same second — a client
+    picking an applicant while a worker accepts their offer — so the claim
+    itself is a single conditional UPDATE, not a read followed by a write:
+
+        UPDATE ... SET state = 'accepted', assigned_worker = ... WHERE state = 'posted'
+
+    The database decides, and it decides once. Nought rows back means somebody
+    else got there first, and the caller says so.
+
+    This replaced ``select_for_update``, which reads like a lock and is not one
+    everywhere: SQLite has no FOR UPDATE, and Django drops the clause silently
+    rather than raising, so on the development database the guard was a plain
+    read-check-write with a real window between the two halves. The failure it
+    let through is the expensive kind — two workers both told the job is theirs
+    and the second write quietly overwriting the first, with no constraint to
+    catch it, because a job has one assigned_worker field and no unique index
+    saying so. A conditional UPDATE needs no lock and is atomic on both.
+
+    Nothing is written before the claim succeeds. Returning early inside the
+    caller's ``atomic`` block commits whatever already happened, so accepting
+    the counter above the claim would mark it accepted for a job somebody else
+    just took.
     """
-    job = Job.objects.select_for_update().get(pk=job_id)
+    job = Job.objects.get(pk=job_id)
     if not job.is_open:
         return None
 
@@ -832,14 +1145,25 @@ def _seal(job_id, worker, counter, now, offer=None, actor=Actor.WORKER):
     fields = ["state", "assigned_worker", "filled_at", "updated_at"]
     if counter is not None:
         fields += counter.apply_to(job)
-        counter.status = CounterStatus.ACCEPTED
-        counter.responded_at = now
-        counter.save(update_fields=["status", "responded_at", "updated_at"])
 
     job.state = JobState.ACCEPTED
     job.assigned_worker = worker
     job.filled_at = now
-    job.save(update_fields=list(dict.fromkeys(fields)))
+    # auto_now does not fire on .update(), so the stamp is passed by hand —
+    # the same as every other .update() in this file.
+    job.updated_at = now
+
+    claimed = Job.objects.filter(pk=job_id, state=JobState.POSTED).update(
+        **{name: getattr(job, name) for name in dict.fromkeys(fields)}
+    )
+    if not claimed:
+        return None
+
+    # Past this line the job is ours and the rest of the deal can be written.
+    if counter is not None:
+        counter.status = CounterStatus.ACCEPTED
+        counter.responded_at = now
+        counter.save(update_fields=["status", "responded_at", "updated_at"])
 
     # An agreed payment method covers the whole offer, not the one day being
     # accepted. Escrow on Tuesday and cash on Wednesday is not an arrangement
@@ -882,6 +1206,61 @@ def _seal(job_id, worker, counter, now, offer=None, actor=Actor.WORKER):
             update_fields=["status", "response_note", "responded_at", "updated_at"]
         )
     return job
+
+
+def _post_counter_to_thread(counter, *, job, worker, sender):
+    """Put a worker's proposed terms into that pair's message thread.
+
+    Naming a different price is the one kind of application that arrives with
+    figures attached, and until now it landed only as a row in the applicant
+    list — somewhere the client goes when they are already thinking about this
+    job, not somewhere that tells them anything happened. The thread is what
+    drives the unread badge in the header, so this is what makes a counter
+    reach a client who is not currently looking.
+
+    The same shape as the expiry notice in ``jobs.services``, and for the same
+    reason given there: this app has no notification system, and a message in a
+    thread both sides already read beats inventing one for a sentence. The
+    worker is the sender, because they are — which also means the client can
+    answer the terms by replying to them.
+
+    ``get_or_create`` because a public gig has no thread until somebody speaks.
+    Creating one here is safe: naming a price is exactly what earns this pair a
+    channel under ``can_converse``.
+    """
+    from messaging.models import Conversation, Message
+
+    # Django's own formatters, so a figure in a message reads the way the same
+    # figure reads on the page it came from. date_format's "D j M" is also the
+    # portable choice — strftime's unpadded "%-d" raises on Windows.
+    when = date_format(counter.gig_date, "D j M")
+    hours = floatformat(counter.gig_hours, "-2")
+    pay = f"{rules.CURRENCY_SYMBOL}{counter.fixed_pay:,.2f}"
+
+    # use_escrow is nullable: a counter that only moves the money says nothing
+    # about how it is handled, and inventing an answer here would put words in
+    # somebody's mouth about the one term that decides whose money is held.
+    if counter.use_escrow is None:
+        settle = ""
+    elif counter.use_escrow:
+        settle = ", held in escrow until the day is signed off"
+    else:
+        settle = ", settled directly rather than through escrow"
+
+    body = (
+        f"Applied at different terms: {pay} for the day, {hours} hours, "
+        f"{when}{settle}."
+    )
+    if counter.note:
+        body = f"{body}\n\n{counter.note}"
+
+    conversation, _created = Conversation.objects.get_or_create(job=job, worker=worker)
+    message = Message.objects.create(
+        conversation=conversation, sender=sender, body=body
+    )
+    conversation.last_message_at = message.created_at
+    conversation.save(update_fields=["last_message_at", "updated_at"])
+    return message
 
 
 @login_required
@@ -958,6 +1337,16 @@ def counter_create(request, pk: int, worker_pk: int | None = None):
                         defaults={"status": ApplicationStatus.APPLIED},
                     )
 
+                # And as a message, so it reaches the client rather than
+                # waiting to be found. Every worker-side counter, private
+                # offer included: a thread is where a price is discussed, and
+                # having the message appear for some of them and not others
+                # would be a hole with no rule behind it.
+                if party == Party.WORKER:
+                    _post_counter_to_thread(
+                        counter, job=job, worker=worker, sender=request.user
+                    )
+
             other = job.client.user if party == Party.WORKER else worker.user
             messages.success(request, f"Sent. {other} has your terms to answer.")
             return redirect("jobs:detail", pk=job.pk)
@@ -1011,16 +1400,32 @@ def counter_respond(request, pk: int):
         )
         return redirect("jobs:detail", pk=job.pk)
 
-    with transaction.atomic():
-        sealed = _seal(
-            job.pk,
-            worker,
-            counter,
-            now,
-            offer=offer,
-            actor=Actor.WORKER if party == Party.WORKER else Actor.CLIENT,
-        )
+    # Agreed terms cover the booking, the same as an accepted offer and the
+    # same as a confirmed application. A counter is answered once because the
+    # reader was only ever shown one to answer.
+    #
+    # Only the first day carries the counter and the offer rows — those are the
+    # ones being responded to. The remaining days are sealed on the terms the
+    # counter just wrote across them, which _seal already spreads for the
+    # payment method.
+    days = _booking_days(job)
+    actor = Actor.WORKER if party == Party.WORKER else Actor.CLIENT
 
+    all_sealed = []
+    with transaction.atomic():
+        for index, day in enumerate(days):
+            result = _seal(
+                day.pk,
+                worker,
+                counter if index == 0 else None,
+                now,
+                offer=offer if index == 0 else None,
+                actor=actor,
+            )
+            if result is not None:
+                all_sealed.append(result)
+
+    sealed = all_sealed[0] if all_sealed else None
     if sealed is None:
         messages.error(request, "That job isn't available any more.")
         return redirect("jobs:mine")
@@ -1110,7 +1515,9 @@ def mine(request):
             # The "waiting on you" panel counts these and sends the reader
             # here; without the list to land on, the count was a dead end and
             # the rating page may as well not have existed.
-            "to_rate": [
+            # Collapsed like everything else: a week worked for one client is
+            # one person to rate, not five identical prompts.
+            "to_rate": collapse_groups(
                 job
                 for job in Job.objects.filter(
                     models.Q(client=client) | models.Q(assigned_worker=worker),
@@ -1119,7 +1526,7 @@ def mine(request):
                 .select_related("trade", "client__user", "assigned_worker__user")
                 .order_by("-gig_date")
                 if job.can_be_reviewed_by(request.user)
-            ],
+            ),
             # Collapsed, so a four-day booking is one line here too. The
             # client posted one thing and should see one thing.
             "posted": (
@@ -1132,9 +1539,16 @@ def mine(request):
                 if client
                 else None
             ),
+            # One line per booking. Applying once applies to every day of it,
+            # so listing the days back is listing an action nobody took five
+            # times. Earliest day first, so the row that survives is the one
+            # the booking starts on.
             "applications": (
-                Application.objects.filter(worker=worker).select_related(
-                    "job__trade", "job__client__user"
+                collapse_rows(
+                    Application.objects.filter(worker=worker)
+                    .select_related("job__trade", "job__client__user")
+                    .order_by("job__gig_date", "pk"),
+                    lambda application: application.job,
                 )
                 if worker
                 else None
@@ -1144,17 +1558,24 @@ def mine(request):
             # Friday. Only live ones — an offer for a job that has since been
             # cancelled is not a decision anyone still has to make.
             "offers": (
-                Offer.objects.filter(worker=worker, status=OfferStatus.PENDING)
-                .filter(job__state=JobState.POSTED)
-                .select_related("job__trade", "job__client__user")
+                collapse_rows(
+                    Offer.objects.filter(worker=worker, status=OfferStatus.PENDING)
+                    .filter(job__state=JobState.POSTED)
+                    .select_related("job__trade", "job__client__user")
+                    .order_by("job__gig_date", "pk"),
+                    lambda offer: offer.job,
+                )
                 if worker
                 else None
             ),
             # And for the client: what is still out with somebody.
             "offers_sent": (
-                Offer.objects.filter(
-                    job__client=client, status=OfferStatus.PENDING
-                ).select_related("job__trade", "worker__user")
+                collapse_rows(
+                    Offer.objects.filter(job__client=client, status=OfferStatus.PENDING)
+                    .select_related("job__trade", "worker__user")
+                    .order_by("job__gig_date", "pk"),
+                    lambda offer: offer.job,
+                )
                 if client
                 else None
             ),
@@ -1183,6 +1604,15 @@ def review_create(request, pk: int):
     job = get_object_or_404(
         Job.objects.select_related("client__user", "assigned_worker__user"), pk=pk
     )
+
+    # One rating for the booking, written against its first day. A week worked
+    # for one client is one opinion, not five — and five would count five times
+    # towards an average that is meant to say how many jobs somebody has been
+    # rated on. Whichever day they arrived from, they land on the same row, so
+    # the "already rated" check below is what stops the second attempt.
+    booking = booking_of(job)
+    job = booking[0]
+
     direction = job.review_direction_for(request.user)
     if direction is None:
         raise Http404("No job matches the given query.")
@@ -1213,6 +1643,22 @@ def review_create(request, pk: int):
                 subject = review.subject_profile
                 if subject is not None:
                     subject.record_rating(review.rating)
+            notify(
+                (
+                    job.assigned_worker.user
+                    if direction == ReviewDirection.CLIENT_ON_WORKER
+                    else job.client.user
+                ),
+                Kind.RATING,
+                job=job,
+                actor=request.user,
+                dedupe=booking_key("rating", job, direction),
+                author=str(request.user),
+                job_title=job.title,
+                rating=review.rating,
+                maximum=rules.RATING_MAX,
+                comment=review.comment[:300],
+            )
             messages.success(request, _("Thanks — that's on their profile now."))
             return redirect("jobs:detail", pk=job.pk)
     else:

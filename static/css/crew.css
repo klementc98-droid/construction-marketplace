@@ -1377,6 +1377,17 @@ ul.checks input { width: 18px; height: 18px; flex: none; accent-color: var(--acc
   font-weight: 580;
 }
 
+/* A radio whose answer is a whole post rather than a word — picking which of
+   your open jobs to send somebody. The row keeps everything above: the target
+   size, the hover, the selected state. Only the body changes, because a job is
+   a title, a price and a line of detail stacked, not a label on one line.
+
+   flex-start rather than the group's centre: on a two-line row a vertically
+   centred dot sits beside the gap between the lines and reads as belonging to
+   neither. */
+.radio-group .pick-body { flex: 1; min-width: 0; }
+.radio-group label:has(.pick-body) { align-items: flex-start; }
+
 /* --- filter bar ---------------------------------------------------------- */
 
 /* One row, always: search, submit, and the button that unfolds the rest. The

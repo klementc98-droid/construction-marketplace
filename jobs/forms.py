@@ -299,6 +299,56 @@ class OfferForm(GigForm):
                 self.fields["trade"].initial = first_trade
 
 
+class OfferExistingForm(forms.Form):
+    """Send a worker a post the client already has, instead of writing another.
+
+    Most direct offers are for work that is already on the board. Retyping the
+    title, the trade, the date, the hours and the price to reach one named
+    person is not just tedious — it produces a second job that is meant to be
+    the same job, and the two drift the moment either is edited.
+
+    So this form collects a choice and a covering note, and nothing else. Every
+    figure comes from the post that already exists, which is the only copy of
+    those numbers there has ever been.
+
+    The queryset is passed in rather than filtered here: which of a client's
+    posts may be offered is a rule about offers — see ``_offerable_jobs`` —
+    and a form that decided it for itself would be a second place to keep that
+    rule right. Passing it in is also what stops a posted primary key reaching
+    somebody else's job, since validation can only match what is in the list.
+    """
+
+    job = forms.ModelChoiceField(
+        queryset=Job.objects.none(),
+        label=_("Which job?"),
+        error_messages={
+            "required": _("Pick one of your open jobs, or write a new one."),
+            "invalid_choice": _(
+                "That job isn't open to offer any more — it may have been "
+                "taken or already sent to somebody."
+            ),
+        },
+    )
+    note = forms.CharField(
+        label=_("Anything they should know?"),
+        required=False,
+        max_length=1500,
+        widget=forms.Textarea(
+            attrs={
+                "rows": 5,
+                "placeholder": _("Why you're asking them, what the day looks like, "
+                "where to park, who to ask for on site…"),
+            }
+        ),
+        help_text=_("Only this worker sees it. The post itself stays as it is."),
+    )
+
+    def __init__(self, *args, offerable=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if offerable is not None:
+            self.fields["job"].queryset = offerable
+
+
 class OfferResponseForm(forms.Form):
     """The worker's reply. Optional either way.
 
@@ -363,10 +413,22 @@ class CounterForm(forms.ModelForm):
         """``terms`` is the job as it stands, plus any counter already agreed."""
         super().__init__(*args, **kwargs)
         self.terms = terms
+
+        # The same calendar the offer was written on. Attached before the early
+        # return below, because the picker is how the field is operated and not
+        # part of pre-filling it — a counter form built without terms still has
+        # a date to collect.
+        #
+        # The input keeps type="date". The script hides it and writes ISO into
+        # it, which is what a date input holds anyway, so with JS off this is
+        # still the native picker rather than a text box asking for a format.
+        self.fields["gig_date"].widget.attrs.update(
+            date_picker_attrs(floor=timezone.localdate(), single=True)
+        )
+        self.fields["gig_date"].widget.attrs["min"] = timezone.localdate().isoformat()
+
         if terms is None:
             return
-
-        self.fields["gig_date"].widget.attrs["min"] = timezone.localdate().isoformat()
         if not self.is_bound:
             for name in ("fixed_pay", "gig_hours", "gig_date", "use_escrow"):
                 self.fields[name].initial = getattr(terms, name, None)

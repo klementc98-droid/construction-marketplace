@@ -19,7 +19,7 @@ from django.db.models import Q
 
 from core.state_machine import JobState
 
-from .models import Job, Offer, OfferStatus, Review
+from .models import count_bookings, Job, Offer, OfferStatus, Review
 
 
 @dataclass(frozen=True)
@@ -50,10 +50,15 @@ def waiting_for(user) -> Waiting:
     worker = getattr(user, "worker_profile", None)
     client = getattr(user, "client_profile", None)
 
+    # Counted in bookings, not days, because the list this number sends people
+    # to is collapsed the same way. "4 offers waiting" over a single four-day
+    # booking is a badge that no page can account for.
     offers = (
-        Offer.objects.filter(
-            worker=worker, status=OfferStatus.PENDING, job__state=JobState.POSTED
-        ).count()
+        count_bookings(
+            Offer.objects.filter(
+                worker=worker, status=OfferStatus.PENDING, job__state=JobState.POSTED
+            ).values_list("job__offer_group", flat=True)
+        )
         if worker is not None
         else 0
     )
@@ -62,9 +67,11 @@ def waiting_for(user) -> Waiting:
     # yet agreed. Only the direct-settlement route: with escrow, the release is
     # the client's move and the workspace already chases it.
     confirmations = (
-        Job.objects.filter(
-            client=client, state=JobState.COMPLETED, use_escrow=False
-        ).count()
+        count_bookings(
+            Job.objects.filter(
+                client=client, state=JobState.COMPLETED, use_escrow=False
+            ).values_list("offer_group", flat=True)
+        )
         if client is not None
         else 0
     )
@@ -73,14 +80,15 @@ def waiting_for(user) -> Waiting:
     # rows rather than by an anti-join on Review, because "have I rated this?"
     # depends on which side of the job they are — which is a property of the
     # row, not something a single filter expresses.
+    # In bookings too: a week worked for one client is one rating to leave.
     ratings = 0
     finished = Job.objects.filter(
         Q(client=client) | Q(assigned_worker=worker),
         state__in=[JobState.PAID_OUT, JobState.CLOSED],
     ).select_related("client", "assigned_worker")
     if client is not None or worker is not None:
-        for job in finished:
-            if job.can_be_reviewed_by(user):
-                ratings += 1
+        ratings = count_bookings(
+            job.offer_group for job in finished if job.can_be_reviewed_by(user)
+        )
 
     return Waiting(offers=offers, confirmations=confirmations, ratings=ratings)

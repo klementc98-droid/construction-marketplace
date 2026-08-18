@@ -26,6 +26,9 @@ from decimal import Decimal
 
 from .forms import OfferForm
 from .models import Counter, CounterStatus
+from accounts.models import ClientProfile
+
+from .views import _offerable_jobs
 from .tests import JobFactoryMixin, make_user
 
 
@@ -267,6 +270,158 @@ class OfferTests(JobFactoryMixin, TestCase):
         self.assertNotIn(offer.job, self.client_profile.open_jobs)
 
 
+class OfferAnExistingJobTests(JobFactoryMixin, TestCase):
+    """Sending somebody a post you already have, rather than retyping it.
+
+    The point of the feature is that nothing is copied: a retyped gig is a
+    second job meaning the same work, and the two drift the moment either is
+    edited. So the cases here are mostly about what does *not* happen.
+    """
+
+    def url(self):
+        return reverse("jobs:offer", args=[self.worker_profile.pk])
+
+    def send(self, job, note="Yours if you want it."):
+        self.client.force_login(self.client_user)
+        return self.client.post(
+            self.url(), {"pick": "1", "job": job.pk, "note": note}
+        )
+
+    def test_the_list_opens_when_the_client_already_has_work_up(self):
+        job = self.gig(title="Framing, Thursday")
+        self.client.force_login(self.client_user)
+        response = self.client.get(self.url())
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "jobs/offer_choose.html")
+        self.assertContains(response, "Framing, Thursday")
+        self.assertIn(job, response.context["bookings"])
+
+    def test_a_client_with_nothing_posted_goes_straight_to_the_form(self):
+        """No list to show, so showing one would be a step for its own sake."""
+        self.client.force_login(self.client_user)
+        response = self.client.get(self.url())
+
+        self.assertTemplateUsed(response, "jobs/offer_form.html")
+        self.assertFalse(response.context["has_open_jobs"])
+
+    def test_new_is_how_you_leave_the_list(self):
+        self.gig()
+        self.client.force_login(self.client_user)
+        response = self.client.get(self.url() + "?new=1")
+
+        self.assertTemplateUsed(response, "jobs/offer_form.html")
+        self.assertTrue(response.context["has_open_jobs"])
+
+    def test_offering_it_writes_an_offer_and_not_a_second_job(self):
+        job = self.gig(title="Framing, Thursday")
+        before = Job.objects.count()
+
+        response = self.send(job)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(Job.objects.count(), before)
+        offer = Offer.objects.get()
+        self.assertEqual(offer.job, job)
+        self.assertEqual(offer.worker, self.worker_profile)
+        self.assertEqual(offer.status, OfferStatus.PENDING)
+
+    def test_the_post_stays_on_the_public_board(self):
+        """An invitation, not a withdrawal. Other people can still apply, and
+        whoever is confirmed, the rest get a definite answer."""
+        job = self.gig()
+        self.send(job)
+
+        job.refresh_from_db()
+        self.assertFalse(job.is_private)
+        self.assertIn(job, Job.objects.public())
+
+    def test_the_note_arrives_as_the_first_message(self):
+        from messaging.models import Conversation
+
+        job = self.gig()
+        self.send(job, note="Same site as the framing.")
+
+        conversation = Conversation.objects.get(job=job, worker=self.worker_profile)
+        self.assertEqual(
+            [m.body for m in conversation.messages.all()],
+            ["Same site as the framing."],
+        )
+
+    def test_a_job_already_out_with_somebody_is_not_offered_again(self):
+        """one_pending_offer_per_job: two people cannot both hold an answer."""
+        job = self.gig(title="Spoken for")
+        rival = WorkerProfile.objects.create(
+            user=make_user("rival-offer@example.com"), region=self.region
+        )
+        Offer.objects.create(job=job, worker=rival)
+
+        self.client.force_login(self.client_user)
+        response = self.client.get(self.url())
+
+        self.assertTemplateUsed(response, "jobs/offer_form.html")
+        self.assertNotIn(job, _offerable_jobs(self.client_profile))
+
+    def test_somebody_elses_job_cannot_be_offered_by_pk(self):
+        """The list is the whitelist — validation can only match what is in it."""
+        stranger = ClientProfile.objects.create(
+            user=make_user("stranger@example.com"), region=self.region
+        )
+        theirs = self.gig(client=stranger, title="Not yours")
+        mine = self.gig(title="Mine")
+
+        response = self.send(theirs)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Offer.objects.filter(job=theirs).exists())
+        self.assertIn("job", response.context["form"].errors)
+        self.assertIsNotNone(mine)
+
+    def test_a_booking_is_offered_whole(self):
+        """Sent Tuesday and left wondering about Wednesday is the confusion
+        _booking_days exists to prevent."""
+        from uuid import uuid4
+
+        group = uuid4()
+        days = [
+            self.gig(
+                title="Three days",
+                gig_date=timezone.localdate() + timedelta(days=n),
+                offer_group=group,
+            )
+            for n in (3, 4, 5)
+        ]
+
+        self.send(days[0])
+
+        self.assertEqual(Offer.objects.count(), 3)
+        self.assertEqual(
+            sorted(o.job_id for o in Offer.objects.all()),
+            sorted(d.pk for d in days),
+        )
+
+    def test_asking_again_after_a_no_reuses_the_offer(self):
+        job = self.gig()
+        Offer.objects.create(
+            job=job, worker=self.worker_profile, status=OfferStatus.DECLINED
+        )
+
+        self.send(job)
+
+        offer = Offer.objects.get(job=job, worker=self.worker_profile)
+        self.assertEqual(offer.status, OfferStatus.PENDING)
+        self.assertIsNone(offer.responded_at)
+
+    def test_a_standing_position_is_not_offered_from_here(self):
+        """An offer is a dated shift with a price on it. A position is neither,
+        and inviting somebody into one is a different conversation."""
+        self.standing()
+        self.client.force_login(self.client_user)
+        response = self.client.get(self.url())
+
+        self.assertTemplateUsed(response, "jobs/offer_form.html")
+
+
 class MultiDayOfferTests(JobFactoryMixin, TestCase):
     """One offer form, several days.
 
@@ -337,8 +492,16 @@ class MultiDayOfferTests(JobFactoryMixin, TestCase):
             response, reverse("jobs:mine"), fetch_redirect_response=False
         )
 
-    def test_the_worker_can_take_one_day_and_leave_the_rest(self):
-        """The reason these are separate rows at all."""
+    def test_accepting_takes_the_whole_booking(self):
+        """Yes to a week is yes to the week.
+
+        The days are separate rows because each one carries its own escrow and
+        its own sign-off — not so that they can be answered separately. The
+        reader is shown one offer (see collapse_rows), answers it once, and the
+        answer has to reach every day of it. Leaving the rest pending left the
+        client holding live offers nobody would ever answer and days still on
+        the board, which is the thing a "yes" was supposed to end.
+        """
         self.send(self.days(3))
         offers = list(Offer.objects.order_by("job__gig_date"))
 
@@ -347,10 +510,70 @@ class MultiDayOfferTests(JobFactoryMixin, TestCase):
             reverse("jobs:offer_respond", args=[offers[0].pk]), {"answer": "accept"}
         )
 
-        offers[0].refresh_from_db()
-        offers[1].refresh_from_db()
-        self.assertEqual(offers[0].status, OfferStatus.ACCEPTED)
-        self.assertTrue(offers[1].is_pending)
+        for offer in offers:
+            offer.refresh_from_db()
+            self.assertEqual(offer.status, OfferStatus.ACCEPTED)
+            self.assertEqual(offer.job.state, JobState.ACCEPTED)
+            self.assertEqual(offer.job.assigned_worker, self.worker_profile)
+
+    def test_declining_answers_the_whole_booking(self):
+        """No is one answer too.
+
+        They were shown one offer and said no to it once. Leaving the other
+        days pending had the app going on telling them a job was waiting after
+        they had turned it down, and the client going on waiting for an answer
+        that had already been given.
+        """
+        self.send(self.days(3))
+        offers = list(Offer.objects.order_by("job__gig_date"))
+
+        self.client.force_login(self.worker_user)
+        self.client.post(
+            reverse("jobs:offer_respond", args=[offers[0].pk]),
+            {"answer": "decline", "response_note": "Booked that week."},
+        )
+
+        for offer in offers:
+            offer.refresh_from_db()
+            self.assertEqual(offer.status, OfferStatus.DECLINED)
+            self.assertEqual(offer.response_note, "Booked that week.")
+
+    def test_a_declined_booking_stops_asking_to_be_answered(self):
+        """The badge counts pending offers, so one left behind kept saying a
+        job was waiting for somebody who had already said no."""
+        from .waiting import waiting_for
+
+        self.send(self.days(3))
+        offer = Offer.objects.order_by("job__gig_date").first()
+
+        self.client.force_login(self.worker_user)
+        self.client.post(
+            reverse("jobs:offer_respond", args=[offer.pk]), {"answer": "decline"}
+        )
+
+        self.assertEqual(waiting_for(self.worker_user).offers, 0)
+
+    def test_a_booking_leaves_the_board_once_it_is_agreed(self):
+        """Two people agreed; nobody else should still be able to apply."""
+        group = __import__("uuid").uuid4()
+        days = [
+            self.gig(
+                is_private=False,
+                offer_group=group,
+                gig_date=timezone.localdate() + timedelta(days=n),
+            )
+            for n in (3, 4, 5)
+        ]
+        offers = [
+            Offer.objects.create(job=d, worker=self.worker_profile) for d in days
+        ]
+
+        self.client.force_login(self.worker_user)
+        self.client.post(
+            reverse("jobs:offer_respond", args=[offers[0].pk]), {"answer": "accept"}
+        )
+
+        self.assertEqual(Job.objects.public().filter(offer_group=group).count(), 0)
 
     def test_a_duplicate_day_is_not_booked_twice(self):
         dates = self.days(2)
