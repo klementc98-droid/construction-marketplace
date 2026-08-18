@@ -22,34 +22,45 @@ from django import forms
 from django.utils.translation import gettext as _
 
 
-def date_picker_attrs(*, floor: date) -> dict[str, str]:
+def date_picker_attrs(*, floor: date, single: bool = False) -> dict[str, str]:
     """Widget attrs for the calendar in ``crew.js``.
 
     The script draws its own calendar, so the words on it have to come from
     somewhere translatable. They are handed over as one JSON attribute rather
-    than through a JavaScript catalogue: it is a handful of strings on two
+    than through a JavaScript catalogue: it is a handful of strings on three
     forms, and a catalogue would be a second request and a second place for
     the language to be decided.
 
     ``data-date-list`` carries the server's today, in the app's timezone. Using
     the browser's clock instead would let someone on a device set to yesterday
     offer a day the server will reject.
+
+    ``single`` is for the fields that hold one day rather than a set — a
+    counter-offer moves the date, it does not collect dates. The calendar is
+    the same calendar; picking replaces instead of adding and the panel closes
+    on the choice, because the reason it stays open on the multi-day fields is
+    that there is a second day coming, and here there is not.
+
+    Sharing it is the point. A counter is answered on the same screen the offer
+    was read on, and a native ``dd/mm/yyyy`` box next to the picker the offer
+    was written with looks like two different applications.
     """
-    return {
-        "data-date-list": floor.isoformat(),
-        "data-date-list-i18n": json.dumps(
-            {
-                "open": _("Pick days"),
-                "more": _("Add or remove days"),
-                "none": _("No days picked yet."),
-                "done": _("Done"),
-                "remove": _("Remove"),
-                "prev": _("Previous month"),
-                "next": _("Next month"),
-            },
-            ensure_ascii=False,
-        ),
+    words = {
+        "open": _("Pick a day") if single else _("Pick days"),
+        "more": _("Change the day") if single else _("Add or remove days"),
+        "none": _("No day picked yet.") if single else _("No days picked yet."),
+        "done": _("Done"),
+        "remove": _("Remove"),
+        "prev": _("Previous month"),
+        "next": _("Next month"),
     }
+    attrs = {
+        "data-date-list": floor.isoformat(),
+        "data-date-list-i18n": json.dumps(words, ensure_ascii=False),
+    }
+    if single:
+        attrs["data-date-one"] = ""
+    return attrs
 
 
 def parse_date_list(raw: str | None, *, today: date) -> list[date]:

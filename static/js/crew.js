@@ -417,6 +417,10 @@
     $$("input[data-date-list]").forEach(function (input) {
       var floor = input.getAttribute("data-date-list") || "";
       var lang = doc.documentElement.getAttribute("lang") || undefined;
+      /* One day rather than a set — a counter-offer moves the date, it does
+         not collect dates. Same calendar, two rules changed: picking replaces,
+         and the panel closes on the pick. */
+      var one = input.hasAttribute("data-date-one");
 
       var words = {};
       try {
@@ -609,6 +613,26 @@
         var cell = event.target.closest ? event.target.closest(".datecal-day") : null;
         if (!cell || cell.disabled) return;
         var value = cell.dataset.date;
+
+        if (one) {
+          // Replace, never toggle. Re-tapping the chosen day is a confirmation,
+          // not a request to leave the field empty — the chip's x is how it is
+          // cleared, the same as a native date input, which also has no way to
+          // unset by tapping the day again.
+          var prevOn = $(".datecal-day.on", grid);
+          if (prevOn && prevOn !== cell) {
+            prevOn.classList.remove("on");
+            prevOn.setAttribute("aria-pressed", "false");
+          }
+          cell.classList.add("on");
+          cell.setAttribute("aria-pressed", "true");
+          input.value = value;
+          renderChips();
+          close();
+          toggle.focus();
+          return;
+        }
+
         var list = read();
         var at = list.indexOf(value);
         var isOn = at === -1;
@@ -702,8 +726,10 @@
           });
         }
 
+        // The count is the useful half of this label when there is a set to
+        // keep track of, and noise when there is exactly one day by design.
         toggle.textContent = list.length
-          ? word("more", "Add or remove days") + " (" + list.length + ")"
+          ? word("more", "Add or remove days") + (one ? "" : " (" + list.length + ")")
           : word("open", "Pick days");
       }
 
