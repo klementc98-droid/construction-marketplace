@@ -183,10 +183,17 @@ class WorkerProfileFormTests(TestCase):
         self.assertIn("available_dates", form.errors)
 
     def test_specific_days_saves_parsed_dates(self):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        # Relative to today, never written out. The form rejects past dates, so
+        # a date fixed in the source is a test with an expiry date on it.
+        days = [timezone.localdate() + timedelta(days=n) for n in (3, 4)]
         form = WorkerProfileForm(
             self._data(
                 availability_status=AvailabilityStatus.SPECIFIC_DAYS,
-                available_dates="2026-08-04, 2026-08-05",
+                available_dates=", ".join(d.isoformat() for d in days),
             ),
             instance=self.profile,
         )
@@ -194,15 +201,19 @@ class WorkerProfileFormTests(TestCase):
         form.save()
         self.assertEqual(
             [d.date.isoformat() for d in self.profile.availability_dates.all()],
-            ["2026-08-04", "2026-08-05"],
+            [d.isoformat() for d in days],
         )
 
     def test_switching_away_from_specific_days_clears_stale_dates(self):
         """Otherwise a worker looks bookable on days they never re-confirmed."""
+        from datetime import timedelta
+
+        from django.utils import timezone
+
         form = WorkerProfileForm(
             self._data(
                 availability_status=AvailabilityStatus.SPECIFIC_DAYS,
-                available_dates="2026-08-04",
+                available_dates=(timezone.localdate() + timedelta(days=3)).isoformat(),
             ),
             instance=self.profile,
         )
