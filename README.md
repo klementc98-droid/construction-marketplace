@@ -135,7 +135,7 @@ and safe to run often.
 python manage.py settle_due_jobs      # release payments past their window
 python manage.py expire_stale_gigs    # retire gigs whose day passed unfilled
 python manage.py send_notifications   # post queued emails
-python manage.py send_reminders       # nudge people holding somebody else up
+python manage.py remind_tomorrow      # tell people about the day they have on
 ```
 
 `settle_due_jobs` is the one that moves money. Without it, a client who says
@@ -147,10 +147,15 @@ inside the transaction that caused them and never sent from a request, so a
 slow or unreachable SMTP host cannot make somebody's job application hang and
 nothing is lost while it is being fixed. Run it every few minutes.
 
-`send_reminders` chases what people are sitting on — an unanswered offer, a
-finished job nobody confirmed, a rating nobody left. It queues at most one
-email per person per week however often you run it, because the interval is
+`remind_tomorrow` tells a worker the night before about the day they have on.
+Run it once each evening; running it more often is harmless, because the day is
 part of the deduplication key rather than a property of the schedule.
+
+Two things are emailed and nothing else: a direct offer, and that night-before
+reminder. Every other event is wired, worded and translated but switched off in
+`notifications.services.ENABLED` — an inbox that fills with mail nobody asked
+for gets the sender filtered, and after that the important one does not arrive
+either. Turning one back on is adding a line to that set.
 
 Leave the mail settings unset and email goes to the console — which is the
 right default for a machine with no business talking to an SMTP server, and

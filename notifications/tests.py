@@ -20,6 +20,7 @@ from django.utils import timezone
 
 from accounts.models import AvailabilityStatus, ClientProfile, WorkerProfile
 from core.models import Region, Trade
+from core.state_machine import JobState
 from jobs.models import Job, JobType
 from notifications.models import Kind, Notification
 from notifications.services import audience_for, booking_key, notify
@@ -63,7 +64,9 @@ class NotificationTestCase(TestCase):
 class WhatIsQueuedTests(NotificationTestCase):
     def test_a_notification_is_written(self):
         job = self.gig()
-        row = notify(self.worker_user, Kind.SELECTED, job=job, job_title=job.title)
+        row = notify(
+            self.worker_user, Kind.OFFER_RECEIVED, job=job, job_title=job.title
+        )
 
         self.assertIsNotNone(row)
         self.assertEqual(row.recipient, self.worker_user)
@@ -73,7 +76,7 @@ class WhatIsQueuedTests(NotificationTestCase):
         """The commonest way to make an app feel stupid."""
         job = self.gig()
         row = notify(
-            self.client_user, Kind.APPLICATION, job=job, actor=self.client_user
+            self.client_user, Kind.OFFER_RECEIVED, job=job, actor=self.client_user
         )
         self.assertIsNone(row)
 
@@ -81,7 +84,7 @@ class WhatIsQueuedTests(NotificationTestCase):
         self.worker_user.email_notifications = False
         self.worker_user.save(update_fields=["email_notifications"])
 
-        row = notify(self.worker_user, Kind.SELECTED, job=self.gig())
+        row = notify(self.worker_user, Kind.OFFER_RECEIVED, job=self.gig())
         self.assertIsNone(row)
         self.assertEqual(Notification.objects.count(), 0)
 
@@ -105,25 +108,33 @@ class WhatIsQueuedTests(NotificationTestCase):
 
         self.assertEqual(Notification.objects.count(), 1)
 
-    def test_two_applicants_to_one_booking_are_two_emails(self):
+    def test_the_key_keeps_two_actors_apart(self):
         """The other half of the dedupe rule, and the half that is easy to get
-        wrong: collapsing these would tell the client about the first person and
-        silently swallow the second."""
+        wrong. Collapsing a booking is right; collapsing two different people
+        doing the same thing to it would announce the first and silently
+        swallow the second, so the actor has to be in the key."""
+        job = self.gig(offer_group=uuid4())
         rival = WorkerProfile.objects.create(
             user=User.objects.create_user(email="rival@example.com"),
             region=self.region,
         )
-        job = self.gig(offer_group=uuid4())
 
-        for applicant in (self.worker_profile, rival):
-            notify(
-                self.client_user,
-                Kind.APPLICATION,
-                job=job,
-                dedupe=booking_key("application", job, applicant.pk),
-            )
+        self.assertNotEqual(
+            booking_key("application", job, self.worker_profile.pk),
+            booking_key("application", job, rival.pk),
+        )
 
-        self.assertEqual(Notification.objects.count(), 2)
+    def test_the_key_treats_every_day_of_a_booking_as_one(self):
+        group = uuid4()
+        monday = self.gig(offer_group=group)
+        friday = self.gig(
+            offer_group=group, gig_date=timezone.localdate() + timedelta(days=7)
+        )
+
+        self.assertEqual(
+            booking_key("offer", monday, self.worker_profile.pk),
+            booking_key("offer", friday, self.worker_profile.pk),
+        )
 
     def test_a_repeat_is_allowed_once_the_first_has_gone_out(self):
         """Being offered the same week again next month is news again."""
@@ -171,31 +182,9 @@ class BroadcastTests(NotificationTestCase):
         job = self.gig(is_private=True)
         self.assertEqual(list(audience_for(job)), [])
 
-    def test_posting_a_booking_tells_each_person_once(self):
-        """Four days must not be four emails to every plumber in the city."""
-        group = uuid4()
-        days = [
-            self.gig(
-                offer_group=group,
-                gig_date=timezone.localdate() + timedelta(days=n),
-            )
-            for n in (3, 4, 5, 6)
-        ]
-        for day in days:
-            for worker in audience_for(day):
-                notify(
-                    worker.user,
-                    Kind.JOB_POSTED,
-                    job=day,
-                    dedupe=booking_key("posted", day, worker.pk),
-                )
-
-        self.assertEqual(
-            Notification.objects.filter(kind=Kind.JOB_POSTED).count(), 1
-        )
-
-    def test_a_client_is_not_told_about_their_own_post(self):
-        """Somebody who is both a client and a plumber matches their own job."""
+    def test_the_client_is_still_in_the_audience_but_never_written_to(self):
+        """Somebody who is both a client and a plumber matches their own job.
+        The audience rule does not know that; notify() does."""
         both = WorkerProfile.objects.create(
             user=self.client_user, region=self.region
         )
@@ -207,35 +196,124 @@ class BroadcastTests(NotificationTestCase):
             notify(self.client_user, Kind.JOB_POSTED, job=job, actor=self.client_user)
         )
 
+    def test_announcing_is_currently_switched_off(self):
+        """The rule above is kept working and tested; the emails are not sent.
+        See ENABLED — this is a decision about volume, not a missing feature."""
+        self.assertIsNone(
+            notify(self.worker_user, Kind.JOB_POSTED, job=self.gig())
+        )
 
-class ReminderTests(NotificationTestCase):
-    def test_nobody_with_a_clear_list_is_nudged(self):
-        call_command("send_reminders")
-        self.assertEqual(Notification.objects.filter(kind=Kind.REMINDER).count(), 0)
 
-    def test_somebody_with_an_unanswered_offer_is(self):
-        from jobs.models import Offer
+class TomorrowTests(NotificationTestCase):
+    """The night-before reminder.
 
-        job = self.gig(is_private=True)
-        Offer.objects.create(job=job, worker=self.worker_profile)
+    The one place a booking is deliberately NOT collapsed: tomorrow is a
+    particular morning somebody has to turn up on.
+    """
 
-        call_command("send_reminders")
+    def booked(self, when, **overrides):
+        job = self.gig(gig_date=when, **overrides)
+        job.state = JobState.ACCEPTED
+        job.assigned_worker = self.worker_profile
+        job.save(update_fields=["state", "assigned_worker"])
+        return job
 
-        row = Notification.objects.get(kind=Kind.REMINDER)
+    def test_tomorrows_job_is_reminded(self):
+        job = self.booked(timezone.localdate() + timedelta(days=1))
+        call_command("remind_tomorrow")
+
+        row = Notification.objects.get(kind=Kind.TOMORROW)
         self.assertEqual(row.recipient, self.worker_user)
-        self.assertEqual(row.payload["offers"], 1)
+        self.assertEqual(row.job, job)
 
-    def test_running_it_again_the_same_week_does_not_nudge_twice(self):
-        """One email listing four things, not four emails — and not a fresh one
-        every time cron fires."""
-        from jobs.models import Offer
+    def test_a_job_further_out_is_left_alone(self):
+        self.booked(timezone.localdate() + timedelta(days=5))
+        call_command("remind_tomorrow")
+        self.assertEqual(Notification.objects.count(), 0)
 
-        Offer.objects.create(job=self.gig(is_private=True), worker=self.worker_profile)
+    def test_a_job_nobody_took_is_not_reminded(self):
+        """No worker, nobody to remind — and it may never be filled at all."""
+        self.gig(gig_date=timezone.localdate() + timedelta(days=1))
+        call_command("remind_tomorrow")
+        self.assertEqual(Notification.objects.count(), 0)
 
-        call_command("send_reminders")
-        call_command("send_reminders")
+    def test_a_finished_job_is_not_reminded(self):
+        job = self.booked(timezone.localdate() + timedelta(days=1))
+        job.state = JobState.CLOSED
+        job.save(update_fields=["state"])
 
-        self.assertEqual(Notification.objects.filter(kind=Kind.REMINDER).count(), 1)
+        call_command("remind_tomorrow")
+        self.assertEqual(Notification.objects.count(), 0)
+
+    def test_running_it_twice_in_a_day_reminds_once(self):
+        self.booked(timezone.localdate() + timedelta(days=1))
+
+        call_command("remind_tomorrow")
+        call_command("remind_tomorrow")
+
+        self.assertEqual(Notification.objects.filter(kind=Kind.TOMORROW).count(), 1)
+
+    def test_each_day_of_a_booking_gets_its_own_night_before(self):
+        """The one reminder that must not collapse. Telling somebody about
+        Monday and leaving them to remember Thursday is how a week gets a day
+        missed."""
+        group = uuid4()
+        monday = self.booked(
+            timezone.localdate() + timedelta(days=1), offer_group=group
+        )
+        thursday = self.booked(
+            timezone.localdate() + timedelta(days=4), offer_group=group
+        )
+
+        call_command("remind_tomorrow")
+        call_command("remind_tomorrow", "--days", "4")
+
+        reminded = set(
+            Notification.objects.filter(kind=Kind.TOMORROW).values_list(
+                "job_id", flat=True
+            )
+        )
+        self.assertEqual(reminded, {monday.pk, thursday.pk})
+
+    def test_it_says_where_in_the_booking_the_day_falls(self):
+        group = uuid4()
+        self.booked(timezone.localdate() + timedelta(days=1), offer_group=group)
+        self.booked(timezone.localdate() + timedelta(days=2), offer_group=group)
+        self.booked(timezone.localdate() + timedelta(days=3), offer_group=group)
+
+        call_command("remind_tomorrow")
+
+        row = Notification.objects.get(kind=Kind.TOMORROW)
+        self.assertEqual(row.payload["day_number"], 1)
+        self.assertEqual(row.payload["of_days"], 3)
+
+
+class EnabledKindsTests(NotificationTestCase):
+    """Only two things are emailed. The rest are built, translated and off."""
+
+    def test_an_offer_is_emailed(self):
+        self.assertIsNotNone(
+            notify(self.worker_user, Kind.OFFER_RECEIVED, job=self.gig())
+        )
+
+    def test_the_night_before_is_emailed(self):
+        self.assertIsNotNone(
+            notify(self.worker_user, Kind.TOMORROW, job=self.gig())
+        )
+
+    def test_everything_else_is_written_off_rather_than_written_down(self):
+        for kind in (
+            Kind.MESSAGE,
+            Kind.APPLICATION,
+            Kind.SELECTED,
+            Kind.JOB_POSTED,
+            Kind.JOB_CLOSED,
+            Kind.PAYMENT_RELEASED,
+            Kind.RATING,
+        ):
+            with self.subTest(kind=kind):
+                self.assertIsNone(notify(self.worker_user, kind, job=self.gig()))
+        self.assertEqual(Notification.objects.count(), 0)
 
 
 class SendingTests(NotificationTestCase):
@@ -243,7 +321,7 @@ class SendingTests(NotificationTestCase):
         job = self.gig()
         return notify(
             self.worker_user,
-            Kind.SELECTED,
+            Kind.OFFER_RECEIVED,
             job=job,
             client="Poster",
             job_title=job.title,
@@ -293,7 +371,13 @@ class SendingTests(NotificationTestCase):
         broken = self.queue()
         Notification.objects.filter(pk=broken.pk).update(kind="no_such_kind")
         good = notify(
-            self.worker_user, Kind.JOB_CLOSED, job=self.gig(), job_title="Other"
+            self.worker_user,
+            Kind.TOMORROW,
+            job=self.gig(),
+            job_title="Other",
+            client="Poster",
+            pay="90",
+            hours="8",
         )
 
         call_command("send_notifications")

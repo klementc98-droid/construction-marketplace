@@ -46,6 +46,9 @@ class Kind(models.TextChoices):
     #: Not an event. A nudge about events that already happened and were
     #: ignored, sent by its own command rather than by anything a person did.
     REMINDER = "reminder", _("Something is waiting for you")
+    #: The day before a booked day. Also not an event — the calendar reaching a
+    #: date is what causes it, so it too has its own command.
+    TOMORROW = "tomorrow", _("You're working tomorrow")
     OFFER_RECEIVED = "offer_received", _("You were offered a job")
     OFFER_ANSWERED = "offer_answered", _("Your offer was answered")
     APPLICATION = "application", _("Somebody applied to your job")

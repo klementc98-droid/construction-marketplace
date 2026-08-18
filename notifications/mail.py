@@ -27,6 +27,7 @@ SUBJECTS = {
     Kind.JOB_POSTED: _("New work posted: %(job)s"),
     # The one subject with no job in it. A nudge is about a list, not a thing.
     Kind.REMINDER: _("You've got something waiting"),
+    Kind.TOMORROW: _("Tomorrow: %(job)s"),
     Kind.OFFER_RECEIVED: _("You've been offered work: %(job)s"),
     Kind.OFFER_ANSWERED: _("Your offer was answered: %(job)s"),
     Kind.APPLICATION: _("Somebody applied for %(job)s"),

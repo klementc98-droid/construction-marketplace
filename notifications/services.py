@@ -12,6 +12,24 @@ from django.db import IntegrityError, transaction
 
 from .models import Kind, Notification
 
+#: What is actually emailed. Everything else in :class:`Kind` is written and
+#: translated and stays inert until it is named here.
+#:
+#: The short list is the decision, not the limit of what was built. An inbox
+#: that fills with mail nobody asked for gets the sender filtered, and once
+#: somebody has filtered you the important one does not arrive either — so the
+#: two that survive are the two where an email genuinely changes what a person
+#: does: work that starts tomorrow, and somebody asking them to take a job.
+#:
+#: Turning one back on is adding a line here. The events are already wired, so
+#: nothing else has to be found and re-plumbed.
+ENABLED: frozenset = frozenset(
+    {
+        Kind.OFFER_RECEIVED,
+        Kind.TOMORROW,
+    }
+)
+
 
 def notify(
     recipient,
@@ -24,9 +42,10 @@ def notify(
 ) -> Notification | None:
     """Queue one email. Returns the row, or None if it was not owed.
 
-    Four reasons nothing is written, and all of them are ordinary rather than
+    Five reasons nothing is written, and all of them are ordinary rather than
     exceptional — hence None rather than a raise:
 
+    * This kind is not one of the ones being emailed. See ``ENABLED``.
     * There is nobody to write to.
     * They turned email off.
     * They have no address. Sign-in is Google-only so this should not happen,
@@ -40,6 +59,8 @@ def notify(
     arrangement one email; leaving out the actor is what would wrongly make two
     applicants one email, so the callers compose the whole key themselves.
     """
+    if kind not in ENABLED:
+        return None
     if recipient is None or not recipient.email:
         return None
     if not recipient.email_notifications:

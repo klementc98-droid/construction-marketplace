@@ -3067,3 +3067,27 @@ msgid "%(n)s job to rate"
 msgid_plural "%(n)s jobs to rate"
 msgstr[0] "%(n)s δουλειά για αξιολόγηση"
 msgstr[1] "%(n)s δουλειές για αξιολόγηση"
+
+#: templates/notifications/email/tomorrow.txt
+msgid "Tomorrow: %(job)s"
+msgstr "Αύριο: %(job)s"
+
+#: templates/notifications/email/tomorrow.txt
+msgid "You're working tomorrow"
+msgstr "Αύριο δουλεύεις"
+
+#: templates/notifications/email/tomorrow.txt
+msgid "You're working tomorrow: %(title)s."
+msgstr "Αύριο δουλεύεις: %(title)s."
+
+#: templates/notifications/email/tomorrow.txt
+msgid "For %(client)s."
+msgstr "Για %(client)s."
+
+#: templates/notifications/email/tomorrow.txt
+msgid "Day %(day_number)s of %(n)s on this booking."
+msgstr "Μέρα %(day_number)s από %(n)s σε αυτή την κράτηση."
+
+#: templates/notifications/email/tomorrow.txt
+msgid "If something has changed, say so now rather than on the day — the thread is on the job page."
+msgstr "Αν κάτι άλλαξε, πες το τώρα και όχι την ημέρα — η συνομιλία είναι στη σελίδα της δουλειάς."
