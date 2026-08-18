@@ -14,7 +14,10 @@ from django.db import transaction
 from django.utils import timezone
 
 from config import business_rules as rules
-from core.state_machine import Actor, JobState, assert_transition
+from notifications.models import Kind
+from notifications.services import booking_key, notify
+
+from core.state_machine import claim, Actor, JobState, assert_transition
 from jobs.models import Job, JobType
 
 from . import gateway
@@ -143,18 +146,50 @@ def mark_authorized(escrow: EscrowPayment, payment_intent_id: str) -> EscrowPaym
     if escrow.status == EscrowStatus.AUTHORIZED:
         return escrow
 
-    job = Job.objects.select_for_update().get(pk=escrow.job_id)
+    job = Job.objects.get(pk=escrow.job_id)
     assert_transition(job.state, JobState.ESCROW_HELD, Actor.CLIENT)
+
+    # The status check above is read from an instance somebody else may already
+    # have moved. This is the same question asked of the database at the moment
+    # of writing, which is the only place it can be answered honestly when the
+    # webhook and the browser are both here — the collision this docstring
+    # promises is constant, so it is worth being exact about.
+    #
+    # A lost claim is a no-op and not a refusal: both callers are doing the
+    # right thing, and the second one arriving late is the expected case.
+    authorized_at = timezone.now()
+    if not claim(
+        EscrowPayment,
+        escrow.pk,
+        field="status",
+        expect=escrow.status,
+        to=EscrowStatus.AUTHORIZED,
+        payment_intent_id=payment_intent_id,
+        authorized_at=authorized_at,
+    ):
+        escrow.refresh_from_db()
+        return escrow
 
     escrow.payment_intent_id = payment_intent_id
     escrow.status = EscrowStatus.AUTHORIZED
-    escrow.authorized_at = timezone.now()
-    escrow.save(
-        update_fields=["payment_intent_id", "status", "authorized_at", "updated_at"]
-    )
+    escrow.authorized_at = authorized_at
 
+    claim(Job, job.pk, expect=job.state, to=JobState.ESCROW_HELD)
     job.state = JobState.ESCROW_HELD
-    job.save(update_fields=["state", "updated_at"])
+
+    # The one an escrow worker most needs. ACCEPTED and ESCROW_HELD are
+    # deliberately different states because only the second is worth crossing
+    # town for, and until now the difference was visible only to somebody
+    # already looking at the page.
+    notify(
+        escrow.worker.user,
+        Kind.ESCROW_FUNDED,
+        job=job,
+        dedupe=booking_key("funded", job),
+        job_title=job.title,
+        pay=str(job.fixed_pay),
+        hours=str(job.gig_hours),
+    )
     return escrow
 
 
@@ -177,23 +212,57 @@ def release(
     if escrow.status != EscrowStatus.AUTHORIZED:
         raise EscrowError("There is no held payment to release on this job.")
 
-    job = Job.objects.select_for_update().get(pk=escrow.job_id)
+    job = Job.objects.get(pk=escrow.job_id)
     assert_transition(job.state, JobState.PAID_OUT, actor)
 
     if amount is not None and amount > escrow.amount:
         raise EscrowError("Cannot release more than was held.")
 
+    # Claimed BEFORE Stripe is called, and this is the ordering that matters
+    # most in the codebase. A client tapping approve in the same second the
+    # settlement cron reaches this job is not a hypothetical — both read an
+    # AUTHORIZED hold from their own instance, both pass the checks above, and
+    # both would call capture on the same intent. Stripe refuses the second,
+    # so the money is safe either way, but the app takes a gateway exception on
+    # a job that was in fact paid correctly, which is a bad night for whoever
+    # has to work out what happened.
+    #
+    # Rolling back is what makes this safe to do first: if the capture throws,
+    # @transaction.atomic puts the status back to AUTHORIZED and the next run
+    # tries again.
+    released_at = timezone.now()
+    if not claim(
+        EscrowPayment,
+        escrow.pk,
+        field="status",
+        expect=EscrowStatus.AUTHORIZED,
+        to=EscrowStatus.RELEASED,
+        released_at=released_at,
+    ):
+        escrow.refresh_from_db()
+        return escrow
+
     result = gateway.capture_payment_intent(escrow.payment_intent_id, amount=amount)
 
     escrow.status = EscrowStatus.RELEASED
     escrow.captured_amount = result["amount_received"]
-    escrow.released_at = timezone.now()
-    escrow.save(
-        update_fields=["status", "captured_amount", "released_at", "updated_at"]
-    )
+    escrow.released_at = released_at
+    escrow.save(update_fields=["captured_amount", "updated_at"])
 
+    claim(Job, job.pk, expect=job.state, to=JobState.PAID_OUT)
     job.state = JobState.PAID_OUT
-    job.save(update_fields=["state", "updated_at"])
+
+    notify(
+        escrow.worker.user,
+        Kind.PAYMENT_RELEASED,
+        job=job,
+        # Not keyed on the booking: each day of a week is its own capture and
+        # its own amount, and rolling them into one email would tell somebody
+        # they had been paid once for five days' work.
+        dedupe="",
+        job_title=job.title,
+        amount=f"{rules.CURRENCY_SYMBOL}{escrow.worker_payout}",
+    )
     return escrow
 
 
@@ -210,17 +279,31 @@ def refund(escrow: EscrowPayment, *, actor: str) -> EscrowPayment:
     if escrow.status != EscrowStatus.AUTHORIZED:
         raise EscrowError("There is no held payment to return on this job.")
 
-    job = Job.objects.select_for_update().get(pk=escrow.job_id)
+    job = Job.objects.get(pk=escrow.job_id)
     assert_transition(job.state, JobState.REFUNDED, actor)
+
+    # Claimed before the gateway, for the reason given on release: two admins
+    # resolving the same dispute is rarer than a cron meeting a click, but it
+    # cancels the same intent twice and reads exactly as badly.
+    refunded_at = timezone.now()
+    if not claim(
+        EscrowPayment,
+        escrow.pk,
+        field="status",
+        expect=EscrowStatus.AUTHORIZED,
+        to=EscrowStatus.REFUNDED,
+        refunded_at=refunded_at,
+    ):
+        escrow.refresh_from_db()
+        return escrow
 
     gateway.cancel_payment_intent(escrow.payment_intent_id)
 
     escrow.status = EscrowStatus.REFUNDED
-    escrow.refunded_at = timezone.now()
-    escrow.save(update_fields=["status", "refunded_at", "updated_at"])
+    escrow.refunded_at = refunded_at
 
+    claim(Job, job.pk, expect=job.state, to=JobState.REFUNDED)
     job.state = JobState.REFUNDED
-    job.save(update_fields=["state", "updated_at"])
     return escrow
 
 

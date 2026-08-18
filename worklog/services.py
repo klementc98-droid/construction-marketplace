@@ -14,8 +14,10 @@ from django.db import models, transaction
 from django.utils import timezone
 
 from config import business_rules as rules
-from core.state_machine import Actor, JobState, assert_transition
-from jobs.models import Job, JobType
+from core.state_machine import can_transition, claim, Actor, JobState, assert_transition
+from jobs.models import Job, JobType, booking_of
+from notifications.models import Kind
+from notifications.services import booking_key, notify
 from payments.models import EscrowPayment, EscrowStatus
 from payments.services import EscrowError, release
 
@@ -24,6 +26,57 @@ from .models import CheckIn, Completion, Dispute, DisputeStatus, EndedBy, payabl
 
 class WorkflowError(RuntimeError):
     """A refusal phrased for the person who hit it."""
+
+
+def _claim_booking(job, *, to: str, actor: str) -> list[Job]:
+    """Move every day of this booking that legally can, and say which moved.
+
+    A booking is one arrangement split into a row per day, and the split is
+    storage — the day is what carries an escrow and a sign-off. Finishing and
+    closing are not per-day facts: the pair agreed one booking and they finish
+    one booking, so one press has to reach all of it.
+
+    Days that cannot make the move are skipped rather than refused. On a week
+    where Tuesday is already disputed, or Friday has not been checked into yet,
+    the honest answer is to move what can move — the alternative is one stuck
+    day blocking a client from closing the other four.
+
+    Nothing here releases money for a day that has not happened; the settlement
+    path decides that for itself, off the completions that exist.
+    """
+    moved = []
+    for day in booking_of(job):
+        if not can_transition(day.state, to, actor):
+            continue
+        if not claim(Job, day.pk, expect=day.state, to=to):
+            continue
+        day.state = to
+        moved.append(day)
+    return moved
+
+
+def _raced(job_id) -> str:
+    """What to say when a claim is lost.
+
+    Every write below is conditional on the job still being in the state it was
+    read in, so two people acting on the same job in the same second get one
+    winner and this sentence.
+
+    It names the state rather than the culprit. Who moved it is genuinely not
+    knowable from here — the other party, the settlement cron and their own
+    second tab are all live possibilities, and a message that guesses wrong is
+    worse than one that does not guess. Where the job ended up is knowable, is
+    the thing they actually need, and answers "what do I do now" without them
+    having to ask. One extra query, on a path that only runs when two people
+    have collided.
+    """
+    state = Job.objects.filter(pk=job_id).values_list("state", flat=True).first()
+    if state is None:
+        return "That job is no longer there. Open your jobs to see where things stand."
+    return (
+        f"This job moved while you were working on it. It now reads: "
+        f"{JobState(state).label}. Open it again to see where it stands."
+    )
 
 
 def _escrow(job: Job) -> EscrowPayment | None:
@@ -72,7 +125,7 @@ def check_in(
     if hasattr(job, "check_in"):
         return job.check_in
 
-    locked = Job.objects.select_for_update().get(pk=job.pk)
+    locked = Job.objects.get(pk=job.pk)
 
     # The row-level half of the rule the transition table cannot state. Once
     # ACCEPTED -> IN_PROGRESS became legal — it has to be, or a deal settled
@@ -99,8 +152,12 @@ def check_in(
     record.evaluate_location()
     record.save()
 
+    # Rolls the CheckIn row back with it: raising inside @transaction.atomic is
+    # what undoes the work above, and a check-in recorded against a job that
+    # moved on is a site visit the record cannot explain.
+    if not claim(Job, job.pk, expect=locked.state, to=JobState.IN_PROGRESS):
+        raise WorkflowError(_raced(job.pk))
     locked.state = JobState.IN_PROGRESS
-    locked.save(update_fields=["state", "updated_at"])
     return record
 
 
@@ -140,14 +197,15 @@ def complete(job: Job, worker) -> Completion:
     if hasattr(job, "completion"):
         return job.completion
 
-    locked = Job.objects.select_for_update().get(pk=job.pk)
+    locked = Job.objects.get(pk=job.pk)
     assert_transition(locked.state, JobState.COMPLETED, Actor.WORKER)
 
     completion = _create_completion(
         job, hours=Decimal(job.gig_hours or 0), ended_early=False
     )
+    if not claim(Job, job.pk, expect=locked.state, to=JobState.COMPLETED):
+        raise WorkflowError(_raced(job.pk))
     locked.state = JobState.COMPLETED
-    locked.save(update_fields=["state", "updated_at"])
 
     _notify(
         job,
@@ -179,18 +237,38 @@ def mark_work_finished(job: Job, worker) -> Job:
             "This job runs through escrow — check in on site, then mark it done."
         )
 
-    locked = Job.objects.select_for_update().get(pk=job.pk)
+    locked = Job.objects.get(pk=job.pk)
     assert_transition(locked.state, JobState.COMPLETED, Actor.WORKER)
-    locked.state = JobState.COMPLETED
-    locked.save(update_fields=["state", "updated_at"])
 
+    # The whole booking. Nothing unique backs this route — no check-in, no
+    # Completion row — so the claim inside is also what stands between a double
+    # tap and the client being told twice.
+    finished = _claim_booking(job, to=JobState.COMPLETED, actor=Actor.WORKER)
+    if not finished:
+        raise WorkflowError(_raced(job.pk))
+
+    days = len(finished)
+    said = (
+        f"Marked all {days} days finished."
+        if days > 1
+        else "Marked the work finished."
+    )
     _notify(
         job,
         worker.user,
-        "Marked the work finished. Confirm it when you agree and the job is "
+        f"{said} Confirm it when you agree and the job is "
         "closed — payment is between us, so nothing releases on its own.",
     )
-    return locked
+    notify(
+        job.client.user,
+        Kind.WORK_FINISHED,
+        job=job,
+        actor=worker.user,
+        dedupe=booking_key("finished", job),
+        worker=str(worker.user),
+        job_title=job.title,
+    )
+    return next((d for d in finished if d.pk == job.pk), finished[0])
 
 
 @transaction.atomic
@@ -210,11 +288,23 @@ def confirm_closed(job: Job, user) -> Job:
     if job.is_escrowed:
         raise WorkflowError("This job has money held — approve the release instead.")
 
-    locked = Job.objects.select_for_update().get(pk=job.pk)
+    locked = Job.objects.get(pk=job.pk)
     assert_transition(locked.state, JobState.CLOSED, Actor.CLIENT)
-    locked.state = JobState.CLOSED
-    locked.save(update_fields=["state", "updated_at"])
 
+    # Closed is closed, for every day of it. Claimed before the counters move,
+    # and this is the one where that ordering earns its keep: jobs_completed is
+    # reputation, and an F() + 1 that ran when it should not have leaves both
+    # track records permanently overstated with nothing in the data to show it.
+    closed = _claim_booking(job, to=JobState.CLOSED, actor=Actor.CLIENT)
+    if not closed:
+        raise WorkflowError(_raced(job.pk))
+    locked.state = JobState.CLOSED
+
+    # Once for the booking, not once per day. A week worked for one client is
+    # one job done by both of them — counting it five times would inflate the
+    # only number on a profile that is supposed to mean "how much has this
+    # person actually seen through", and the same reasoning is why there is one
+    # rating for it rather than five.
     worker = job.assigned_worker
     if worker is not None:
         type(worker).objects.filter(pk=worker.pk).update(
@@ -225,10 +315,26 @@ def confirm_closed(job: Job, user) -> Job:
         jobs_completed=models.F("jobs_completed") + 1
     )
 
+    if worker is not None:
+        notify(
+            worker.user,
+            Kind.JOB_CLOSED,
+            job=job,
+            actor=user,
+            dedupe=booking_key("closed", job),
+            job_title=job.title,
+        )
+
+    days = len(closed)
     _notify(
         job,
         user,
-        "Confirmed — the job is closed. You can both leave a rating now.",
+        (
+            f"Confirmed all {days} days — the booking is closed. "
+            if days > 1
+            else "Confirmed — the job is closed. "
+        )
+        + "You can both leave a rating now.",
     )
     return locked
 
@@ -258,7 +364,7 @@ def flag_early_end(job: Job, user, *, hours_worked: Decimal, note: str = "") -> 
         )
 
     actor = Actor.WORKER if is_worker else Actor.CLIENT
-    locked = Job.objects.select_for_update().get(pk=job.pk)
+    locked = Job.objects.get(pk=job.pk)
     assert_transition(locked.state, JobState.ENDED_EARLY, actor)
 
     completion = _create_completion(
@@ -268,8 +374,9 @@ def flag_early_end(job: Job, user, *, hours_worked: Decimal, note: str = "") -> 
         ended_by=EndedBy.WORKER if is_worker else EndedBy.CLIENT,
         note=note,
     )
+    if not claim(Job, job.pk, expect=locked.state, to=JobState.ENDED_EARLY):
+        raise WorkflowError(_raced(job.pk))
     locked.state = JobState.ENDED_EARLY
-    locked.save(update_fields=["state", "updated_at"])
 
     hours_label = f"{hours.normalize()}"
     window_hours = int(rules.EARLY_END_DISPUTE_WINDOW.total_seconds() // 3600)
@@ -307,15 +414,37 @@ def _release_for(completion: Completion, *, actor: str) -> Completion:
 
 @transaction.atomic
 def approve(job: Job, user) -> Completion:
-    """Client approves release before the window lapses."""
+    """Client approves release before the window lapses.
+
+    Approving pays the booking, not the day. One press on a week's work
+    releases every day of it that is waiting — the client agreed one
+    arrangement and is answering it once, and making them press the same button
+    on five consecutive screens is not five decisions, it is one decision typed
+    out five times.
+
+    The limit, and it is deliberate: only days with a completion on them. A
+    completion exists because somebody said that day's work was done, so this
+    can never release money for a day nobody has worked yet. On a week where
+    Monday is finished and Thursday has not happened, approving pays Monday and
+    leaves Thursday's hold exactly where it is.
+    """
     if job.client.user_id != user.pk:
         raise WorkflowError("Only the client who posted this can approve it.")
+
     completion = getattr(job, "completion", None)
     if completion is None:
         raise WorkflowError("Nothing to approve yet.")
-    if completion.settled_at:
-        return completion
-    return _release_for(completion, actor=Actor.CLIENT)
+
+    due = (
+        Completion.objects.filter(job__in=booking_of(job), settled_at__isnull=True)
+        .select_related("job")
+        .order_by("job__gig_date")
+    )
+    for pending in due:
+        _release_for(pending, actor=Actor.CLIENT)
+
+    completion.refresh_from_db()
+    return completion
 
 
 @transaction.atomic
@@ -370,12 +499,30 @@ def raise_dispute(job: Job, user, *, reason: str) -> Dispute:
         raise WorkflowError("Say what the problem is — a human has to read this.")
 
     actor = Actor.WORKER if is_worker else Actor.CLIENT
-    locked = Job.objects.select_for_update().get(pk=job.pk)
+    locked = Job.objects.get(pk=job.pk)
     assert_transition(locked.state, JobState.DISPUTED, actor)
 
-    dispute = Dispute.objects.create(job=job, raised_by=user, reason=reason.strip())
+    # Claimed first, so the loser never gets as far as the OneToOne and the
+    # refusal is a sentence rather than an IntegrityError page. Both sides can
+    # be typing a reason at once here — that is the normal shape of a dispute.
+    if not claim(Job, job.pk, expect=locked.state, to=JobState.DISPUTED):
+        raise WorkflowError(_raced(job.pk))
     locked.state = JobState.DISPUTED
-    locked.save(update_fields=["state", "updated_at"])
+
+    dispute = Dispute.objects.create(job=job, raised_by=user, reason=reason.strip())
+
+    other = job.client.user if is_worker else (
+        job.assigned_worker.user if job.assigned_worker else None
+    )
+    notify(
+        other,
+        Kind.DISPUTE,
+        job=job,
+        actor=user,
+        dedupe=booking_key("dispute", job),
+        job_title=job.title,
+        reason=reason.strip()[:500],
+    )
 
     _notify(job, user, f"Raised a dispute on this job.\n\n{reason.strip()}")
     return dispute

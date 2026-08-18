@@ -495,6 +495,69 @@ class NoEscrowJobTests(WorkTestCase):
         self.job.refresh_from_db()
         self.assertFalse(hasattr(self.job, "completion"))
 
+    def test_confirming_twice_at_once_counts_the_job_once(self):
+        """jobs_completed is reputation, and an F() + 1 that ran twice for one
+        job leaves both track records overstated with nothing to show for it.
+
+        The window is forced open rather than raced for: assert_transition runs
+        after confirm_closed has read the job and before it writes, which is
+        exactly where a second request would land.
+        """
+        from unittest import mock
+
+        from jobs.models import Job
+
+        services.mark_work_finished(self.job, self.worker)
+        before_worker = type(self.worker).objects.get(pk=self.worker.pk).jobs_completed
+        before_client = type(self.client_profile).objects.get(
+            pk=self.client_profile.pk
+        ).jobs_completed
+
+        real = services.assert_transition
+
+        def close_it_first(*args, **kwargs):
+            result = real(*args, **kwargs)
+            Job.objects.filter(pk=self.job.pk, state=JobState.COMPLETED).update(
+                state=JobState.CLOSED
+            )
+            return result
+
+        with mock.patch.object(services, "assert_transition", close_it_first):
+            with self.assertRaises(services.WorkflowError):
+                services.confirm_closed(self.job, self.client_user)
+
+        self.assertEqual(
+            type(self.worker).objects.get(pk=self.worker.pk).jobs_completed,
+            before_worker,
+        )
+        self.assertEqual(
+            type(self.client_profile).objects.get(
+                pk=self.client_profile.pk
+            ).jobs_completed,
+            before_client,
+        )
+
+    def test_the_refusal_says_where_the_job_actually_ended_up(self):
+        """Who moved it is not knowable from here; where it went is, and it is
+        the half that tells somebody what to do next."""
+        from unittest import mock
+
+        from jobs.models import Job
+
+        services.mark_work_finished(self.job, self.worker)
+        real = services.assert_transition
+
+        def close_it_first(*args, **kwargs):
+            result = real(*args, **kwargs)
+            Job.objects.filter(pk=self.job.pk).update(state=JobState.CLOSED)
+            return result
+
+        with mock.patch.object(services, "assert_transition", close_it_first):
+            with self.assertRaises(services.WorkflowError) as caught:
+                services.confirm_closed(self.job, self.client_user)
+
+        self.assertIn(str(JobState.CLOSED.label), str(caught.exception))
+
     def test_the_client_confirming_closes_it(self):
         services.mark_work_finished(self.job, self.worker)
         services.confirm_closed(self.job, self.client_user)
@@ -542,3 +605,100 @@ class NoEscrowJobTests(WorkTestCase):
         services.mark_work_finished(self.job, self.worker)
         with self.assertRaises(services.WorkflowError):
             services.approve(self.job, self.client_user)
+
+
+class BookingLifecycleTests(WorkTestCase):
+    """A booking finishes, closes and counts as one job.
+
+    The days are separate rows so each can carry its own escrow and its own
+    sign-off. Nothing about that is meant to reach the two people involved:
+    they agreed one week, they finish one week, and it goes on both records
+    once.
+    """
+
+    def booking(self, count=4, **overrides):
+        from uuid import uuid4
+
+        group = uuid4()
+        days = []
+        for n in range(count):
+            job = self.make_job(state=JobState.ACCEPTED, offer_group=group, **overrides)
+            job.use_escrow = False
+            job.assigned_worker = self.worker_profile
+            job.save(update_fields=["use_escrow", "assigned_worker"])
+            days.append(job)
+        return days
+
+    def test_marking_it_finished_finishes_every_day(self):
+        days = self.booking(4)
+        services.mark_work_finished(days[0], self.worker_profile)
+
+        for day in days:
+            day.refresh_from_db()
+            self.assertEqual(day.state, JobState.COMPLETED)
+
+    def test_confirming_closes_every_day(self):
+        days = self.booking(4)
+        services.mark_work_finished(days[0], self.worker_profile)
+        services.confirm_closed(days[0], self.client_user)
+
+        for day in days:
+            day.refresh_from_db()
+            self.assertEqual(day.state, JobState.CLOSED)
+
+    def test_a_week_counts_as_one_job_on_both_records(self):
+        """The number a profile shows is "how much has this person seen
+        through". Five days of one booking is one."""
+        days = self.booking(5)
+        worker_before = type(self.worker_profile).objects.get(
+            pk=self.worker_profile.pk
+        ).jobs_completed
+        client_before = type(self.client_profile).objects.get(
+            pk=self.client_profile.pk
+        ).jobs_completed
+
+        services.mark_work_finished(days[0], self.worker_profile)
+        services.confirm_closed(days[0], self.client_user)
+
+        self.assertEqual(
+            type(self.worker_profile).objects.get(
+                pk=self.worker_profile.pk
+            ).jobs_completed,
+            worker_before + 1,
+        )
+        self.assertEqual(
+            type(self.client_profile).objects.get(
+                pk=self.client_profile.pk
+            ).jobs_completed,
+            client_before + 1,
+        )
+
+    def test_a_single_day_job_is_untouched_by_any_of_this(self):
+        job = self.make_job(state=JobState.ACCEPTED)
+        job.use_escrow = False
+        job.assigned_worker = self.worker_profile
+        job.save(update_fields=["use_escrow", "assigned_worker"])
+
+        services.mark_work_finished(job, self.worker_profile)
+        job.refresh_from_db()
+        self.assertEqual(job.state, JobState.COMPLETED)
+
+        services.confirm_closed(job, self.client_user)
+        job.refresh_from_db()
+        self.assertEqual(job.state, JobState.CLOSED)
+
+    def test_a_day_that_cannot_move_does_not_block_the_rest(self):
+        """One stuck day must not stop a client closing the other four."""
+        days = self.booking(4)
+        services.mark_work_finished(days[0], self.worker_profile)
+        # Something happened to Wednesday on its own.
+        days[2].state = JobState.DISPUTED
+        days[2].save(update_fields=["state"])
+
+        services.confirm_closed(days[0], self.client_user)
+
+        for day in (days[0], days[1], days[3]):
+            day.refresh_from_db()
+            self.assertEqual(day.state, JobState.CLOSED)
+        days[2].refresh_from_db()
+        self.assertEqual(days[2].state, JobState.DISPUTED)

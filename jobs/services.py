@@ -39,7 +39,13 @@ from django.utils import timezone
 from django.utils.formats import date_format
 
 from config import business_rules as rules
-from core.state_machine import Actor, IllegalTransition, JobState, assert_transition
+from core.state_machine import (
+    Actor,
+    IllegalTransition,
+    JobState,
+    assert_transition,
+    claim,
+)
 
 from .models import (
     Application,
@@ -111,13 +117,22 @@ def expire(job: Job) -> Job:
     a state that may expire — the caller decides whether that is a bug or just
     a row that moved on since the queryset was built.
     """
-    locked = Job.objects.select_for_update().get(pk=job.pk)
+    locked = Job.objects.get(pk=job.pk)
     assert_transition(locked.state, JobState.EXPIRED, Actor.SYSTEM)
 
-    _notify_applicants(locked)
+    # Claimed before anyone is told. Two overlapping runs of the cron — a slow
+    # one still going when the next fires — would otherwise both walk the same
+    # applicant list, and being told twice that a gig expired reads as the app
+    # being broken rather than as the gig being over.
+    #
+    # IllegalTransition rather than a quiet return: this runs unattended, and a
+    # caller that cannot tell "already expired" from "expired by me" has no way
+    # to report what it did. expire_stale_gigs already catches it per row.
+    if not claim(Job, job.pk, expect=locked.state, to=JobState.EXPIRED):
+        raise IllegalTransition("This gig was already retired by another run.")
 
+    _notify_applicants(locked)
     locked.state = JobState.EXPIRED
-    locked.save(update_fields=["state", "updated_at"])
     return locked
 
 
@@ -147,8 +162,8 @@ def expire_stale_gigs(*, today=None) -> list[Job]:
 
     One row failing does not abandon the batch — same reasoning as
     ``worklog.services.settle_due``. A job that changed state between building
-    the queryset and locking the row is the ordinary race, not an error: the
-    transition simply refuses and we move on.
+    the queryset and claiming the row is the ordinary race, not an error: the
+    claim simply refuses and we move on.
     """
     expired = []
     for job in due_for_expiry(today=today):

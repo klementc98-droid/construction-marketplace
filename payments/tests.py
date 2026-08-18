@@ -260,6 +260,34 @@ class ReleaseTests(EscrowTestCase):
         mock.assert_called_once_with("pi_test_1", amount=None)
 
     @patch("payments.gateway.capture_payment_intent")
+    def test_a_lost_race_never_reaches_stripe(self, mock):
+        """A client approving as the settlement cron fires.
+
+        Both read an AUTHORIZED hold from their own instance and both would
+        capture the same intent. Stripe refuses the second, so the money is
+        safe either way — but the loser must not get that far, or the app takes
+        a gateway exception on a job that was in fact paid correctly.
+        """
+        from payments.models import EscrowPayment
+
+        # The window: assert_transition runs after release() has read the
+        # escrow and before it claims it, which is where the other caller lands.
+        real = services.assert_transition
+
+        def settle_it_first(*args, **kwargs):
+            result = real(*args, **kwargs)
+            EscrowPayment.objects.filter(
+                pk=self.escrow.pk, status=EscrowStatus.AUTHORIZED
+            ).update(status=EscrowStatus.RELEASED)
+            return result
+
+        with patch.object(services, "assert_transition", settle_it_first):
+            returned = services.release(self.escrow, actor=Actor.SYSTEM)
+
+        mock.assert_not_called()
+        self.assertEqual(returned.status, EscrowStatus.RELEASED)
+
+    @patch("payments.gateway.capture_payment_intent")
     def test_a_partial_capture_recomputes_what_the_worker_nets(self, mock):
         """The prorated path phase 5 will use for a job that ended early."""
         mock.return_value = {
