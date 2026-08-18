@@ -247,6 +247,176 @@
 
 
 /* ==========================================================================
+   2b. Luxe theme — near-black and champagne gold
+   --------------------------------------------------------------------------
+   A third choice, not a replacement: the toggle runs light → dark → luxe. The
+   room is the same, the material is not — near-black ground, warm white text,
+   and one restrained champagne gold instead of the lime.
+
+   The discipline this theme lives or dies by is how little gold is on screen.
+   Gold is roughly 5–10% of the interface: the thing you press, the price, a
+   premium badge, the tab you are on. Everything else is black, charcoal and
+   warm white. Gold spread across borders, headings and rules stops reading as
+   money and starts reading as a novelty skin, which is the one mistake this
+   palette invites.
+
+   Unlike the lime, the gold is light enough to carry text — 9.3:1 on a card —
+   so --accent-ink is the gold itself and --accent-fg is the near-black that
+   sits on top of it. The gradients and the brick texture are built from these
+   same tokens upstream, so they follow without being restated here.
+   ========================================================================== */
+
+:root[data-theme="luxe"] {
+  --bg:            #050505;
+  --bg-tint:       #0a0a08;   /* the wash behind the header/hero */
+  --panel:         #0f0f0d;
+  --panel-2:       #15140f;
+  --panel-3:       #1c1a14;
+  --line:          #24221d;   /* almost invisible, and meant to be */
+  --line-strong:   #3a362c;
+  --fg:            #f1eee7;   /* warm white, never pure — 17.6:1 on the ground */
+  --fg-2:          #cfc8bc;
+  --dim:           #a39b8d;   /* 7:1 on --panel */
+  --dimmer:        #a8a092;
+
+  --accent:        #c9b27c;   /* champagne — a fill AND, here, safe as text */
+  --accent-hover:  #dcc894;
+  --accent-2:      #b49c66;
+  --accent-3:      #eadcb8;   /* palest step — decoration only, no text on it */
+  --brick:         #8c7742;
+  --accent-soft:   #1a1710;   /* gold at ~10% over panel, precomputed */
+  --accent-fg:     #0a0906;   /* what sits on the gold — 9.6:1 */
+  --accent-ink:    #c9b27c;   /* the gold as text — 9.3:1 on --panel */
+
+  /* Real gold is not a flat colour — it is a dark side, a lit side and a hot
+     line where the light crosses it. Two stops read as mustard; five read as
+     metal. This is the cheapest gold in the theme: it adds no new gold surface
+     at all, it only makes the surface already there behave like the material.
+
+     Every stop sits at or above --accent-2, the darkest gold that still clears
+     7:1 under --accent-fg. A button label crosses all five and has to be
+     readable over each one, so the range is bounded from below on purpose —
+     dropping --brick in at 0% looks richer and fails at the one end where the
+     text is. */
+  --heat: linear-gradient(135deg,
+            var(--accent-2) 0%, var(--accent) 24%, var(--accent-3) 46%,
+            var(--accent) 68%, var(--accent-2) 100%);
+  --heat-bright: linear-gradient(135deg,
+            var(--accent) 0%, var(--accent-3) 22%, #fff6e2 40%,
+            var(--accent-3) 58%, var(--accent) 82%, var(--accent-2) 100%);
+
+  --ok:            #86be72;
+  --warn:          #e0b15c;
+  --err:           #e88a7d;
+  --info:          #7fb3cc;
+
+  /* Blacker than the dark theme's, because they fall on a blacker ground: a
+     shadow tuned for #171a1c disappears entirely against #050505. */
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / .6);
+  --shadow-md: 0 2px 4px -1px rgb(0 0 0 / .55),
+               0 10px 20px -6px rgb(0 0 0 / .65);
+  --shadow-lg: 0 4px 10px -2px rgb(0 0 0 / .6),
+               0 22px 44px -12px rgb(0 0 0 / .75);
+  /* The one glow. Kept faint — a gold halo under every raised thing is exactly
+     the "gold everywhere" this palette is trying to avoid. */
+  --shadow-heat: 0 2px 6px -1px rgb(201 178 124 / .18),
+                 0 14px 28px -12px rgb(201 178 124 / .26);
+
+  --ring: 0 0 0 2px var(--panel), 0 0 0 4px var(--accent);
+  --ring-soft: 0 0 0 4px rgb(201 178 124 / .26);
+
+  color-scheme: dark;
+}
+
+/* The prices, in gold. Money is the thing a marketplace is actually about, and
+   in this theme it is the one piece of running text allowed to be the accent —
+   which is only legible because this accent, unlike the lime, clears 9:1. */
+:root[data-theme="luxe"] .pay,
+:root[data-theme="luxe"] .feed-headline .pay,
+:root[data-theme="luxe"] .job-row .pay {
+  color: var(--accent-ink);
+}
+
+/* The gig badge carries a hard-coded orange glow from the lime themes, which
+   under a gold badge reads as a smudge rather than a light. Gold, faint, and
+   only because this badge is one of the few things meant to catch the eye. */
+:root[data-theme="luxe"] .badge.gig {
+  box-shadow: 0 1px 3px -1px rgb(201 178 124 / .35);
+}
+
+/* --- more gold, spent on edges rather than on fills -----------------------
+
+   Everything below adds gold without adding gold *area*, which is the whole
+   trick to this palette. A hairline, a rim and a numeral are gold the way a
+   watch is gold: the case catches the light and the dial stays black. Filling
+   the same components instead would double the gold on screen and halve what
+   it is worth — the failure described at the top of this section.
+
+   The 5–10% rule survives intact. Edges are one pixel wide. */
+
+/* Raised surfaces take a warm rim and a highlight along the top edge, as if
+   the room were lit from above. Mixed rather than set, so it stays a whisper
+   off the charcoal line and never becomes a gold box. */
+:root[data-theme="luxe"] .card,
+:root[data-theme="luxe"] .stat-row {
+  border-color: color-mix(in srgb, var(--accent) 16%, var(--line));
+  box-shadow: var(--shadow-sm), inset 0 1px 0 rgb(234 220 184 / .06);
+}
+/* The hero is lit harder — it is the one surface meant to look like a display
+   case — but keeps its own depth rather than dropping to the card's. */
+:root[data-theme="luxe"] .hero {
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--line));
+  box-shadow: var(--shadow-md), inset 0 1px 0 rgb(234 220 184 / .1);
+}
+
+/* The name, in gold leaf. One element, at the top of every page, and the only
+   place the metallic gradient is spent on something that is not a control.
+
+   Fallback colour first and transparent only behind @supports: a browser
+   without background-clip painting a transparent wordmark leaves a hole where
+   the business name goes. */
+:root[data-theme="luxe"] .brand { color: var(--accent-ink); }
+:root[data-theme="luxe"] .brand:hover { color: var(--accent-hover); }
+:root[data-theme="luxe"] .brand-word {
+  background: var(--heat-bright);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+@supports (-webkit-background-clip: text) or (background-clip: text) {
+  :root[data-theme="luxe"] .brand-word { color: transparent; }
+}
+/* Forced colours throws the gradient away and would keep the transparent. Put
+   the wordmark back and let the system paint it. */
+@media (forced-colors: active) {
+  :root[data-theme="luxe"] .brand-word { color: CanvasText; background: none; }
+}
+
+/* Section rules start gold under the heading and fade out across the page, so
+   the line reads as light falling on the left of it rather than as a gold
+   underscore. border-bottom-color is the fallback and carries the tint, never
+   transparent — a browser that skips border-image must still show a rule. */
+:root[data-theme="luxe"] .section-head {
+  border-bottom-color: color-mix(in srgb, var(--accent) 26%, var(--line));
+  border-image: linear-gradient(90deg,
+    color-mix(in srgb, var(--accent) 62%, transparent) 0%,
+    color-mix(in srgb, var(--accent) 12%, transparent) 38%,
+    transparent 78%) 1;
+}
+
+/* The numbers join the prices. A stat is a figure someone is judged on, and in
+   this theme that is the same category of thing as money. "New" is not a
+   figure and stays out of it. */
+:root[data-theme="luxe"] .stat .v { color: var(--accent-ink); }
+:root[data-theme="luxe"] .stat .v.new { color: var(--dim); }
+
+/* A thin gold rim on every face. Costs nothing, and on a page full of avatars
+   it is the detail that reads as expensive. */
+:root[data-theme="luxe"] .pic {
+  border-color: color-mix(in srgb, var(--accent) 38%, var(--line-strong));
+}
+
+
+/* ==========================================================================
    3. Reset & base
    ========================================================================== */
 

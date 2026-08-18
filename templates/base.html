@@ -26,12 +26,14 @@ correct answer anyway.
   (function () {
     try {
       var t = localStorage.getItem("crew-theme");
-      if (t !== "light" && t !== "dark") {
+      if (t !== "light" && t !== "dark" && t !== "luxe") {
         t = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
           ? "dark" : "light";
       }
       document.documentElement.setAttribute("data-theme", t);
-      document.documentElement.style.colorScheme = t;
+      /* Luxe is a dark theme in different paint — the browser needs the scheme,
+         not the name, or form controls come back white on a black page. */
+      document.documentElement.style.colorScheme = t === "luxe" ? "dark" : t;
     } catch (e) { /* storage blocked — the stylesheet's media query covers it */ }
   })();
 </script>

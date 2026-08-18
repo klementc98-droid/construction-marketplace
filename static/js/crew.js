@@ -39,6 +39,16 @@
 
   var THEME_KEY = "crew-theme";
 
+  /* Three themes, cycled in this order by the one button. Luxe is near-black
+     and gold and is a deliberate choice rather than an OS-derived one, so it
+     is never what an untouched toggle resolves to — only a press reaches it. */
+  var THEMES = ["light", "dark", "luxe"];
+
+  /* Which browser colour-scheme each one is. Luxe is a dark theme wearing
+     different paint; telling the browser "luxe" would mean telling it nothing
+     and form controls would come back white. */
+  var SCHEME = { light: "light", dark: "dark", luxe: "dark" };
+
   function storedTheme() {
     try { return localStorage.getItem(THEME_KEY); } catch (e) { return null; }
   }
@@ -56,7 +66,7 @@
      toggle. Only an actual press is a choice. */
   function applyTheme(theme, persist) {
     root.setAttribute("data-theme", theme);
-    root.style.colorScheme = theme;
+    root.style.colorScheme = SCHEME[theme] || theme;
 
     if (persist) {
       try { localStorage.setItem(THEME_KEY, theme); } catch (e) { /* private mode */ }
@@ -70,10 +80,17 @@
     }
 
     $$("[data-theme-toggle]").forEach(function (btn) {
-      var next = theme === "dark" ? "light" : "dark";
+      var next = nextTheme(theme);
       btn.setAttribute("aria-label", "Switch to " + next + " theme");
       btn.setAttribute("title", "Switch to " + next + " theme");
     });
+  }
+
+  /* An unrecognised value — an old key, a hand-edited one — lands on light
+     rather than throwing, which is the same answer a first-time visitor gets. */
+  function nextTheme(theme) {
+    var i = THEMES.indexOf(theme);
+    return THEMES[(i + 1) % THEMES.length] || THEMES[0];
   }
 
   function initTheme() {
@@ -84,7 +101,7 @@
 
     toggles.forEach(function (btn) {
       on(btn, "click", function () {
-        applyTheme(activeTheme() === "dark" ? "light" : "dark", true);
+        applyTheme(nextTheme(activeTheme()), true);
       });
     });
 
