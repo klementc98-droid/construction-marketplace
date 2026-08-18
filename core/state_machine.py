@@ -36,6 +36,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from django.db import models
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 
@@ -260,6 +261,35 @@ ESCROW_FUNDED_STATES: frozenset[str] = frozenset(
         JobState.DISPUTED,
     }
 )
+
+
+def claim(model, pk, *, expect, to, field: str = "state", **extra) -> bool:
+    """Move one row from ``expect`` to ``to``, and say whether it was you.
+
+    The writing half of a transition. :func:`assert_transition` judges a state
+    that was read a moment ago; between that read and the write another
+    request — or the settlement cron — can move the same row. This makes the
+    write itself the decision. The database matches ``expect`` and updates, or
+    it matches nothing and updates nothing, and there is no gap in between for
+    a second actor to fit through.
+
+    Used instead of ``select_for_update``, which reads like a lock and is not
+    one everywhere. SQLite has no ``FOR UPDATE``, and Django drops the clause
+    silently rather than raising, so on the development database a locked read
+    is an ordinary read with a window after it. A conditional UPDATE needs no
+    lock and behaves the same on both databases.
+
+    Returns False when somebody else got there first. What that means is the
+    caller's to decide: a refusal the user should see, or — where two paths
+    doing the same work is expected, as with a Stripe webhook racing the
+    browser — a no-op.
+
+    ``updated_at`` is written by hand because ``auto_now`` does not fire on
+    ``update()``.
+    """
+    values = {field: to, "updated_at": timezone.now()}
+    values.update(extra)
+    return model.objects.filter(pk=pk, **{field: expect}).update(**values) == 1
 
 
 class IllegalTransition(Exception):
