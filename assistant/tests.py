@@ -23,7 +23,7 @@ from config import business_rules as rules
 from core.models import Region, Trade
 from jobs.tests import make_user
 
-from . import knowledge, llm, registry
+from . import knowledge, llm, options, registry
 from .conversation import BRANCH_FORM, BRANCH_QA, Conversation, take_handoff
 from .schemas import UnknownChoice, field_schema, required_fields, to_form_data, tool_definitions
 
@@ -444,6 +444,139 @@ class KnowledgeTests(AssistantFixture):
 
     def test_states_that_licences_are_not_verified(self):
         self.assertIn("NOT verify", knowledge.facts())
+
+    def test_says_escrow_is_optional(self):
+        """The worst wrong answer available: money is held when it is not."""
+        self.assertIn("OPTIONAL", knowledge.facts())
+        self.assertIn("OFF by default", knowledge.facts())
+
+    def test_says_a_multi_day_booking_is_one_job(self):
+        self.assertIn("ONE booking", knowledge.facts())
+
+    def test_says_the_advertised_price_is_per_day(self):
+        self.assertIn("PER DAY", knowledge.facts())
+
+    def test_the_whitelist_reaches_the_qa_prompt(self):
+        """A topic on the list is a topic the model is told it may answer."""
+        from . import prompts
+
+        prompt = prompts.question_answering()
+        for name, _detail in knowledge.TOPICS:
+            with self.subTest(topic=name):
+                self.assertIn(name, prompt)
+
+    def test_the_whitelist_is_also_in_the_facts_block(self):
+        for name, _detail in knowledge.TOPICS:
+            with self.subTest(topic=name):
+                self.assertIn(name, knowledge.facts())
+
+
+# ---------------------------------------------------------------------------
+# The clickable answers — always the form's own, never a written-down copy
+# ---------------------------------------------------------------------------
+
+
+class OptionTests(AssistantFixture):
+    def conversation(self, form_key="gig", collected=None):
+        conversation = Conversation()
+        conversation.start(BRANCH_FORM, form_key)
+        conversation.collected = dict(collected or {})
+        return conversation
+
+    def test_a_trade_question_offers_the_real_trades(self):
+        spec = registry.get("gig")
+        labels = [o["label"] for o in options.options_for_field(spec, "trade")]
+        self.assertIn(self.carpentry.name, labels)
+
+    def test_a_new_trade_appears_without_touching_this_module(self):
+        """The whole reason options are derived rather than listed."""
+        Trade.objects.create(name="Scaffolder", slug="scaffolder")
+        spec = registry.get("gig")
+        labels = [o["label"] for o in options.options_for_field(spec, "trade")]
+        self.assertIn("Scaffolder", labels)
+
+    def test_a_free_text_field_offers_nothing(self):
+        """No invented rates. An anchor we made up is worse than a blank box."""
+        spec = registry.get("gig")
+        self.assertEqual(options.options_for_field(spec, "fixed_pay"), [])
+        self.assertEqual(options.options_for_field(spec, "title"), [])
+
+    def test_a_date_question_sends_iso_and_shows_a_readable_day(self):
+        spec = registry.get("gig")
+        offered = options.options_for_field(spec, "gig_dates")
+        today = timezone.localdate()
+        self.assertEqual(offered[0]["value"], today.isoformat())
+        self.assertNotEqual(offered[0]["label"], offered[0]["value"])
+        self.assertEqual(
+            offered[1]["value"], (today + timedelta(days=1)).isoformat()
+        )
+
+    def test_no_date_offered_is_in_the_past(self):
+        """A gig form rejects past dates, so a button must never propose one."""
+        today = timezone.localdate()
+        spec = registry.get("gig")
+        for offered in options.options_for_field(spec, "gig_dates"):
+            with self.subTest(value=offered["value"]):
+                self.assertGreaterEqual(offered["value"], today.isoformat())
+
+    def test_every_offered_value_is_one_the_form_accepts(self):
+        """The guarantee that makes buttons safe: no button can be rejected."""
+        for key, spec in registry.specs().items():
+            form = spec.form()
+            for name in spec.chat_fields:
+                bound = form.fields[name]
+                choices = {str(v) for v, _ in getattr(bound, "choices", [])}
+                if not choices:
+                    continue
+                for offered in options.options_for_field(spec, name):
+                    with self.subTest(form=key, field=name, value=offered["value"]):
+                        labels = {str(label) for _v, label in bound.choices}
+                        self.assertIn(offered["value"], labels | choices)
+
+    def test_the_buttons_follow_the_next_unanswered_field(self):
+        conversation = self.conversation(collected={"title": "Roof repair"})
+        self.assertEqual(
+            options.next_field(registry.get("gig"), conversation.collected), "trade"
+        )
+        labels = [o["label"] for o in options.options_for(conversation)]
+        self.assertIn(self.carpentry.name, labels)
+
+    def test_nothing_is_offered_once_every_field_is_answered(self):
+        spec = registry.get("gig")
+        conversation = self.conversation(collected={n: "x" for n in spec.chat_fields})
+        self.assertEqual(options.options_for(conversation), [])
+
+    def test_an_optional_choice_field_can_be_skipped(self):
+        """An optional question with no visible way past it stalls the form."""
+        spec = registry.get("worker_profile")
+        optional = [
+            n
+            for n in spec.chat_fields
+            if n not in required_fields(spec) and options.options_for_field(spec, n)
+        ]
+        self.assertTrue(optional, "expected at least one optional field with choices")
+        conversation = self.conversation(
+            "worker_profile",
+            {n: "x" for n in spec.chat_fields[: spec.chat_fields.index(optional[0])]},
+        )
+        self.assertIn("Skip", [o["label"] for o in options.options_for(conversation)])
+
+    def test_the_start_of_a_qa_chat_offers_openers(self):
+        self.sign_in()
+        response = self.client.post(
+            reverse("assistant:start"),
+            {"branch": BRANCH_QA},
+            content_type="application/json",
+        )
+        self.assertTrue(response.json()["options"])
+
+    def test_openers_stop_being_offered_once_the_chat_is_going(self):
+        conversation = Conversation()
+        conversation.start(BRANCH_QA)
+        conversation.transcript = [{"role": "user", "content": "hi"}] * 4
+        from .views import _options
+
+        self.assertEqual(_options(conversation), [])
 
 
 # ---------------------------------------------------------------------------

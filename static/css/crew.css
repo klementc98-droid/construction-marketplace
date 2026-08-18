@@ -3499,6 +3499,52 @@ footer.foot .foot-brand { color: var(--fg-2); font-weight: 700; }
 .asst-bot  { align-self: flex-start; background: var(--panel-2); color: var(--fg-2); border-bottom-left-radius: var(--r-xs); }
 .asst-user { align-self: flex-end; background: var(--accent); color: var(--accent-fg); border-bottom-right-radius: var(--r-xs); }
 
+/* The clickable answers under a question.
+
+   Wrapped rather than scrolled: a row that scrolls sideways hides options
+   behind an edge nobody on a phone thinks to drag, and the whole point of
+   these is that every answer is visible at once.
+
+   Sized for a thumb in a work glove — 40px of height and a real gap between
+   targets, because the alternative for this audience is typing "electrician"
+   correctly on a cracked screen. Deliberately not the accent colour: these sit
+   directly under the bot's message and are answers to consider, while the one
+   accent-filled thing in the panel stays the handoff at the end. */
+.asst-opts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  align-self: flex-start;
+  max-width: 96%;
+  margin: 2px 0 3px;
+}
+
+.asst-opt {
+  min-height: 40px;
+  padding: 8px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-full);
+  background: var(--panel);
+  color: var(--fg);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.3;
+  cursor: pointer;
+  transition: background var(--t-fast) var(--ease),
+              border-color var(--t-fast) var(--ease),
+              transform var(--t-fast) var(--ease);
+}
+
+.asst-opt:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent-ink);
+  color: var(--accent-ink);
+}
+
+.asst-opt:active { transform: scale(.96); }
+.asst-opt:focus-visible { outline: none; box-shadow: var(--ring); }
+
 /* The handoff into the prefilled form. Full width and set apart from the
    bubbles: it is the one thing left to do in the panel, and on a phone it has
    to be an unmissable target rather than a link inside a sentence. */
