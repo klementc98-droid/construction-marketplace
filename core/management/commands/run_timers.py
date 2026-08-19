@@ -40,8 +40,14 @@ from django.utils import timezone
 #:   key rather than a property of the schedule — so running it hourly sends
 #:   exactly one reminder per person per day regardless, and means a laptop
 #:   that was closed all evening still sends it when it opens.
+#: * ``reconcile_payments`` asks Stripe what actually happened. Every few
+#:   minutes, because the window it repairs — a capture that succeeded while
+#:   the commit did not — is a window in which somebody's money has moved and
+#:   this database does not know. It costs a handful of reads and nothing else
+#:   when there is nothing wrong.
 SCHEDULE: tuple[tuple[str, int], ...] = (
     ("send_notifications", 60),
+    ("reconcile_payments", 300),
     ("expire_stale_gigs", 3600),
     ("settle_due_jobs", 3600),
     ("remind_tomorrow", 3600),

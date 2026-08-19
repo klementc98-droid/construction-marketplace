@@ -12,6 +12,7 @@ from decimal import Decimal
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.db import IntegrityError
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
@@ -140,7 +141,7 @@ class StartFundingTests(EscrowTestCase):
         self.account = self.ready_account()
         self.job = self.make_gig()
 
-    @patch("payments.gateway.create_checkout_session")
+    @patch("payments.gateway.create_checkout_session", autospec=True)
     def test_funding_freezes_the_split_and_sends_stripe_the_right_numbers(self, mock):
         mock.return_value = ("cs_test_1", "https://checkout.stripe.test/cs_test_1")
 
@@ -161,7 +162,7 @@ class StartFundingTests(EscrowTestCase):
         self.assertEqual(kwargs["destination_account_id"], "acct_test_123")
         self.assertEqual(kwargs["metadata"]["job_id"], str(self.job.pk))
 
-    @patch("payments.gateway.create_checkout_session")
+    @patch("payments.gateway.create_checkout_session", autospec=True)
     def test_the_frozen_split_survives_a_later_fee_change(self, mock):
         """An in-flight gig settles on the terms both sides actually saw."""
         mock.return_value = ("cs_1", "https://checkout/1")
@@ -173,8 +174,8 @@ class StartFundingTests(EscrowTestCase):
             self.assertEqual(escrow.platform_fee, Decimal("10.80"))
             self.assertEqual(escrow.worker_payout, Decimal("79.20"))
 
-    @patch("payments.gateway.retrieve_session")
-    @patch("payments.gateway.create_checkout_session")
+    @patch("payments.gateway.retrieve_session", autospec=True)
+    @patch("payments.gateway.create_checkout_session", autospec=True)
     def test_abandoning_checkout_and_retrying_reuses_one_escrow_row(
         self, mock, live
     ):
@@ -206,8 +207,8 @@ class FundingAttemptTests(EscrowTestCase):
         self.account = self.ready_account()
         self.job = self.make_gig()
 
-    @patch("payments.gateway.retrieve_session")
-    @patch("payments.gateway.create_checkout_session")
+    @patch("payments.gateway.retrieve_session", autospec=True)
+    @patch("payments.gateway.create_checkout_session", autospec=True)
     def test_a_second_press_returns_the_checkout_already_open(self, mock, live):
         mock.return_value = ("cs_1", "https://checkout/1")
         first = services.start_funding(self.job, success_url="a", cancel_url="b")
@@ -221,8 +222,8 @@ class FundingAttemptTests(EscrowTestCase):
         # so one hold on the card.
         self.assertEqual(mock.call_count, 1)
 
-    @patch("payments.gateway.retrieve_session")
-    @patch("payments.gateway.create_checkout_session")
+    @patch("payments.gateway.retrieve_session", autospec=True)
+    @patch("payments.gateway.create_checkout_session", autospec=True)
     def test_a_session_already_paid_does_not_open_another(self, mock, live):
         """The webhook has not landed yet, and the client has already paid."""
         mock.return_value = ("cs_1", "https://checkout/1")
@@ -240,7 +241,7 @@ class FundingAttemptTests(EscrowTestCase):
         self.assertEqual(escrow.status, EscrowStatus.AUTHORIZED)
         self.assertEqual(escrow.payment_intent_id, "pi_live_1")
 
-    @patch("payments.gateway.create_checkout_session")
+    @patch("payments.gateway.create_checkout_session", autospec=True)
     def test_two_simultaneous_presses_send_stripe_the_same_key(self, mock):
         """The deterministic half of the race, without threads.
 
@@ -271,8 +272,8 @@ class FundingAttemptTests(EscrowTestCase):
             first_key, f"escrow:{stale.pk}:attempt:1"
         )
 
-    @patch("payments.gateway.retrieve_session")
-    @patch("payments.gateway.create_checkout_session")
+    @patch("payments.gateway.retrieve_session", autospec=True)
+    @patch("payments.gateway.create_checkout_session", autospec=True)
     def test_a_genuinely_new_attempt_gets_a_new_key(self, mock, live):
         """Otherwise a client who abandoned yesterday could never start again."""
         mock.return_value = ("cs_1", "https://checkout/1")
@@ -290,20 +291,46 @@ class FundingAttemptTests(EscrowTestCase):
             f"escrow:{escrow.pk}:attempt:2",
         )
 
-    @patch("payments.gateway.retrieve_session")
-    @patch("payments.gateway.create_checkout_session")
+    @patch("payments.gateway.retrieve_session", autospec=True)
+    @patch("payments.gateway.create_checkout_session", autospec=True)
     def test_a_session_stripe_cannot_find_is_treated_as_gone(self, mock, live):
         """A stale id must not make a job permanently unfundable."""
         mock.return_value = ("cs_1", "https://checkout/1")
         services.start_funding(self.job, success_url="a", cancel_url="b")
 
-        live.side_effect = RuntimeError("No such session")
+        live.side_effect = gateway.ObjectMissing("No such session")
         mock.return_value = ("cs_2", "https://checkout/2")
         url = services.start_funding(self.job, success_url="a", cancel_url="b")
 
         self.assertEqual(url, "https://checkout/2")
 
-    @patch("payments.gateway.create_checkout_session")
+    @patch("payments.gateway.retrieve_session", autospec=True)
+    @patch("payments.gateway.create_checkout_session", autospec=True)
+    def test_but_stripe_not_answering_opens_nothing(self, mock, live):
+        """A timeout is not an answer, and used to be read as one.
+
+        The catch-all here turned "Stripe did not reply" into "there is no
+        session", and the next line opened a second one — re-making the hole
+        the idempotency key was added to close, on the one occasion when
+        Stripe may already be holding money against the first.
+        """
+        mock.return_value = ("cs_1", "https://checkout/1")
+        services.start_funding(self.job, success_url="a", cancel_url="b")
+        mock.reset_mock()
+
+        live.side_effect = RuntimeError("connection timed out")
+
+        with self.assertRaises(RuntimeError):
+            services.start_funding(self.job, success_url="a", cancel_url="b")
+
+        mock.assert_not_called()
+        self.escrow_row().refresh_from_db()
+        self.assertEqual(self.escrow_row().funding_attempts, 1)
+
+    def escrow_row(self):
+        return EscrowPayment.objects.get(job=self.job)
+
+    @patch("payments.gateway.create_checkout_session", autospec=True)
     def test_funding_an_already_held_job_is_refused(self, mock):
         mock.return_value = ("cs_1", "https://checkout/1")
         services.start_funding(self.job, success_url="a", cancel_url="b")
@@ -347,6 +374,85 @@ class AuthorizationTests(EscrowTestCase):
         self.assertEqual(self.job.state, JobState.ESCROW_HELD)
 
 
+class GatewayContractTests(TestCase):
+    """The service layer and the gateway have to agree, and mocks hide it.
+
+    Every test in this file replaces the gateway with a mock, and a mock takes
+    any arguments you give it. So a service that calls the gateway with a
+    keyword the real function does not have passes the entire suite and fails
+    on the first real call — the payment and payout paths, 500, in production,
+    on the one code path nobody can exercise locally without keys.
+
+    That is not hypothetical: it is exactly what an outside reviewer thought
+    they had found here, and the only reason they were wrong is that the
+    signature had in fact been updated. Nothing was enforcing it.
+
+    Two things enforce it now. Every patch in the suite is autospec'd, so a
+    mocked call is held to the real signature. And this, which checks the calls
+    the services actually make against the functions that will actually run.
+    """
+
+    def test_every_gateway_call_the_services_make_is_valid(self):
+        import inspect
+
+        from . import gateway
+
+        # The exact keyword sets the service layer uses today. Written out
+        # rather than introspected, because the point is to fail when somebody
+        # changes one side and not the other — and a check that derives both
+        # sides from the same source would never notice.
+        calls = {
+            "create_express_account": {
+                "email": "a@b.c",
+                "country": "GR",
+                "idempotency_key": "connect-account:1",
+                "metadata": {"worker_id": "1"},
+            },
+            "create_checkout_session": {
+                "job_title": "t",
+                "amount": Decimal("90"),
+                "platform_fee": Decimal("10.80"),
+                "destination_account_id": "acct_1",
+                "success_url": "u",
+                "cancel_url": "u",
+                "metadata": {},
+                "idempotency_key": "escrow:1:attempt:1",
+            },
+            "capture_payment_intent": {
+                "amount": Decimal("60"),
+                "application_fee": Decimal("7.20"),
+            },
+            "retrieve_session": {},
+            "retrieve_payment_intent": {},
+            "cancel_payment_intent": {},
+            "find_account_for": {},
+        }
+
+        positional = {
+            "capture_payment_intent": ("pi_1",),
+            "retrieve_session": ("cs_1",),
+            "retrieve_payment_intent": ("pi_1",),
+            "cancel_payment_intent": ("pi_1",),
+            "find_account_for": (1,),
+        }
+
+        for name, kwargs in calls.items():
+            with self.subTest(call=name):
+                fn = getattr(gateway, name)
+                inspect.signature(fn).bind(*positional.get(name, ()), **kwargs)
+
+    def test_an_autospecced_mock_refuses_an_argument_that_does_not_exist(self):
+        """Proof that the suite's mocks now catch what they used to hide."""
+        from unittest.mock import patch
+
+        with patch("payments.gateway.cancel_payment_intent", autospec=True) as mock:
+            from . import gateway
+
+            with self.assertRaises(TypeError):
+                gateway.cancel_payment_intent("pi_1", nonsense=True)
+            mock.assert_not_called()
+
+
 class ReleaseTests(EscrowTestCase):
     def setUp(self):
         self.ready_account()
@@ -361,7 +467,7 @@ class ReleaseTests(EscrowTestCase):
             payment_intent_id="pi_test_1",
         )
 
-    @patch("payments.gateway.capture_payment_intent")
+    @patch("payments.gateway.capture_payment_intent", autospec=True)
     def test_releasing_captures_the_hold_and_finishes_the_job(self, mock):
         mock.return_value = {
             "id": "pi_test_1",
@@ -375,9 +481,11 @@ class ReleaseTests(EscrowTestCase):
         self.assertEqual(self.job.state, JobState.PAID_OUT)
         self.assertEqual(self.escrow.status, EscrowStatus.RELEASED)
         self.assertEqual(self.escrow.captured_amount, Decimal("90.00"))
-        mock.assert_called_once_with("pi_test_1", amount=None)
+        mock.assert_called_once_with(
+            "pi_test_1", amount=None, application_fee=Decimal("10.80")
+        )
 
-    @patch("payments.gateway.capture_payment_intent")
+    @patch("payments.gateway.capture_payment_intent", autospec=True)
     def test_a_lost_race_never_reaches_stripe(self, mock):
         """A client approving as the settlement cron fires.
 
@@ -405,7 +513,7 @@ class ReleaseTests(EscrowTestCase):
         mock.assert_not_called()
         self.assertEqual(returned.status, EscrowStatus.RELEASED)
 
-    @patch("payments.gateway.capture_payment_intent")
+    @patch("payments.gateway.capture_payment_intent", autospec=True)
     def test_a_partial_capture_recomputes_what_the_worker_nets(self, mock):
         """The prorated path phase 5 will use for a job that ended early."""
         mock.return_value = {
@@ -420,13 +528,13 @@ class ReleaseTests(EscrowTestCase):
         self.assertEqual(self.escrow.net_to_worker, Decimal("39.60"))
         self.assertEqual(mock.call_args.kwargs["amount"], Decimal("45.00"))
 
-    @patch("payments.gateway.capture_payment_intent")
+    @patch("payments.gateway.capture_payment_intent", autospec=True)
     def test_releasing_more_than_was_held_is_refused(self, mock):
         with self.assertRaises(services.EscrowError):
             services.release(self.escrow, actor=Actor.CLIENT, amount=Decimal("500"))
         mock.assert_not_called()
 
-    @patch("payments.gateway.capture_payment_intent")
+    @patch("payments.gateway.capture_payment_intent", autospec=True)
     def test_releasing_twice_captures_only_once(self, mock):
         mock.return_value = {
             "id": "pi_test_1",
@@ -437,13 +545,13 @@ class ReleaseTests(EscrowTestCase):
         services.release(self.escrow, actor=Actor.CLIENT)
         mock.assert_called_once()
 
-    @patch("payments.gateway.capture_payment_intent")
+    @patch("payments.gateway.capture_payment_intent", autospec=True)
     def test_a_worker_cannot_release_their_own_payment(self, mock):
         with self.assertRaises(IllegalTransition):
             services.release(self.escrow, actor=Actor.WORKER)
         mock.assert_not_called()
 
-    @patch("payments.gateway.capture_payment_intent")
+    @patch("payments.gateway.capture_payment_intent", autospec=True)
     def test_money_cannot_be_released_straight_out_of_the_hold(self, mock):
         """ESCROW_HELD has no path to PAID_OUT — work has to happen first."""
         self.job.state = JobState.ESCROW_HELD
@@ -467,7 +575,7 @@ class RefundTests(EscrowTestCase):
             payment_intent_id="pi_test_1",
         )
 
-    @patch("payments.gateway.cancel_payment_intent")
+    @patch("payments.gateway.cancel_payment_intent", autospec=True)
     def test_calling_off_a_funded_gig_releases_the_hold(self, mock):
         mock.return_value = {"id": "pi_test_1", "status": "canceled"}
         services.refund(self.escrow, actor=Actor.CLIENT)
@@ -478,7 +586,7 @@ class RefundTests(EscrowTestCase):
         self.assertEqual(self.escrow.status, EscrowStatus.REFUNDED)
         mock.assert_called_once_with("pi_test_1")
 
-    @patch("payments.gateway.cancel_payment_intent")
+    @patch("payments.gateway.cancel_payment_intent", autospec=True)
     def test_a_worker_cannot_refund_the_client(self, mock):
         with self.assertRaises(IllegalTransition):
             services.refund(self.escrow, actor=Actor.WORKER)
@@ -534,7 +642,7 @@ class TwoRowsMustAgreeTests(EscrowTestCase):
 
     # -- releasing -------------------------------------------------------
 
-    @patch("payments.gateway.capture_payment_intent")
+    @patch("payments.gateway.capture_payment_intent", autospec=True)
     def test_a_dispute_landing_first_stops_the_release(self, capture):
         """The case that used to capture money into a disputed job."""
         held = self.stale(
@@ -551,7 +659,7 @@ class TwoRowsMustAgreeTests(EscrowTestCase):
         self.assertEqual(self.escrow.status, EscrowStatus.AUTHORIZED)
         self.assertEqual(self.job.state, JobState.DISPUTED)
 
-    @patch("payments.gateway.capture_payment_intent")
+    @patch("payments.gateway.capture_payment_intent", autospec=True)
     def test_nothing_is_half_done_when_the_release_is_refused(self, capture):
         """Both rows are as they were: the whole thing rolls back."""
         held = self.stale(
@@ -565,7 +673,7 @@ class TwoRowsMustAgreeTests(EscrowTestCase):
         self.assertIsNone(self.escrow.released_at)
         self.assertIsNone(self.escrow.captured_amount)
 
-    @patch("payments.gateway.capture_payment_intent")
+    @patch("payments.gateway.capture_payment_intent", autospec=True)
     def test_the_ordinary_release_still_moves_both_rows(self, capture):
         capture.return_value = {"amount_received": Decimal("90.00")}
 
@@ -578,7 +686,7 @@ class TwoRowsMustAgreeTests(EscrowTestCase):
 
     # -- refunding -------------------------------------------------------
 
-    @patch("payments.gateway.cancel_payment_intent")
+    @patch("payments.gateway.cancel_payment_intent", autospec=True)
     def test_a_job_that_moved_stops_the_refund(self, cancel):
         """Losing here costs nothing, because the hold is still untouched."""
         held = self.stale(
@@ -656,6 +764,154 @@ class TwoRowsMustAgreeTests(EscrowTestCase):
         self.assertEqual(Notification.objects.count(), before)
 
 
+class MultiDaySettlementTests(EscrowTestCase):
+    """A week is several captures, and a rollback cannot reach money.
+
+    approve() wrapped the whole booking in one transaction, which reads like
+    safety and was the bug: Monday captured at Stripe, Tuesday failed, the
+    transaction unwound — and Monday's money was gone while the database had
+    forgotten taking it. The next run would find Monday unsettled and capture
+    it a second time.
+    """
+
+    def booking(self, days=3):
+        """A booking with a funded, finished day per date."""
+        import uuid
+
+        from worklog.models import Completion
+
+        group = uuid.uuid4()
+        made = []
+        for n in range(days):
+            job = self.make_gig(
+                state=JobState.COMPLETED,
+                days_ahead=-(days - n),
+                offer_group=group,
+                use_escrow=True,
+            )
+            EscrowPayment.objects.create(
+                job=job,
+                worker=self.worker_profile,
+                amount=Decimal("90"),
+                platform_fee=Decimal("10.80"),
+                worker_payout=Decimal("79.20"),
+                status=EscrowStatus.AUTHORIZED,
+                payment_intent_id=f"pi_{n}",
+                authorized_at=timezone.now(),
+            )
+            Completion.objects.create(
+                job=job,
+                hours_worked=Decimal("8"),
+                payable_amount=Decimal("90"),
+                settles_at=timezone.now(),
+            )
+            made.append(job)
+        return made
+
+    @patch("payments.gateway.capture_payment_intent", autospec=True)
+    def test_a_day_that_fails_does_not_unpay_the_days_before_it(self, capture):
+        """The finding, and the reason the transaction had to go.
+
+        Stripe keeps Monday's money whatever this database decides afterwards,
+        so the only honest thing the database can do is remember taking it.
+        """
+        from worklog import services as worklog_services
+        from worklog.models import Completion
+
+        days = self.booking(3)
+        capture.side_effect = [
+            {"amount_received": Decimal("90.00")},
+            RuntimeError("card network refused"),
+            {"amount_received": Decimal("90.00")},
+        ]
+
+        with self.assertRaises(Exception):
+            worklog_services.approve(days[0], self.client_user)
+
+        first = EscrowPayment.objects.get(job=days[0])
+        self.assertEqual(first.status, EscrowStatus.RELEASED)
+        self.assertTrue(
+            Completion.objects.get(job=days[0]).settled_at,
+            "the day whose money moved must stay settled",
+        )
+
+    @patch("payments.gateway.capture_payment_intent", autospec=True)
+    def test_the_failed_day_and_the_ones_after_it_are_untouched(self, capture):
+        days = self.booking(3)
+        capture.side_effect = [
+            {"amount_received": Decimal("90.00")},
+            RuntimeError("card network refused"),
+            {"amount_received": Decimal("90.00")},
+        ]
+
+        from worklog import services as worklog_services
+
+        with self.assertRaises(Exception):
+            worklog_services.approve(days[0], self.client_user)
+
+        for job in days[1:]:
+            self.assertEqual(
+                EscrowPayment.objects.get(job=job).status,
+                EscrowStatus.AUTHORIZED,
+            )
+
+    @patch("payments.gateway.capture_payment_intent", autospec=True)
+    def test_the_refusal_says_what_was_paid(self, capture):
+        """"Something failed" on a week of work is not an answer."""
+        days = self.booking(3)
+        capture.side_effect = [
+            {"amount_received": Decimal("90.00")},
+            RuntimeError("card network refused"),
+        ]
+
+        from worklog import services as worklog_services
+
+        with self.assertRaises(services.EscrowError) as caught:
+            worklog_services.approve(days[0], self.client_user)
+
+        self.assertIn("Paid 1 of 3 days", str(caught.exception))
+
+    @patch("payments.gateway.capture_payment_intent", autospec=True)
+    def test_approving_again_picks_up_where_it_stopped(self, capture):
+        """The day already paid is not captured a second time."""
+        days = self.booking(3)
+        capture.side_effect = [
+            {"amount_received": Decimal("90.00")},
+            RuntimeError("card network refused"),
+        ]
+
+        from worklog import services as worklog_services
+
+        with self.assertRaises(Exception):
+            worklog_services.approve(days[0], self.client_user)
+
+        capture.reset_mock()
+        capture.side_effect = None
+        capture.return_value = {"amount_received": Decimal("90.00")}
+        worklog_services.approve(days[0], self.client_user)
+
+        # Two days remained; the first is not touched again.
+        self.assertEqual(capture.call_count, 2)
+        for job in days:
+            self.assertEqual(
+                EscrowPayment.objects.get(job=job).status, EscrowStatus.RELEASED
+            )
+
+    @patch("payments.gateway.capture_payment_intent", autospec=True)
+    def test_the_whole_week_settles_when_nothing_goes_wrong(self, capture):
+        days = self.booking(3)
+        capture.return_value = {"amount_received": Decimal("90.00")}
+
+        from worklog import services as worklog_services
+
+        worklog_services.approve(days[0], self.client_user)
+
+        for job in days:
+            self.assertEqual(
+                EscrowPayment.objects.get(job=job).status, EscrowStatus.RELEASED
+            )
+
+
 class ConnectAccountTests(EscrowTestCase):
     """Creating the worker's Stripe account, without leaving one behind.
 
@@ -665,7 +921,7 @@ class ConnectAccountTests(EscrowTestCase):
     account, and nothing in this database will ever point at it again.
     """
 
-    @patch("payments.gateway.create_express_account")
+    @patch("payments.gateway.create_express_account", autospec=True)
     def test_the_account_is_opened_in_the_regions_country(self, mock):
         """Not "US" for everybody, which is what the default argument said."""
         mock.return_value = "acct_new"
@@ -676,7 +932,7 @@ class ConnectAccountTests(EscrowTestCase):
 
         self.assertEqual(mock.call_args.kwargs["country"], "GR")
 
-    @patch("payments.gateway.create_express_account")
+    @patch("payments.gateway.create_express_account", autospec=True)
     def test_the_request_carries_an_idempotency_key(self, mock):
         """So two concurrent creations get the same account from Stripe."""
         mock.return_value = "acct_new"
@@ -687,30 +943,71 @@ class ConnectAccountTests(EscrowTestCase):
             f"connect-account:{self.worker_profile.pk}",
         )
 
-    @patch("payments.gateway.create_express_account")
-    def test_losing_the_insert_returns_the_row_that_won(self, mock):
-        """The race itself, made deterministic.
+    @patch("payments.gateway.find_account_for", return_value=None, autospec=True)
+    @patch("payments.gateway.create_express_account", autospec=True)
+    def test_losing_the_row_claim_still_ends_with_one_account(self, mock, find):
+        """Two requests both claim; one loses and reads the winner's row.
 
-        The row appears *while we are talking to Stripe* — which is the only
-        window there is, and the one a read-then-create cannot see. Our insert
-        then loses to the OneToOne, and the caller must come away with the
-        winner's account rather than with an IntegrityError.
+        The claim now happens before Stripe is asked, so this is the race that
+        remains — and both callers still end up naming the same account,
+        because the idempotency key made Stripe hand them the same one.
         """
+        mock.return_value = "acct_same"
+        winner = StripeAccount.objects.create(worker=self.worker_profile)
 
-        def stripe_answers_slowly(**kwargs):
-            StripeAccount.objects.create(
-                worker=self.worker_profile, account_id="acct_winner"
-            )
-            return "acct_ours"
+        with patch.object(
+            StripeAccount.objects, "create", side_effect=IntegrityError("dup")
+        ):
+            account = services.ensure_stripe_account(self.worker_profile)
 
-        mock.side_effect = stripe_answers_slowly
+        self.assertEqual(account.pk, winner.pk)
+        self.assertEqual(StripeAccount.objects.count(), 1)
+
+    @patch("payments.gateway.find_account_for", autospec=True)
+    @patch("payments.gateway.create_express_account", autospec=True)
+    def test_a_crash_before_the_id_was_written_adopts_the_lost_account(
+        self, create, find
+    ):
+        """The 24-hour hole, closed by a record rather than by a key.
+
+        Stripe forgets an idempotency key after a day. A process that died
+        between Stripe answering and the insert used to leave an account nobody
+        could name, and the retry the next day opened a second one. The blank
+        row is what makes the first one findable.
+        """
+        StripeAccount.objects.create(worker=self.worker_profile)
+        find.return_value = "acct_lost_and_found"
 
         account = services.ensure_stripe_account(self.worker_profile)
 
-        self.assertEqual(account.account_id, "acct_winner")
+        self.assertEqual(account.account_id, "acct_lost_and_found")
+        create.assert_not_called()
         self.assertEqual(StripeAccount.objects.count(), 1)
 
-    @patch("payments.gateway.create_express_account")
+    @patch("payments.gateway.find_account_for", autospec=True)
+    @patch("payments.gateway.create_express_account", autospec=True)
+    def test_and_opens_a_new_one_when_stripe_holds_nothing(self, create, find):
+        StripeAccount.objects.create(worker=self.worker_profile)
+        find.return_value = None
+        create.return_value = "acct_fresh"
+
+        account = services.ensure_stripe_account(self.worker_profile)
+
+        self.assertEqual(account.account_id, "acct_fresh")
+
+    @patch("payments.gateway.find_account_for", autospec=True)
+    @patch("payments.gateway.create_express_account", autospec=True)
+    def test_a_failed_lookup_does_not_block_the_worker(self, create, find):
+        """A recovery nicety must not stand between somebody and getting paid."""
+        StripeAccount.objects.create(worker=self.worker_profile)
+        find.side_effect = RuntimeError("listing timed out")
+        create.return_value = "acct_fresh"
+
+        account = services.ensure_stripe_account(self.worker_profile)
+
+        self.assertEqual(account.account_id, "acct_fresh")
+
+    @patch("payments.gateway.create_express_account", autospec=True)
     def test_an_existing_account_is_never_recreated(self, mock):
         StripeAccount.objects.create(
             worker=self.worker_profile, account_id="acct_existing"
@@ -754,7 +1051,7 @@ class WebhookClaimTests(EscrowTestCase):
         }
 
     def post(self, event):
-        with patch("payments.gateway.construct_event", return_value=event):
+        with patch("payments.gateway.construct_event", return_value=event, autospec=True):
             return self.client.post(
                 reverse("payments:webhook"),
                 data=b"{}",
@@ -825,7 +1122,7 @@ class WebhookTests(EscrowTestCase):
         )
 
     def post_event(self, event):
-        with patch("payments.gateway.construct_event", return_value=event):
+        with patch("payments.gateway.construct_event", return_value=event, autospec=True):
             return self.client.post(
                 reverse("payments:webhook"),
                 data=b"{}",

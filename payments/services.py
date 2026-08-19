@@ -18,6 +18,7 @@ from config import business_rules as rules
 from notifications.models import Kind
 from notifications.services import booking_key, notify
 
+from core.money import money
 from core.state_machine import claim, Actor, JobState, assert_transition
 from jobs.models import Job, JobType
 
@@ -61,23 +62,67 @@ def ensure_stripe_account(worker) -> StripeAccount:
     creation running twice at once.
     """
     existing = StripeAccount.objects.filter(worker=worker).first()
-    if existing:
+    if existing and existing.is_open:
         return existing
 
-    account_id = gateway.create_express_account(
-        email=worker.user.email,
-        country=worker.region.country,
-        idempotency_key=f"connect-account:{worker.pk}",
+    # The row is claimed *before* Stripe is asked, and this is the half that
+    # was missing. The idempotency key below protects two requests arriving
+    # together; it does nothing for a process that dies between Stripe
+    # answering and the insert, because Stripe forgets the key after 24 hours
+    # and the retry a day later opens a second account. A row with a blank id
+    # is a note saying "an account was being made for this worker" — which is
+    # what turns an orphan from invisible into findable.
+    claimed_now = False
+    if existing is None:
+        try:
+            with transaction.atomic():
+                existing = StripeAccount.objects.create(worker=worker)
+                claimed_now = True
+        except IntegrityError:
+            existing = StripeAccount.objects.get(worker=worker)
+            if existing.is_open:
+                return existing
+
+    # A blank row we did *not* just write means an earlier attempt reached
+    # Stripe and never came back. Only then is there anything to adopt — and
+    # only then is a listing worth its round trip.
+    account_id = None if claimed_now else _adopt_lost_account(worker)
+
+    if not account_id:
+        account_id = gateway.create_express_account(
+            email=worker.user.email,
+            country=worker.region.country,
+            idempotency_key=f"connect-account:{worker.pk}",
+            metadata={"worker_id": str(worker.pk)},
+        )
+
+    StripeAccount.objects.filter(pk=existing.pk, account_id="").update(
+        account_id=account_id, updated_at=timezone.now()
     )
+    existing.refresh_from_db()
+    return existing
+
+
+def _adopt_lost_account(worker) -> str | None:
+    """An account Stripe already holds for this worker, if there is one.
+
+    Asked only when a row exists with no id — which means a previous attempt
+    reached Stripe and did not come back. Answering "no" is normal and cheap;
+    answering "yes" is what stops a second account being opened for somebody
+    who already has one they cannot use.
+
+    Silent on failure. This is a recovery nicety in the middle of somebody
+    trying to get paid, and a listing that times out must not stop them: the
+    worst case is the orphan staying an orphan for another attempt, which is
+    where they already were.
+    """
     try:
-        with transaction.atomic():
-            return StripeAccount.objects.create(
-                worker=worker, account_id=account_id
-            )
-    except IntegrityError:
-        # Somebody else got there first. Their row names the same Stripe
-        # account, because the key above made Stripe hand us both the same one.
-        return StripeAccount.objects.get(worker=worker)
+        return gateway.find_account_for(worker.pk)
+    except gateway.StripeNotConfigured:
+        raise
+    except Exception:                        # noqa: BLE001 - see the docstring
+        logger.warning("Could not check Stripe for a lost account", exc_info=True)
+        return None
 
 
 def refresh_account_flags(account: StripeAccount) -> StripeAccount:
@@ -144,17 +189,21 @@ def _live_checkout(escrow: EscrowPayment) -> str | None:
     the three want different answers. One network call, on the second press of
     a button, to avoid opening a second way to pay for the same job.
 
-    A session we cannot look up at all is treated as gone. That is the same
-    outcome as before any of this existed — a fresh checkout — and it keeps a
-    stale id from making a job permanently unfundable.
+    A session Stripe has never heard of is gone, and starting again is right.
+    Anything else is not an answer and is not treated as one: this used to
+    catch every exception and open a new checkout, so a Stripe timeout re-made
+    the very hole the idempotency key was added to close. A timeout means
+    Stripe may hold that session, may have taken money on it, and simply did
+    not get a reply to us — the one moment when opening a second way to pay is
+    worst. The error travels up instead, and the caller shows "try again".
     """
     if not (escrow.checkout_session_id and escrow.checkout_url):
         return None
     try:
         live = gateway.retrieve_session(escrow.checkout_session_id)
-    except gateway.StripeNotConfigured:
-        raise
-    except Exception:                       # noqa: BLE001 - see the docstring
+    except gateway.ObjectMissing:
+        # Stripe answered, and there is no such session. Starting again is the
+        # right move and the only one that leaves the job fundable.
         return None
 
     if live.get("status") == "open":
@@ -410,12 +459,35 @@ def release(
         escrow.refresh_from_db()
         return escrow
 
-    result = gateway.capture_payment_intent(escrow.payment_intent_id, amount=amount)
+    # The fee follows the capture down, and this is a money bug rather than a
+    # detail. It was fixed on the session at the full amount, and Stripe does
+    # not prorate it when less is taken — it charges the whole original fee
+    # against the smaller capture, so every cent of the difference comes out of
+    # the worker's half. A €100 day ending early at €60 turned a €7.20 fee into
+    # €12. Recomputing on what is actually captured keeps the split the one
+    # both sides agreed to.
+    captured = amount if amount is not None else escrow.amount
+    fee = rules.platform_fee_for(captured)
+    result = gateway.capture_payment_intent(
+        escrow.payment_intent_id, amount=amount, application_fee=fee
+    )
 
+    settled = result["amount_received"]
     escrow.status = EscrowStatus.RELEASED
-    escrow.captured_amount = result["amount_received"]
+    escrow.captured_amount = settled
+    # Off what Stripe says it took, not off what we asked for. If those differ
+    # the money is the authority.
+    escrow.captured_fee = rules.platform_fee_for(settled)
+    escrow.captured_payout = rules.worker_payout_for(settled)
     escrow.released_at = released_at
-    escrow.save(update_fields=["captured_amount", "updated_at"])
+    escrow.save(
+        update_fields=[
+            "captured_amount",
+            "captured_fee",
+            "captured_payout",
+            "updated_at",
+        ]
+    )
 
     # Already claimed above; this only brings the instance in hand up to date.
     job.state = JobState.PAID_OUT
@@ -429,7 +501,12 @@ def release(
         # they had been paid once for five days' work.
         dedupe="",
         job_title=job.title,
-        amount=f"{rules.CURRENCY_SYMBOL}{escrow.worker_payout}",
+        # What landed, not what was agreed. On a day that ended early those are
+        # different numbers, and this one used to send the agreed figure —
+        # telling somebody they had been paid in full for a day that settled at
+        # two thirds. A payment notification naming the wrong amount is worse
+        # than none: it is the number they will check their bank against.
+        amount=money(escrow.captured_payout, decimals=2),
     )
     return escrow
 

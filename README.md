@@ -136,6 +136,7 @@ python manage.py settle_due_jobs      # release payments past their window
 python manage.py expire_stale_gigs    # retire gigs whose day passed unfilled
 python manage.py send_notifications   # post queued emails
 python manage.py remind_tomorrow      # tell people about the day they have on
+python manage.py reconcile_payments   # ask Stripe what actually happened
 ```
 
 `settle_due_jobs` is the one that moves money. Without it, a client who says
@@ -146,6 +147,16 @@ silence is meant to be approval.
 inside the transaction that caused them and never sent from a request, so a
 slow or unreachable SMTP host cannot make somebody's job application hang and
 nothing is lost while it is being fixed. Run it every few minutes.
+
+`reconcile_payments` is the one that admits Stripe is a separate system. A
+capture can succeed and the commit that records it can fail; no ordering inside
+a transaction prevents that, because the two halves live in different
+databases. So this asks Stripe about every hold that could be behind and moves
+the local record to match — Stripe is the authority, and where they disagree
+about money the money is right. It also gives back holds left on jobs that
+expired or were called off, which is somebody's credit limit frozen for work
+that is not going to happen. `--dry-run` reports without writing. Run it every
+few minutes; every repair is a conditional claim, so running it often is free.
 
 `remind_tomorrow` tells a worker the night before about the day they have on.
 Run it once each evening; running it more often is harmless, because the day is
@@ -214,7 +225,20 @@ transaction. It is not written yet.
 python manage.py test
 ```
 
-Around 500 tests, no network calls — Stripe and the assistant are both stubbed.
+Around 650 tests, no network calls — Stripe and the assistant are both stubbed.
+
+Stubbing the payment gateway is what makes the suite runnable without keys, and
+it hides exactly one thing: a mock accepts any arguments, so a service calling
+the gateway wrongly would pass every test and fail on the first real call. Two
+things stop that now — the patches are autospec'd, and one test binds the calls
+the services make against the signatures that will actually run.
+
+The concurrency tests do not use threads, which prove nothing on SQLite. Each
+race is staged instead: a function is handed an instance that says one thing
+while the database says another, which is precisely what a concurrent write
+leaves behind and happens the same way every run. Two simultaneous fundings,
+two deliveries of one webhook, a release meeting a dispute, a booking whose
+third day fails after the first two have been captured.
 The interesting assistant tests are the ones where the stubbed model misbehaves
 on purpose: declaring a form finished halfway through, claiming values it never
 heard, or taking an instruction out of a user's message.
