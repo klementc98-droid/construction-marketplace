@@ -22,7 +22,9 @@ from django import forms
 from django.utils.translation import gettext as _
 
 
-def date_picker_attrs(*, floor: date, single: bool = False) -> dict[str, str]:
+def date_picker_attrs(
+    *, floor: date, single: bool = False, taken=()
+) -> dict[str, str]:
     """Widget attrs for the calendar in ``crew.js``.
 
     The script draws its own calendar, so the words on it have to come from
@@ -44,6 +46,13 @@ def date_picker_attrs(*, floor: date, single: bool = False) -> dict[str, str]:
     Sharing it is the point. A counter is answered on the same screen the offer
     was read on, and a native ``dd/mm/yyyy`` box next to the picker the offer
     was written with looks like two different applications.
+
+    ``taken`` are days the calendar must refuse — the ones a worker is already
+    booked on. Sent to the picker rather than only checked on submit because
+    the answer is knowable before anybody types: a day that cannot be offered
+    should not be tickable, and finding out after filling in the hours and the
+    price is the round trip this whole field exists to avoid. The form still
+    validates them, since a disabled cell is a courtesy and not a rule.
     """
     words = {
         "open": _("Pick a day") if single else _("Pick days"),
@@ -53,11 +62,14 @@ def date_picker_attrs(*, floor: date, single: bool = False) -> dict[str, str]:
         "remove": _("Remove"),
         "prev": _("Previous month"),
         "next": _("Next month"),
+        "taken": _("Already booked"),
     }
     attrs = {
         "data-date-list": floor.isoformat(),
         "data-date-list-i18n": json.dumps(words, ensure_ascii=False),
     }
+    if taken:
+        attrs["data-date-taken"] = ",".join(day.isoformat() for day in taken)
     if single:
         attrs["data-date-one"] = ""
     return attrs
@@ -95,3 +107,56 @@ def parse_date_list(raw: str | None, *, today: date) -> list[date]:
             % {"dates": listed}
         )
     return sorted(set(parsed))
+
+
+def month_grids(dates, *, months_ahead: int = 3) -> list:
+    """The months these days fall in, drawn as calendar grids.
+
+    A list of dates answers "which days?" only if the reader already knows what
+    a Tuesday in three weeks looks like. A month laid out the way a calendar is
+    laid out answers it at a glance, and — this being the point — it shows the
+    gaps as plainly as the bookings: somebody booked on the 25th and the 30th
+    is visibly free on the 26th, which a run of chips is not.
+
+    Rendered on the server rather than by the picker in ``crew.js``. That one
+    is an input; this is a statement, it must be there with the script off, and
+    it must be readable to somebody using a screen reader as a table of days
+    rather than as forty buttons.
+
+    Returns ``[{"label": date, "weeks": [[cell, ...], ...]}]`` where a cell is
+    ``None`` for the padding before and after a month, and otherwise a dict of
+    the date, whether it is booked, and whether it is today.
+    """
+    import calendar as _calendar
+
+    wanted = sorted({day for day in dates if day})
+    if not wanted:
+        return []
+
+    today = date.today()
+    out = []
+    seen: set = set()
+    for day in wanted:
+        key = (day.year, day.month)
+        if key in seen:
+            continue
+        seen.add(key)
+        if len(seen) > months_ahead:
+            break
+
+        weeks = []
+        # Monday first, as everywhere else in the app.
+        for week in _calendar.Calendar(firstweekday=0).monthdatescalendar(*key):
+            row = []
+            for cell in week:
+                if cell.month != day.month:
+                    row.append(None)
+                    continue
+                row.append({
+                    "date": cell,
+                    "booked": cell in wanted,
+                    "today": cell == today,
+                })
+            weeks.append(row)
+        out.append({"label": date(day.year, day.month, 1), "weeks": weeks})
+    return out

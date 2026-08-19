@@ -89,6 +89,12 @@ def workspace(request, pk: int):
             "is_worker": is_worker,
             "is_client": is_client,
             "moves": [m.to_state for m in available_transitions(job.state, actor)],
+            # Whether today has caught up with this day. The state machine
+            # cannot answer it — a transition is about states, and this is
+            # about the calendar — so the button asks separately rather than
+            # being offered and then refused. See _claim_booking: nobody can
+            # say next Thursday's work happened.
+            "day_has_come": job.gig_date is None or job.gig_date <= timezone.localdate(),
             "early_form": EarlyEndForm(),
             "dispute_form": DisputeForm(),
             "minimum_hours": rules.MINIMUM_GUARANTEED_HOURS,

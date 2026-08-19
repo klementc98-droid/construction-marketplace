@@ -179,6 +179,28 @@ class GigForm(_BaseJobForm):
                 )
                 % {"count": len(dates), "limit": self.MAX_DAYS}
             )
+
+        # Editing one day of a booking: it cannot be moved onto a day the
+        # booking already holds. Nothing used to stop it, and the result was a
+        # booking with the same date twice — two rows, two escrows and two
+        # sign-offs for one day's work, and a worker who accepts it gets one of
+        # them and is left with the other still sitting open on the board.
+        # Which is exactly how it read: "she accepted and the job is still
+        # open." The duplicate is refused here, where the reader can still fix
+        # it, rather than by the index at the far end.
+        instance = self.instance
+        if instance.pk and instance.offer_group:
+            already = set(
+                Job.objects.filter(offer_group=instance.offer_group)
+                .exclude(pk=instance.pk)
+                .values_list("gig_date", flat=True)
+            )
+            clash = sorted(day for day in dates if day in already)
+            if clash:
+                raise forms.ValidationError(
+                    _("This booking already has %(days)s. Pick a different day.")
+                    % {"days": ", ".join(d.strftime("%d/%m") for d in clash)}
+                )
         return dates
 
     def clean(self):
@@ -285,6 +307,17 @@ class OfferForm(GigForm):
         if worker is None:
             return
 
+        # The days they have already sold, handed to the calendar so they
+        # cannot be ticked. Recomputed in clean_gig_dates as well: this is what
+        # the picker shows, not what the server trusts.
+        self.taken_days = worker.booked_dates
+        if self.taken_days:
+            self.fields["gig_dates"].widget.attrs.update(
+                date_picker_attrs(
+                    floor=timezone.localdate(), taken=self.taken_days
+                )
+            )
+
         self.fields["title"].widget.attrs["placeholder"] = (
             f"e.g. Second fix with {worker.user.short_name or worker.user}"
         )
@@ -297,6 +330,31 @@ class OfferForm(GigForm):
             first_trade = worker.trades.first()
             if first_trade is not None:
                 self.fields["trade"].initial = first_trade
+
+
+    def clean_gig_dates(self) -> list:
+        """The days, minus any this worker cannot take.
+
+        The calendar has already greyed these out, so arriving here means a
+        stale page or an edited control — but it is also the only place the
+        rule is actually enforced, and it names the days rather than saying
+        "unavailable", because the client's next move is to pick different
+        ones.
+        """
+        dates = super().clean_gig_dates()
+        worker = getattr(self, "worker", None)
+        if worker is None:
+            return dates
+
+        from .services import booked_days_among, describe_dates
+
+        clash = booked_days_among(worker, dates)
+        if clash:
+            raise forms.ValidationError(
+                _("%(who)s is already booked on %(days)s. Pick other days.")
+                % {"who": worker.user, "days": describe_dates(clash)}
+            )
+        return dates
 
 
 class OfferExistingForm(forms.Form):

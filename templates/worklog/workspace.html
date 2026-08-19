@@ -181,16 +181,28 @@
   {% elif is_worker and not job.is_escrowed and 'completed' in moves %}
     <h2>{% translate "Next" %}</h2>
     <div class="card action-panel">
-      <p class="flush"><strong>{% translate "Is the work done?" %}</strong></p>
-      <p class="note">
-        {% translate "Mark it finished and the client confirms. Payment is between the two of you — we record that the job happened, nothing more." %}
-      </p>
-      <form method="post" action="{% url 'worklog:finish' job.pk %}">
-        {% csrf_token %}
-        <button class="btn" type="submit" data-busy-label="{% translate "Saving…" %}">
-          {% translate "The work is done" %}
-        </button>
-      </form>
+      {% comment %} Not offered before the day arrives. The service refuses it anyway —
+         nobody can say next Thursday's work happened — but a button that is
+         there to be pressed and then answers "no" is a worse way to learn a
+         rule than a button that waits its turn and says when it is coming.
+      {% endcomment %}
+      {% if day_has_come %}
+        <p class="flush"><strong>{% translate "Is the work done?" %}</strong></p>
+        <p class="note">
+          {% translate "Mark it finished and the client confirms. Payment is between the two of you — we record that the job happened, nothing more." %}
+        </p>
+        <form method="post" action="{% url 'worklog:finish' job.pk %}">
+          {% csrf_token %}
+          <button class="btn" type="submit" data-busy-label="{% translate "Saving…" %}">
+            {% translate "The work is done" %}
+          </button>
+        </form>
+      {% else %}
+        <p class="flush"><strong>{% translate "Not yet — this day is still ahead." %}</strong></p>
+        <p class="note">
+          {% blocktranslate with day=job.gig_date|date:"D j M" %}You can mark it done on {{ day }}, once the day has actually been worked. Days already worked can be signed off now from their own page.{% endblocktranslate %}
+        </p>
+      {% endif %}
     </div>
 
   {% elif is_client and job.awaiting_client_confirmation %}

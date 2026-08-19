@@ -200,6 +200,32 @@
     </div>
   {% endif %}
 
+  {% comment %} The days already spoken for. The headline above answers "when do they
+     free up?" with a single date, which on a diary full of gaps says less than
+     it seems to: "busy until the 25th" hides that the 21st and 22nd are open.
+     A client about to write an offer for a particular day needs that day, not
+     a horizon.
+
+     Dates only, never what the work is or who it is for — that is between the
+     worker and the client who booked them. Same rule as busy_until.
+  {% endcomment %}
+  {% if profile.booked_dates %}
+    <h2>{% translate "Already booked" %}</h2>
+    <div class="card">
+      <p style="margin:0">
+        {% for day in profile.booked_dates %}
+          <span class="badge">{{ day|date:"D j M" }}</span>
+        {% endfor %}
+      </p>
+      {% include "accounts/_booked_calendar.html" %}
+      <p class="note">
+        {% translate "Offers that include these days can't be accepted — they are taken. Any day not marked is free." %}
+      </p>
+    </div>
+  {% endif %}
+
+  {% include "accounts/_reviews.html" %}
+
   {% if profile.cv %}
     <div class="card" style="margin-top:14px">
       <a href="{{ profile.cv.url }}">{% translate "Download résumé (PDF)" %}</a>

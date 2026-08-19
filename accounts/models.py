@@ -507,6 +507,29 @@ class WorkerProfile(ReputationMixin, TimestampedModel):
         return max(dates) if dates else None
 
     @property
+    def booked_dates(self) -> list:
+        """The days ahead that are already spoken for, in order.
+
+        Dates and nothing else. *Which* job somebody is on is between them and
+        the client who hired them — the same rule :attr:`busy_until` follows —
+        but the days themselves are exactly what a client deciding whether to
+        offer them next Tuesday needs to know, and a headline reading "busy
+        until the 25th" hides that the 21st and 22nd are free.
+
+        Days gone by are left out for the reason given on :attr:`busy_until`: a
+        gig can sit in an active state well past its date while a sign-off is
+        waited on, and nobody is unavailable on a day that has already been.
+        """
+        today = timezone.localdate()
+        return sorted(
+            {
+                job.gig_date
+                for job in self.active_jobs
+                if job.gig_date is not None and job.gig_date >= today
+            }
+        )
+
+    @property
     def has_open_ended_commitment(self) -> bool:
         """On a standing position, which has no finish date to quote."""
         return self.active_jobs.filter(gig_date__isnull=True).exists()
@@ -540,8 +563,20 @@ class WorkerProfile(ReputationMixin, TimestampedModel):
             # busy_until never looks backwards now, so there is no stale case
             # left to fall through — see the note on that property.
             today = timezone.localdate()
+            booked = self.booked_dates
+            span = (end - booked[0]).days + 1 if booked else 0
             if end == today:
                 return _("Busy today, free from tomorrow")
+            elif len(booked) < span:
+                # A diary with holes in it. "Busy until the 30th" would be a
+                # straight untruth about the 26th, and the 26th is exactly the
+                # day somebody is about to ask for. The count is the honest
+                # summary; the days themselves are listed on the profile.
+                return _("Booked %(count)s days, %(from_date)s to %(to_date)s") % {
+                    "count": len(booked),
+                    "from_date": formats.date_format(booked[0], "j M"),
+                    "to_date": formats.date_format(end, "j M"),
+                }
             else:
                 # One string with both dates in it, not "Busy until" + a date +
                 # "free from" + a date. Greek does not order those words the way
@@ -586,9 +621,12 @@ class WorkerProfile(ReputationMixin, TimestampedModel):
             return False
         if self.has_open_ended_commitment:
             return False
-        end = self.busy_until
-        if end is not None and day <= end:
-            return False
+        # No test against busy_until here, deliberately. That is the *last* day
+        # they are committed, and treating everything before it as taken calls
+        # a worker booked on the 25th and the 30th unavailable on the 26th —
+        # a day that is free and that somebody is trying to hire them for. The
+        # exact-date check above is the whole answer; a booking is a set of
+        # days, not a block.
         if self.availability_status == AvailabilityStatus.SPECIFIC_DAYS:
             return self.availability_dates.filter(date=day).exists()
         if self.availability_status == AvailabilityStatus.AVAILABLE_NOW:

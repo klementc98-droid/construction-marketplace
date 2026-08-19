@@ -29,10 +29,17 @@
       <h2>{% translate "Which job?" %}</h2>
       {{ form.job.errors }}
       <div class="radio-group">
+        {% comment %} A booking whose days this worker has already sold is shown, not
+           hidden: "where did my Tuesday job go?" is a worse question than a
+           row that says plainly why it cannot be sent. Disabled rather than
+           merely marked, because the answer would only come back as a refusal
+           at the other end anyway — see _seal.
+        {% endcomment %}
         {% for job in bookings %}
-          <label>
+          <label class="{% if job.clash_dates %}is-taken{% endif %}">
             <input type="radio" name="job" value="{{ job.pk }}"
-                   {% if form.job.value|stringformat:"s" == job.pk|stringformat:"s" %}checked{% endif %}>
+                   {% if job.clash_dates %}disabled{% endif %}
+                   {% if form.job.value|stringformat:"s" == job.pk|stringformat:"s" and not job.clash_dates %}checked{% endif %}>
             <div class="pick-body">
               <div class="row-top">
                 <span class="title">{{ job.title }}</span>
@@ -53,6 +60,12 @@
                 {% endif %}
                 <br>
                 {{ job.trade }}{% if job.location %} · {{ job.location }}{% endif %}
+                {% if job.clash_dates %}
+                  <br>
+                  <strong class="taken-why">
+                    {% blocktranslate with who=worker.user.short_name|default:worker.user days=job.clash_said %}{{ who }} is already booked on {{ days }}, so this one can't be sent.{% endblocktranslate %}
+                  </strong>
+                {% endif %}
               </div>
             </div>
           </label>

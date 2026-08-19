@@ -110,6 +110,7 @@ class DealWithoutEscrowTests(JobFactoryMixin, TestCase):
         job.refresh_from_db()
         self.assertEqual(job.state, JobState.IN_PROGRESS)
 
+        self.day_arrives(job)
         worklog_services.mark_work_finished(job, self.worker_profile)
         job.refresh_from_db()
         self.assertEqual(job.state, JobState.COMPLETED)
@@ -134,6 +135,7 @@ class DealWithoutEscrowTests(JobFactoryMixin, TestCase):
         job.save(update_fields=["state", "assigned_worker"])
 
         with patch("payments.gateway.stripe") as stripe:
+            self.day_arrives(job)
             worklog_services.mark_work_finished(job, self.worker_profile)
             worklog_services.confirm_closed(job, self.client_user)
         self.assertEqual(stripe.method_calls, [])
@@ -149,6 +151,7 @@ class DealWithoutEscrowTests(JobFactoryMixin, TestCase):
         job.assigned_worker = self.worker_profile
         job.save(update_fields=["state", "assigned_worker"])
 
+        self.day_arrives(job)
         worklog_services.mark_work_finished(job, self.worker_profile)
         worklog_services.confirm_closed(job, self.client_user)
         job.refresh_from_db()
@@ -186,6 +189,7 @@ class DealWithEscrowTests(JobFactoryMixin, TestCase):
     def test_it_cannot_take_the_direct_settlement_shortcut(self):
         """Closing by agreement would skip the release of real money."""
         with self.assertRaises(worklog_services.WorkflowError):
+            self.day_arrives(self.job)
             worklog_services.mark_work_finished(self.job, self.worker_profile)
 
     def test_the_direct_close_is_refused_even_from_completed(self):
@@ -230,6 +234,7 @@ class EscrowIsolationTests(JobFactoryMixin, TestCase):
         job.state = JobState.ACCEPTED
         job.assigned_worker = self.worker_profile
         job.save(update_fields=["state", "assigned_worker"])
+        self.day_arrives(job)
         worklog_services.mark_work_finished(job, self.worker_profile)
         return job
 

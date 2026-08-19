@@ -55,6 +55,10 @@ class WorkTestCase(TestCase):
         )
 
     def make_job(self, *, state=JobState.ESCROW_HELD, hours="8", pay="90", **extra):
+        # gig_date is overridable, because a booking needs a day per row —
+        # see the double-booking index. It was hard-coded below, so any caller
+        # asking for one got "multiple values for gig_date".
+        extra.setdefault("gig_date", timezone.localdate())
         # Escrow on by default in this fixture: these tests are about the
         # escrow path. The model default is off — most deals are settled
         # directly — so the ones exercising that path say so explicitly.
@@ -66,7 +70,6 @@ class WorkTestCase(TestCase):
             region=self.region,
             title="Framing help",
             description="Second storey.",
-            gig_date=timezone.localdate(),
             gig_hours=Decimal(hours),
             fixed_pay=Decimal(pay),
             state=state,
@@ -595,7 +598,12 @@ class NoEscrowJobTests(WorkTestCase):
         self.assertEqual(self.job.state, JobState.COMPLETED)
 
     def test_an_escrowed_job_refuses_the_short_route(self):
-        escrowed = self.make_job(state=JobState.ACCEPTED)
+        # Tomorrow, not today: this worker already has today's job from setUp,
+        # and one worker has one of each day — see the double-booking index.
+        escrowed = self.make_job(
+            state=JobState.ACCEPTED,
+            gig_date=timezone.localdate() + timedelta(days=1),
+        )
         escrowed.assigned_worker = self.worker
         escrowed.save(update_fields=["assigned_worker"])
         with self.assertRaises(services.WorkflowError):
@@ -619,37 +627,85 @@ class BookingLifecycleTests(WorkTestCase):
     def booking(self, count=4, **overrides):
         from uuid import uuid4
 
+        from datetime import timedelta
+
         group = uuid4()
         days = []
         for n in range(count):
-            job = self.make_job(state=JobState.ACCEPTED, offer_group=group, **overrides)
+            # A day of its own each, which is what a booking is. They all
+            # shared today's date until the double-booking index refused it —
+            # correctly: four live gigs on one date for one worker is the very
+            # thing that index exists to make impossible.
+            overrides.setdefault("gig_date", timezone.localdate())
+            job = self.make_job(
+                state=JobState.ACCEPTED,
+                offer_group=group,
+                **{**overrides, "gig_date": overrides["gig_date"] + timedelta(days=n)},
+            )
             job.use_escrow = False
             job.assigned_worker = self.worker_profile
             job.save(update_fields=["use_escrow", "assigned_worker"])
             days.append(job)
         return days
 
-    def test_marking_it_finished_finishes_every_day(self):
-        days = self.booking(4)
+    def test_marking_it_finished_reaches_every_day_that_has_happened(self):
+        """A booking is signed off in one press — but only as far as today.
+
+        It used to reach the whole week on its first morning, which recorded
+        six days of work as done before they existed and handed the worker's
+        diary back to her while she was still committed to it.
+        """
+        days = self.booking(4, gig_date=timezone.localdate() - timedelta(days=1))
+        # Yesterday and today have happened; the two after have not.
         services.mark_work_finished(days[0], self.worker_profile)
+
+        for day in days[:2]:
+            day.refresh_from_db()
+            self.assertEqual(day.state, JobState.COMPLETED)
+        for day in days[2:]:
+            day.refresh_from_db()
+            self.assertEqual(day.state, JobState.ACCEPTED)
+
+    def test_a_day_still_ahead_cannot_be_signed_off_at_all(self):
+        """And the refusal says so, rather than reading as a lost race."""
+        days = self.booking(3, gig_date=timezone.localdate() + timedelta(days=2))
+
+        with self.assertRaises(services.WorkflowError) as caught:
+            services.mark_work_finished(days[0], self.worker_profile)
+        self.assertIn("hasn't come yet", str(caught.exception))
 
         for day in days:
             day.refresh_from_db()
-            self.assertEqual(day.state, JobState.COMPLETED)
+            self.assertEqual(day.state, JobState.ACCEPTED)
 
-    def test_confirming_closes_every_day(self):
-        days = self.booking(4)
+    def test_the_worker_stays_booked_for_the_days_still_to_come(self):
+        """The point of the rule, from the diary's side."""
+        days = self.booking(4, gig_date=timezone.localdate() - timedelta(days=1))
         services.mark_work_finished(days[0], self.worker_profile)
         services.confirm_closed(days[0], self.client_user)
 
-        for day in days:
+        self.worker_profile.refresh_from_db()
+        self.assertEqual(
+            self.worker_profile.booked_dates,
+            [days[2].gig_date, days[3].gig_date],
+        )
+
+    def test_confirming_closes_every_day_that_has_happened(self):
+        days = self.booking(4, gig_date=timezone.localdate() - timedelta(days=1))
+        services.mark_work_finished(days[0], self.worker_profile)
+        services.confirm_closed(days[0], self.client_user)
+
+        for day in days[:2]:
             day.refresh_from_db()
             self.assertEqual(day.state, JobState.CLOSED)
+        for day in days[2:]:
+            day.refresh_from_db()
+            self.assertEqual(day.state, JobState.ACCEPTED)
 
     def test_a_week_counts_as_one_job_on_both_records(self):
         """The number a profile shows is "how much has this person seen
         through". Five days of one booking is one."""
-        days = self.booking(5)
+        days = self.booking(5, gig_date=timezone.localdate() - timedelta(days=4))
         worker_before = type(self.worker_profile).objects.get(
             pk=self.worker_profile.pk
         ).jobs_completed
@@ -689,7 +745,9 @@ class BookingLifecycleTests(WorkTestCase):
 
     def test_a_day_that_cannot_move_does_not_block_the_rest(self):
         """One stuck day must not stop a client closing the other four."""
-        days = self.booking(4)
+        # All four behind us, so the only thing being tested is the stuck day
+        # rather than the calendar.
+        days = self.booking(4, gig_date=timezone.localdate() - timedelta(days=4))
         services.mark_work_finished(days[0], self.worker_profile)
         # Something happened to Wednesday on its own.
         days[2].state = JobState.DISPUTED

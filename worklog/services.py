@@ -12,6 +12,8 @@ from decimal import Decimal
 
 from django.db import models, transaction
 from django.utils import timezone
+from django.utils.formats import date_format
+from django.utils.translation import gettext as _
 
 from config import business_rules as rules
 from core.state_machine import can_transition, claim, Actor, JobState, assert_transition
@@ -41,11 +43,25 @@ def _claim_booking(job, *, to: str, actor: str) -> list[Job]:
     the honest answer is to move what can move — the alternative is one stuck
     day blocking a client from closing the other four.
 
+    **And a day that has not arrived is not one of them.** Both routes through
+    here are somebody saying the work happened, and nobody can say that about
+    next Thursday. This used to sign off the whole booking on its first
+    morning, which had two consequences and both were wrong: a week's work was
+    recorded as done before six days of it existed, and the worker's diary was
+    handed back to her — free to be booked by somebody else on days she is in
+    fact committed to. Signing off a Monday says nothing about the Tuesday
+    after it, so Tuesday waits its turn.
+
     Nothing here releases money for a day that has not happened; the settlement
     path decides that for itself, off the completions that exist.
     """
+    today = timezone.localdate()
     moved = []
     for day in booking_of(job):
+        # Standing positions have no date and are not caught by this — there is
+        # no day for them to be ahead of.
+        if day.gig_date is not None and day.gig_date > today:
+            continue
         if not can_transition(day.state, to, actor):
             continue
         if not claim(Job, day.pk, expect=day.state, to=to):
@@ -53,6 +69,30 @@ def _claim_booking(job, *, to: str, actor: str) -> list[Job]:
         day.state = to
         moved.append(day)
     return moved
+
+
+def _too_early(job) -> str | None:
+    """The refusal for a booking nobody can sign off yet, or None.
+
+    What separates "somebody beat you to it" from "that day has not happened".
+    Both come back from the claim as an empty list and read identically to
+    whoever pressed the button, and the second one is not a failure at all —
+    it is an answer about the calendar, so it names the day to come back on.
+    """
+    today = timezone.localdate()
+    ahead = [
+        day
+        for day in booking_of(job)
+        if day.gig_date is not None and day.gig_date > today
+    ]
+    if not ahead or len(ahead) != len([d for d in booking_of(job) if d.gig_date]):
+        # Some day of this booking has arrived, so the empty claim is about
+        # state rather than about the calendar.
+        return None
+    first = min(day.gig_date for day in ahead)
+    return _(
+        "That day hasn't come yet — you can mark it done from %(day)s."
+    ) % {"day": date_format(first, "D j M")}
 
 
 def _raced(job_id) -> str:
@@ -245,7 +285,7 @@ def mark_work_finished(job: Job, worker) -> Job:
     # tap and the client being told twice.
     finished = _claim_booking(job, to=JobState.COMPLETED, actor=Actor.WORKER)
     if not finished:
-        raise WorkflowError(_raced(job.pk))
+        raise WorkflowError(_too_early(job) or _raced(job.pk))
 
     days = len(finished)
     said = (
@@ -297,7 +337,7 @@ def confirm_closed(job: Job, user) -> Job:
     # track records permanently overstated with nothing in the data to show it.
     closed = _claim_booking(job, to=JobState.CLOSED, actor=Actor.CLIENT)
     if not closed:
-        raise WorkflowError(_raced(job.pk))
+        raise WorkflowError(_too_early(job) or _raced(job.pk))
     locked.state = JobState.CLOSED
 
     # Once for the booking, not once per day. A week worked for one client is
