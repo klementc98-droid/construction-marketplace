@@ -28,29 +28,44 @@
 
 :root {
   /* --- Palette ------------------------------------------------------------
-     Neutral ground, one loud colour. Near-white paper, white cards, near-black
-     text, and a single high-voltage lime for anything you press. Nothing else
-     is coloured: on a screen read outdoors, a page with one accent tells you
+     Neutral ground, one warm colour. Near-white paper, white cards, near-black
+     text, and a single champagne gold for anything you press. Nothing else is
+     coloured: on a screen read outdoors, a page with one accent tells you
      where to look, and a page with four tells you nothing.
 
-     The important constraint is that the lime CANNOT carry text. #b8e63e
-     measures 1.46:1 against a white card — it is a fill, and what sits on it
-     is --accent-fg, the near-black, at 12:1. Where the accent has to *be* the
-     text — a link, an active tab, a hover — the token is --accent-ink, a dark
-     olive of the same hue measuring 5.65:1 on white. Using --accent there
-     produces a word nobody can read, which is the one mistake this palette
-     invites, so the two are named differently on purpose.
+     White and gold, sharing its accent with the luxe theme — the same #c9b27c,
+     so the two themes the app has are one material seen in two lights rather
+     than two brands. The lime this used to run has gone from the app
+     altogether: it was the wrong register on white for a marketplace whose
+     subject is money, and once this palette changed, the dark theme that kept
+     it was the only green left in the building.
 
-     In the dark theme the lime is already 12:1 on the ground, so --accent-ink
-     is simply the lime itself. */
+     The important constraint survives the change of hue, and gets sharper.
+     The gold CANNOT carry text on white: #c9b27c measures 1.9:1 against a
+     white card. It is a fill, and what sits on it is --accent-fg, the
+     near-black, at 8.45:1. Where the accent has to *be* the text — a link, an
+     active tab, a hover — the token is --accent-ink, a deep bronze of the same
+     hue at 7:1 on white. Using --accent there produces a word nobody can read,
+     which is the one mistake this palette invites, so the two are named
+     differently on purpose.
+
+     Note that luxe can do what this cannot: on near-black, the gold itself
+     clears 9:1, so there --accent-ink is the gold. Same colour, opposite
+     ground, opposite rule. */
 
   --bg:            #f5f5f2;
-  --bg-tint:       #ecefe4;   /* the wash behind the header/hero */
+  --bg-tint:       #f2ece0;   /* the wash behind the header/hero */
   --panel:         #ffffff;
-  --panel-2:       #f2f3ef;
-  --panel-3:       #e7e9e3;
-  --line:          #e3e5df;
-  --line-strong:   #c7cbc2;
+  /* The greys carried a green cast to sit under the lime. Warmed to sit under
+     the gold instead — a cool grey beside champagne reads as a smudge. */
+  --panel-2:       #f4f1ea;
+  --panel-3:       #eae5da;
+  /* Dividers you can actually see. These were #e3e5df / #c7cbc2 — a hair off
+     the panel they sit on, which reads as a printing fault rather than as a
+     line. A rule either separates two things or it should not be drawn, so
+     both steps are darkened until they do the job they are there for. */
+  --line:          #ddd5c5;
+  --line-strong:   #bdb29a;
   --fg:            #202427;
   --fg-2:          #3e454a;
   --dim:           #5f666c;
@@ -59,14 +74,14 @@
      inbox row, placeholders, secondary facts), not just decoration. */
   --dimmer:        #62696f;
 
-  --accent:        #b8e63e;   /* lime — a fill, never text */
-  --accent-hover:  #a6d62b;
-  --accent-2:      #d2ef6a;   /* decoration only */
-  --accent-3:      #e8f7a8;   /* palest step of the scale */
-  --brick:         #7fa81c;
-  --accent-soft:   #f1f9dc;   /* accent at ~10% over panel, precomputed */
-  --accent-fg:     #171a1c;   /* what sits on the lime — 12:1 */
-  --accent-ink:    #55701a;   /* the accent when it must be text — 5.65:1 */
+  --accent:        #c9b27c;   /* champagne — a fill, never text on white */
+  --accent-hover:  #bda169;
+  --accent-2:      #dfc98f;   /* decoration only */
+  --accent-3:      #f0e3c4;   /* palest step of the scale */
+  --brick:         #9a8340;   /* 4.74:1 under --accent-fg — see --heat below */
+  --accent-soft:   #faf5ea;   /* accent at ~10% over panel, precomputed */
+  --accent-fg:     #171a1c;   /* what sits on the gold — 8.45:1 */
+  --accent-ink:    #6f5514;   /* the accent when it must be text — 7:1 */
 
   /* --- The heat scale, as two gradients -----------------------------------
      Kept as tokens so the button, the badge and the filament under the header
@@ -109,14 +124,19 @@
                0 8px 16px -6px rgb(23 26 28 / .10);
   --shadow-lg: 0 4px 8px -2px rgb(23 26 28 / .08),
                0 18px 36px -12px rgb(23 26 28 / .14);
-  --shadow-heat: 0 2px 6px -1px rgb(127 168 28 / .26),
-                 0 12px 24px -10px rgb(127 168 28 / .34);
+  --shadow-heat: 0 2px 6px -1px rgb(154 131 64 / .26),
+                 0 12px 24px -10px rgb(154 131 64 / .34);
+  /* The glow under a gig badge, per theme because the badge is filled with
+     --heat and a glow of the wrong hue under it reads as a smudge rather than
+     a light. It was a hard-coded burnt orange in the rule itself, which is why
+     luxe had to override the rule; now every palette answers the question. */
+  --glow-gig:  0 1px 3px -1px rgb(154 131 64 / .45);
 
   /* --- Focus --------------------------------------------------------------
      Two rings: a solid accent line for definition and a soft halo so it stays
      visible against both the panel and the accent button itself. */
   --ring: 0 0 0 2px var(--panel), 0 0 0 4px var(--accent-ink);
-  --ring-soft: 0 0 0 4px rgb(85 112 26 / .22);
+  --ring-soft: 0 0 0 4px rgb(111 85 20 / .22);
 
   /* --- Motion -------------------------------------------------------------
      Fast enough to feel like a direct response, slow enough to be read. */
@@ -149,109 +169,99 @@
 
 
 /* ==========================================================================
-   2. Dark theme
+   2. The dark answer, for a reader who has chosen nothing
    --------------------------------------------------------------------------
-   The same room with the lights off — the primary near-black as ground. Two
-   selectors, one declaration list, deliberately duplicated: `light-dark()`
-   would remove the repetition but takes the whole palette down with it on any
-   browser that lacks it, and an unstyled page is a worse outcome than forty
-   duplicated lines.
+   There used to be a lime dark theme here and it has gone. Two dark themes was
+   one more than the palette could justify: with the light theme moved to white
+   and gold, the lime was the last green left in the app and belonged to
+   nothing else on screen. Dark is now luxe, and the toggle runs light → luxe.
 
-   `[data-theme]` is written by the toggle; the media query only applies when
-   the reader has not made a choice.
+   What survives is this block, and only for the case where the toggle cannot
+   speak: JavaScript off or blocked, so no `data-theme` is written, and the
+   reader's OS says dark. It carries luxe's tokens so that reader gets a black
+   page rather than a white one. The gold *flourishes* keyed to
+   `[data-theme="luxe"]` further down — the prices, the brand word, the edges —
+   do not reach here, and are not worth duplicating for a case this narrow: the
+   palette is what stops the page being unreadable, and the palette is here.
+
+   Duplicated rather than shared with the luxe block below, deliberately.
+   `light-dark()` would remove the repetition and take the whole palette down
+   with it on any browser that lacks it, and an unstyled page is a worse
+   outcome than forty duplicated lines.
    ========================================================================== */
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg:            #171a1c;
-    --bg-tint:       #1c2023;
-    --panel:         #1e2225;
-    --panel-2:       #24282c;
-    --panel-3:       #2d3236;
-    --line:          #2a2f33;
-    --line-strong:   #414750;
-    --fg:            #f5f5f2;
-    --fg-2:          #c9cdcf;
-    --dim:           #949b9f;
-    --dimmer:        #9aa1a5;   /* 5.2:1 on --panel; was #83705d at 3.7:1 */
+    --bg:            #050505;
+    --bg-tint:       #0a0a08;   /* the wash behind the header/hero */
+    --panel:         #0f0f0d;
+    --panel-2:       #15140f;
+    --panel-3:       #1c1a14;
+    --line:          #24221d;   /* almost invisible, and meant to be */
+    --line-strong:   #3a362c;
+    --fg:            #f1eee7;   /* warm white, never pure — 17.6:1 on the ground */
+    --fg-2:          #cfc8bc;
+    --dim:           #a39b8d;   /* 7:1 on --panel */
+    --dimmer:        #a8a092;
 
-    --accent:        #b8e63e;
-    --accent-hover:  #c9ef63;
-    --accent-2:      #a6d62b;
-    --accent-3:      #d2f27a;
-    --brick:         #8fc01f;
-    --accent-soft:   #232b14;
-    --accent-fg:     #171a1c;
-    --accent-ink:    #b8e63e;
+    --accent:        #c9b27c;   /* champagne — a fill AND, here, safe as text */
+    --accent-hover:  #dcc894;
+    --accent-2:      #b49c66;
+    --accent-3:      #eadcb8;   /* palest step — decoration only, no text on it */
+    --brick:         #8c7742;
+    --accent-soft:   #1a1710;   /* gold at ~10% over panel, precomputed */
+    --accent-fg:     #0a0906;   /* what sits on the gold — 9.6:1 */
+    --accent-ink:    #c9b27c;   /* the gold as text — 9.3:1 on --panel */
 
-    --ok:            #a8d95e;
-    --warn:          #e8b45c;
-    --err:           #f2938a;
-    --info:          #74b6d8;
+    /* Real gold is not a flat colour — it is a dark side, a lit side and a hot
+       line where the light crosses it. Two stops read as mustard; five read as
+       metal. This is the cheapest gold in the theme: it adds no new gold surface
+       at all, it only makes the surface already there behave like the material.
 
-    --shadow-sm: 0 1px 2px rgb(0 0 0 / .45);
-    --shadow-md: 0 2px 4px -1px rgb(0 0 0 / .4),
-                 0 10px 20px -6px rgb(0 0 0 / .5);
-    --shadow-lg: 0 4px 10px -2px rgb(0 0 0 / .45),
-                 0 22px 44px -12px rgb(0 0 0 / .6);
-    --shadow-heat: 0 2px 6px -1px rgb(184 230 62 / .20),
-                   0 14px 28px -12px rgb(184 230 62 / .28);
+       Every stop sits at or above --accent-2, the darkest gold that still clears
+       7:1 under --accent-fg. A button label crosses all five and has to be
+       readable over each one, so the range is bounded from below on purpose —
+       dropping --brick in at 0% looks richer and fails at the one end where the
+       text is. */
+    --heat: linear-gradient(135deg,
+              var(--accent-2) 0%, var(--accent) 24%, var(--accent-3) 46%,
+              var(--accent) 68%, var(--accent-2) 100%);
+    --heat-bright: linear-gradient(135deg,
+              var(--accent) 0%, var(--accent-3) 22%, #fff6e2 40%,
+              var(--accent-3) 58%, var(--accent) 82%, var(--accent-2) 100%);
+
+    --ok:            #86be72;
+    --warn:          #e0b15c;
+    --err:           #e88a7d;
+    --info:          #7fb3cc;
+
+    /* Blacker than the dark theme's, because they fall on a blacker ground: a
+       shadow tuned for #171a1c disappears entirely against #050505. */
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / .6);
+    --shadow-md: 0 2px 4px -1px rgb(0 0 0 / .55),
+                 0 10px 20px -6px rgb(0 0 0 / .65);
+    --shadow-lg: 0 4px 10px -2px rgb(0 0 0 / .6),
+                 0 22px 44px -12px rgb(0 0 0 / .75);
+    /* The one glow. Kept faint — a gold halo under every raised thing is exactly
+       the "gold everywhere" this palette is trying to avoid. */
+    --shadow-heat: 0 2px 6px -1px rgb(201 178 124 / .18),
+                   0 14px 28px -12px rgb(201 178 124 / .26);
+    --glow-gig:  0 1px 3px -1px rgb(201 178 124 / .35);
 
     --ring: 0 0 0 2px var(--panel), 0 0 0 4px var(--accent);
-    --ring-soft: 0 0 0 4px rgb(184 230 62 / .26);
+    --ring-soft: 0 0 0 4px rgb(201 178 124 / .26);
 
     color-scheme: dark;
   }
-}
-
-:root[data-theme="dark"] {
-  --bg:            #171a1c;
-  --bg-tint:       #1c2023;
-  --panel:         #1e2225;
-  --panel-2:       #24282c;
-  --panel-3:       #2d3236;
-  --line:          #2a2f33;
-  --line-strong:   #414750;
-  --fg:            #f5f5f2;
-  --fg-2:          #c9cdcf;
-  --dim:           #949b9f;
-  --dimmer:        #9aa1a5;   /* 5.2:1 on --panel; was #83705d at 3.7:1 */
-
-  --accent:        #b8e63e;
-  --accent-hover:  #c9ef63;
-  --accent-2:      #a6d62b;
-  --accent-3:      #d2f27a;
-  --brick:         #8fc01f;
-  --accent-soft:   #232b14;
-  --accent-fg:     #171a1c;
-    --accent-ink:    #b8e63e;
-
-  --ok:            #a8d95e;
-  --warn:          #e8b45c;
-  --err:           #f2938a;
-  --info:          #74b6d8;
-
-  --shadow-sm: 0 1px 2px rgb(0 0 0 / .45);
-  --shadow-md: 0 2px 4px -1px rgb(0 0 0 / .4),
-               0 10px 20px -6px rgb(0 0 0 / .5);
-  --shadow-lg: 0 4px 10px -2px rgb(0 0 0 / .45),
-               0 22px 44px -12px rgb(0 0 0 / .6);
-  --shadow-heat: 0 2px 6px -1px rgb(184 230 62 / .20),
-                   0 14px 28px -12px rgb(184 230 62 / .28);
-
-  --ring: 0 0 0 2px var(--panel), 0 0 0 4px var(--accent);
-  --ring-soft: 0 0 0 4px rgb(184 230 62 / .26);
-
-  color-scheme: dark;
 }
 
 
 /* ==========================================================================
    2b. Luxe theme — near-black and champagne gold
    --------------------------------------------------------------------------
-   A third choice, not a replacement: the toggle runs light → dark → luxe. The
-   room is the same, the material is not — near-black ground, warm white text,
-   and one restrained champagne gold instead of the lime.
+   One of the two themes the toggle runs: light → luxe, white and gold then
+   black and gold. It began as a third choice beside a lime dark theme; that
+   theme has gone and this is what dark means here now.
 
    The discipline this theme lives or dies by is how little gold is on screen.
    Gold is roughly 5–10% of the interface: the thing you press, the price, a
@@ -260,7 +270,7 @@
    money and starts reading as a novelty skin, which is the one mistake this
    palette invites.
 
-   Unlike the lime, the gold is light enough to carry text — 9.3:1 on a card —
+   Unlike the light theme, this ground lets the gold carry text — 9.3:1 on a card —
    so --accent-ink is the gold itself and --accent-fg is the near-black that
    sits on top of it. The gradients and the brick texture are built from these
    same tokens upstream, so they follow without being restated here.
@@ -321,6 +331,7 @@
      the "gold everywhere" this palette is trying to avoid. */
   --shadow-heat: 0 2px 6px -1px rgb(201 178 124 / .18),
                  0 14px 28px -12px rgb(201 178 124 / .26);
+  --glow-gig:  0 1px 3px -1px rgb(201 178 124 / .35);
 
   --ring: 0 0 0 2px var(--panel), 0 0 0 4px var(--accent);
   --ring-soft: 0 0 0 4px rgb(201 178 124 / .26);
@@ -330,18 +341,11 @@
 
 /* The prices, in gold. Money is the thing a marketplace is actually about, and
    in this theme it is the one piece of running text allowed to be the accent —
-   which is only legible because this accent, unlike the lime, clears 9:1. */
+   which is only legible because on this ground the gold clears 9:1. */
 :root[data-theme="luxe"] .pay,
 :root[data-theme="luxe"] .feed-headline .pay,
 :root[data-theme="luxe"] .job-row .pay {
   color: var(--accent-ink);
-}
-
-/* The gig badge carries a hard-coded orange glow from the lime themes, which
-   under a gold badge reads as a smudge rather than a light. Gold, faint, and
-   only because this badge is one of the few things meant to catch the eye. */
-:root[data-theme="luxe"] .badge.gig {
-  box-shadow: 0 1px 3px -1px rgb(201 178 124 / .35);
 }
 
 /* --- more gold, spent on edges rather than on fills -----------------------
@@ -413,6 +417,133 @@
    it is the detail that reads as expensive. */
 :root[data-theme="luxe"] .pic {
   border-color: color-mix(in srgb, var(--accent) 38%, var(--line-strong));
+}
+
+
+/* --- the same gold, spent on the white theme --------------------------------
+
+   Everything above is keyed to luxe. This is the light theme's share of it,
+   and it exists because a white page carrying gold on the buttons alone reads
+   as a grey page with one yellow control on it — the material never arrives.
+   The rule the luxe section lives by holds here too: gold on edges, figures
+   and the mark, never as a fill behind text.
+
+   One difference, and it decides every value below. On near-black the gold
+   itself is the ink at 9:1; on white it measures 1.9:1 and cannot be text at
+   all, so anything that *is* a word uses --accent-ink, the bronze of the same
+   hue at 7:1. Borders and rims take the gold straight, because nothing has to
+   be read off them.
+
+   `:not([data-theme="luxe"])` rather than `[data-theme="light"]`: the light
+   palette is also what a browser gets before the toggle has written anything,
+   and a flourish that waits for an attribute would be missing for that first
+   paint.
+   ========================================================================== */
+
+/* Money, in bronze. The one piece of running text allowed to carry the accent,
+   for the same reason it is allowed to in luxe: a marketplace is about what
+   the day pays, and the eye should find that figure first. */
+:root:not([data-theme="luxe"]) .pay,
+:root:not([data-theme="luxe"]) .feed-headline .pay,
+:root:not([data-theme="luxe"]) .job-row .pay {
+  color: var(--accent-ink);
+}
+
+/* The numbers a person is judged on join the prices. "New" is not a figure. */
+:root:not([data-theme="luxe"]) .stat .v { color: var(--accent-ink); }
+:root:not([data-theme="luxe"]) .stat .v.new { color: var(--dim); }
+
+/* Raised surfaces take a warm rim. Mixed into the line rather than set, so it
+   stays a tint on the edge and never becomes a gold box on white. */
+:root:not([data-theme="luxe"]) .card,
+:root:not([data-theme="luxe"]) .stat-row {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+}
+:root:not([data-theme="luxe"]) .hero {
+  border-color: color-mix(in srgb, var(--accent) 62%, var(--line));
+  box-shadow: var(--shadow-md), inset 0 1px 0 rgb(255 255 255 / .6);
+}
+
+/* A gold rim on every face. On a page full of avatars it is the cheapest
+   detail that reads as considered. */
+:root:not([data-theme="luxe"]) .pic {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line-strong));
+}
+
+/* Section rules start gold under the heading and fade across the page, so the
+   line reads as light falling on the left of it rather than as an underscore.
+   border-bottom-color carries the tint as the fallback, never transparent. */
+:root:not([data-theme="luxe"]) .section-head {
+  border-bottom-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+  border-image: linear-gradient(90deg,
+    var(--brick) 0%,
+    color-mix(in srgb, var(--accent) 70%, transparent) 30%,
+    color-mix(in srgb, var(--accent) 22%, transparent) 62%,
+    transparent 88%) 1;
+}
+
+/* The hairlines *between* stat cells. They are not borders — the row is a grid
+   with a 1px gap and its own background showing through, which is how the app
+   gets one line where two cells meet instead of two. So the divider colour is
+   this background, and tinting it is what puts gold between the figures. */
+:root:not([data-theme="luxe"]) .stat-row {
+  background: color-mix(in srgb, var(--accent) 45%, var(--line));
+}
+
+/* The current tab. It already sat on a wash of the accent; the label joins it,
+   so "where am I" is answered in the colour the rest of the page uses for
+   things that matter rather than in the same grey as its neighbours. */
+:root:not([data-theme="luxe"]) .nav-link.on { color: var(--accent-ink); }
+
+/* Outline buttons take the accent on their edge rather than a neutral. They
+   are the second choice on the page and stay unfilled — the edge is what makes
+   them look chosen deliberately rather than left over. */
+:root:not([data-theme="luxe"]) .btn.secondary {
+  border-color: color-mix(in srgb, var(--accent) 52%, var(--line-strong));
+}
+:root:not([data-theme="luxe"]) .btn.secondary:hover {
+  border-color: var(--accent-ink);
+  color: var(--accent-ink);
+}
+
+/* Badges keep their shape and gain a warm edge. Not the filled gig badge —
+   that one is already the accent and does not need outlining as well. */
+:root:not([data-theme="luxe"]) .badge:not(.gig):not(.ok):not(.state) {
+  border-color: color-mix(in srgb, var(--accent) 42%, var(--line-strong));
+}
+
+/* Trade pills, the row of them under a name. Same reasoning as the badges. */
+:root:not([data-theme="luxe"]) .pill {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line-strong));
+}
+
+/* Quiet notes are set off by a left rule; in gold it reads as an aside that
+   belongs to the page rather than as a leftover border. */
+:root:not([data-theme="luxe"]) .note {
+  border-left-color: color-mix(in srgb, var(--accent) 60%, var(--line-strong));
+}
+
+/* The name in gold leaf, as in luxe — but built from the dark end of the
+   scale. Luxe's gradient opens on --accent-3, which is the palest step and
+   invisible on white; this one runs bronze → gold → bronze so every stop is
+   a colour a word survives being made of.
+
+   Fallback colour first and transparent only behind @supports: a browser that
+   cannot clip a background to text would otherwise leave a hole where the
+   business name goes. */
+:root:not([data-theme="luxe"]) .brand-word {
+  color: var(--accent-ink);
+  background: linear-gradient(135deg,
+    var(--accent-ink) 0%, var(--brick) 26%, var(--accent-hover) 52%,
+    var(--brick) 74%, var(--accent-ink) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+@supports (-webkit-background-clip: text) or (background-clip: text) {
+  :root:not([data-theme="luxe"]) .brand-word { color: transparent; }
+}
+@media (forced-colors: active) {
+  :root:not([data-theme="luxe"]) .brand-word { color: CanvasText; background: none; }
 }
 
 
@@ -499,8 +630,18 @@ a:hover { color: var(--accent-hover); text-decoration: underline; }
 
 hr {
   border: 0;
-  border-top: 1px solid var(--line);
-  margin: 20px 0;
+  /* Not a flat grey line. The rule starts at the accent and fades out across
+     the page, so it reads as light falling along an edge — the same figure
+     the section headings use, so every horizontal division in the app is
+     visibly the same idea. The solid colour underneath is the fallback for a
+     browser that skips border-image, and it is a real colour, never
+     transparent. */
+  border-top: 1px solid var(--line-strong);
+  border-image: linear-gradient(90deg,
+    color-mix(in srgb, var(--accent) 78%, transparent) 0%,
+    color-mix(in srgb, var(--accent) 30%, transparent) 45%,
+    transparent 90%) 1;
+  margin: 22px 0;
 }
 
 ::selection { background: var(--accent); color: var(--accent-fg); }
@@ -688,7 +829,7 @@ header.top.is-scrolled {
   border-bottom-color: var(--line);
   box-shadow: 0 1px 3px rgb(74 34 12 / .07);
 }
-:root[data-theme="dark"] header.top.is-scrolled,
+:root[data-theme="luxe"] header.top.is-scrolled,
 :root:not([data-theme="light"]) header.top.is-scrolled {
   box-shadow: 0 1px 3px rgb(0 0 0 / .4);
 }
@@ -834,8 +975,8 @@ header.top .wrap {
 .icon-btn svg { width: 18px; height: 18px; }
 /* Sun in light, moon in dark — only one is ever drawn. */
 .icon-btn .i-moon { display: none; }
-:root[data-theme="dark"] .icon-btn .i-moon { display: block; }
-:root[data-theme="dark"] .icon-btn .i-sun  { display: none; }
+:root[data-theme="luxe"] .icon-btn .i-moon { display: block; }
+:root[data-theme="luxe"] .icon-btn .i-sun  { display: none; }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .icon-btn .i-moon { display: block; }
   :root:not([data-theme="light"]) .icon-btn .i-sun  { display: none; }
@@ -1172,7 +1313,7 @@ input[type=datetime-local]::-webkit-calendar-picker-indicator {
   transition: opacity var(--t-fast) var(--ease);
 }
 input[type=date]:hover::-webkit-calendar-picker-indicator { opacity: 1; }
-:root[data-theme="dark"] input::-webkit-calendar-picker-indicator { filter: invert(1); }
+:root[data-theme="luxe"] input::-webkit-calendar-picker-indicator { filter: invert(1); }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) input::-webkit-calendar-picker-indicator { filter: invert(1); }
 }
@@ -1191,7 +1332,7 @@ select {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5l5-5' fill='none' stroke='%237d6a57' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   cursor: pointer;
 }
-:root[data-theme="dark"] select {
+:root[data-theme="luxe"] select {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5l5-5' fill='none' stroke='%23a3907c' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 @media (prefers-color-scheme: dark) {
@@ -1376,6 +1517,68 @@ ul.checks input { width: 18px; height: 18px; flex: none; accent-color: var(--acc
   box-shadow: var(--ring-soft);
   font-weight: 580;
 }
+
+/* A row that cannot be picked — the worker is already booked on days this job
+   needs. Legible, not hidden: the reader has to be able to read which job it
+   is and why it is out, so the text keeps its contrast and only the row
+   recedes. Greying the words themselves would make the reason unreadable,
+   which is the one thing on this row worth reading. */
+.radio-group label.is-taken {
+  background: var(--panel-2);
+  border-style: dashed;
+  cursor: not-allowed;
+}
+.radio-group label.is-taken:hover {
+  border-color: var(--line-strong);
+  background: var(--panel-2);
+}
+.radio-group label.is-taken input { cursor: not-allowed; }
+.taken-why { color: var(--warn); font-weight: 620; }
+
+/* The read-only month on a worker's profile. Deliberately not the picker's
+   calendar: that one is an input with forty buttons in it, and this is a
+   statement — a table of days, which is what a screen reader should hear. */
+.mini-cal {
+  border-collapse: collapse;
+  margin: 10px 0 4px;
+  font-size: 13.5px;
+  font-variant-numeric: tabular-nums;
+}
+.mini-cal caption {
+  padding-bottom: 6px;
+  color: var(--dim);
+  font-weight: 620;
+  text-align: left;
+}
+.mini-cal th {
+  padding: 2px 0 6px;
+  color: var(--dim);
+  font-size: 11.5px;
+  font-weight: 620;
+}
+.mini-cal td {
+  width: 32px;
+  height: 30px;
+  padding: 0;
+  color: var(--fg-2);
+  text-align: center;
+}
+.mini-cal td.pad { color: transparent; }
+/* Booked days are filled, not outlined: the whole point of the month is that
+   the taken days read as a shape at a glance and the free ones as the gaps
+   between them. */
+.mini-cal td.booked span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--r-full);
+  background: var(--accent);
+  color: var(--accent-fg);
+  font-weight: 680;
+}
+.mini-cal td.today { font-weight: 700; text-decoration: underline; }
 
 /* A radio whose answer is a whole post rather than a word — picking which of
    your open jobs to send somebody. The row keeps everything above: the target
@@ -1611,6 +1814,16 @@ ul.checks input { width: 18px; height: 18px; flex: none; accent-color: var(--acc
 .datecal-day:hover:not(:disabled) { background: var(--panel-2); }
 .datecal-day:focus-visible { outline: none; box-shadow: var(--ring); }
 .datecal-day:disabled { color: var(--dimmer); cursor: default; }
+/* Not merely unavailable — spoken for. A day before today is simply past and
+   fades out; a day the worker has sold is a fact about them, so it is struck
+   through rather than dimmed away, and stays legible enough to be read as an
+   answer instead of as a rendering fault. */
+.datecal-day.taken {
+  color: var(--dim);
+  background: var(--panel-2);
+  text-decoration: line-through;
+  cursor: not-allowed;
+}
 .datecal-day.today { border-color: var(--line-strong); font-weight: 700; }
 .datecal-day.on {
   background: var(--accent);
@@ -1930,7 +2143,7 @@ a.job-row:hover .stat-row.compact .stat {
   background: var(--accent);
   background-image: var(--heat);
   color: var(--accent-fg);
-  box-shadow: 0 1px 3px -1px rgb(191 68 19 / .5);
+  box-shadow: var(--glow-gig);
 }
 .badge.state {
   border-color: color-mix(in srgb, var(--warn) 36%, var(--line));
@@ -2379,7 +2592,10 @@ a.job-row.pick:hover .card::after {
   justify-content: space-between;
   gap: 12px;
   padding-bottom: 9px;
-  border-bottom: 1px solid var(--line);
+  /* 2px, because this is the strongest division on a page — everything under
+     it belongs to the heading above it. At 1px in a near-panel grey it was
+     doing neither job: too faint to divide, too present to be nothing. */
+  border-bottom: 2px solid var(--line-strong);
 }
 .section-head h2 {
   margin: 0;

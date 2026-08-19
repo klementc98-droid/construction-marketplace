@@ -39,15 +39,18 @@
 
   var THEME_KEY = "crew-theme";
 
-  /* Three themes, cycled in this order by the one button. Luxe is near-black
-     and gold and is a deliberate choice rather than an OS-derived one, so it
-     is never what an untouched toggle resolves to — only a press reaches it. */
-  var THEMES = ["light", "dark", "luxe"];
+  /* Two themes, cycled by the one button: white and gold, black and gold. The
+     lime dark theme that used to sit between them has gone — it was the last
+     green in the app once the light theme moved to gold, and a second dark
+     theme earning its place on paint alone is not a choice worth making
+     somebody press through. Luxe is now what dark means here, which is also
+     why it is what an untouched toggle resolves to on an OS set to dark. */
+  var THEMES = ["light", "luxe"];
 
   /* Which browser colour-scheme each one is. Luxe is a dark theme wearing
      different paint; telling the browser "luxe" would mean telling it nothing
      and form controls would come back white. */
-  var SCHEME = { light: "light", dark: "dark", luxe: "dark" };
+  var SCHEME = { light: "light", luxe: "dark" };
 
   function storedTheme() {
     try { return localStorage.getItem(THEME_KEY); } catch (e) { return null; }
@@ -55,9 +58,14 @@
 
   function activeTheme() {
     var chosen = root.getAttribute("data-theme");
+    /* "dark" is a value this app no longer has, and it is still sitting in the
+       localStorage of everyone who pressed the button before it went. Read as
+       luxe rather than ignored, so their next press moves them on by one
+       instead of appearing to do nothing. */
+    if (chosen === "dark") return "luxe";
     if (chosen) return chosen;
     return window.matchMedia &&
-      window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      window.matchMedia("(prefers-color-scheme: dark)").matches ? "luxe" : "light";
   }
 
   /* `persist` is deliberately opt-in. The inline bootstrap sets data-theme on
@@ -422,6 +430,14 @@
          and the panel closes on the pick. */
       var one = input.hasAttribute("data-date-one");
 
+      /* Days this worker has already sold. Refused by the calendar so nobody
+         fills in a whole offer for a day that cannot be accepted — the form
+         checks them again on submit, because a disabled cell is a courtesy
+         and the rule lives on the server. */
+      var taken = (input.getAttribute("data-date-taken") || "")
+        .split(",")
+        .filter(function (value) { return value; });
+
       var words = {};
       try {
         words = JSON.parse(input.getAttribute("data-date-list-i18n") || "{}");
@@ -596,6 +612,11 @@
 
           if (floor && value < floor) {
             cell.disabled = true;
+          } else if (taken.indexOf(value) !== -1) {
+            cell.disabled = true;
+            cell.classList.add("taken");
+            cell.title = word("taken", "Already booked");
+            cell.setAttribute("aria-label", word("taken", "Already booked"));
           } else {
             var isOn = chosen.indexOf(value) !== -1;
             cell.setAttribute("aria-pressed", isOn ? "true" : "false");
