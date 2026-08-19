@@ -500,7 +500,9 @@ class PayoutViewTests(EscrowTestCase):
         self.client.force_login(outsider)
 
         response = self.client.get(reverse("payments:escrow", args=[job.pk]))
-        self.assertRedirects(response, reverse("jobs:detail", args=[job.pk]))
+        # The board: the job itself is no longer readable by an outsider
+        # either, so redirecting there would be a second refusal.
+        self.assertRedirects(response, reverse("jobs:list"))
 
     def test_the_worker_on_the_job_can_see_its_money_view(self):
         self.ready_account()

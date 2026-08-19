@@ -296,7 +296,11 @@
     </div>
   {% endif %}
 
-  {% if job.assigned_worker %}
+  {% comment %} Only the pair. A worker who applied and lost can still open the post
+     they applied to — their own list links to it — but who got it instead is
+     between the client and the person they booked.
+  {% endcomment %}
+  {% if job.assigned_worker and is_a_party %}
     <h2>{% translate "Assigned to" %}</h2>
     <div class="card">
       {% if job.is_finished %}

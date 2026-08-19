@@ -423,7 +423,10 @@ class WorkspaceViewTests(WorkTestCase):
         ClientProfile.objects.create(user=outsider, region=self.region)
         self.client.force_login(outsider)
         response = self.client.get(reverse("worklog:workspace", args=[job.pk]))
-        self.assertRedirects(response, reverse("jobs:detail", args=[job.pk]))
+        # The board, not the job. A booked job is only readable by the two
+        # people it is between, so sending an outsider there would answer one
+        # refusal with a second.
+        self.assertRedirects(response, reverse("jobs:list"))
 
     def test_the_worker_sees_the_check_in_action(self):
         job = self.make_job()

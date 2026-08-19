@@ -71,7 +71,10 @@ def workspace(request, pk: int):
     worker, is_worker, is_client = _roles(request, job)
     if not (is_worker or is_client):
         flash.error(request, "That job isn't yours.")
-        return redirect("jobs:detail", pk=job.pk)
+        # The board, not the job: a taken job is only readable by the two
+        # people it is between, so sending a stranger to it answers one
+        # refusal with a second.
+        return redirect("jobs:list")
 
     actor = Actor.WORKER if is_worker else Actor.CLIENT
     completion = getattr(job, "completion", None)

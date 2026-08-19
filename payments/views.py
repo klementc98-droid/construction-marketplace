@@ -124,7 +124,10 @@ def escrow_detail(request, pk: int):
     is_worker = worker is not None and job.assigned_worker_id == worker.pk
     if not (is_client or is_worker):
         flash.error(request, "That job isn't yours.")
-        return redirect("jobs:detail", pk=job.pk)
+        # The board, not the job. A job with somebody on it is readable only by
+        # the two people it is between, so sending an outsider to it would
+        # answer one refusal with a 404.
+        return redirect("jobs:list")
 
     escrow = EscrowPayment.objects.filter(job=job).first()
     return render(

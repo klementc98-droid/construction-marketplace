@@ -771,6 +771,89 @@ class DoubleBookingTests(JobFactoryMixin, TestCase):
         )
 
 
+class BookedJobIsPrivateTests(JobFactoryMixin, TestCase):
+    """A taken job is an arrangement, not an advertisement.
+
+    It stayed world-readable at its own URL after somebody got it, so anybody
+    holding the link could read a booking they had nothing to do with — the
+    worker's name, the price, the days and the site. Nobody browses to it: it
+    is off the board and out of search the moment it is taken. It leaks by
+    being pasted, which is the case a state-blind check cannot catch.
+    """
+
+    def setUp(self):
+        self.job = self.gig(
+            state=JobState.ACCEPTED, assigned_worker=self.worker_profile
+        )
+        self.stranger = make_user("stranger@example.com")
+        self.stranger_worker = WorkerProfile.objects.create(
+            user=self.stranger, region=self.region
+        )
+
+    def open_it(self):
+        return self.client.get(reverse("jobs:detail", args=[self.job.pk]))
+
+    def test_a_stranger_with_the_link_gets_nothing(self):
+        self.client.force_login(self.stranger)
+        self.assertEqual(self.open_it().status_code, 404)
+
+    def test_a_signed_out_visitor_gets_nothing_either(self):
+        self.assertEqual(self.open_it().status_code, 404)
+
+    def test_the_client_still_sees_their_own_job(self):
+        self.client.force_login(self.client_user)
+        self.assertEqual(self.open_it().status_code, 200)
+
+    def test_the_worker_doing_it_still_sees_it(self):
+        self.client.force_login(self.worker_user)
+        self.assertEqual(self.open_it().status_code, 200)
+
+    def test_somebody_who_applied_keeps_their_own_history(self):
+        """Their list links to it; a 404 from your own list is not privacy."""
+        Application.objects.create(job=self.job, worker=self.stranger_worker)
+        self.client.force_login(self.stranger)
+        self.assertEqual(self.open_it().status_code, 200)
+
+    def name_the_worker(self):
+        """A name nothing else on the page could contain.
+
+        str(user) falls back to the email's local part, and "worker" appears
+        nine times in an unrelated page — the assertion has to be about the
+        person, not about a common word.
+        """
+        self.worker_user.full_name = "Aristotelis Vlachopoulos"
+        self.worker_user.save(update_fields=["full_name"])
+        return self.worker_user.full_name
+
+    def test_but_they_do_not_learn_who_got_it(self):
+        name = self.name_the_worker()
+        Application.objects.create(job=self.job, worker=self.stranger_worker)
+        self.client.force_login(self.stranger)
+        self.assertNotContains(self.open_it(), name)
+
+    def test_the_pair_do_see_who_it_went_to(self):
+        name = self.name_the_worker()
+        self.client.force_login(self.client_user)
+        self.assertContains(self.open_it(), name)
+
+    def test_an_open_post_is_still_public(self):
+        """The board is browsable signed out, and that is the point."""
+        open_job = self.gig()
+        self.assertEqual(
+            self.client.get(reverse("jobs:detail", args=[open_job.pk])).status_code,
+            200,
+        )
+
+    def test_a_dead_post_with_nobody_on_it_stays_readable(self):
+        """Expired or called off with no worker is a dead advertisement, not
+        an arrangement — it was public while it stood and holds nothing to
+        protect, so an old link to one still opens."""
+        dead = self.gig(state=JobState.EXPIRED)
+        self.assertEqual(
+            self.client.get(reverse("jobs:detail", args=[dead.pk])).status_code, 200
+        )
+
+
 class OfferPageLinksTests(JobFactoryMixin, TestCase):
     """The links on an offer a worker is looking at have to point at the job."""
 

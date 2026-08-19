@@ -236,6 +236,11 @@ def job_detail(request, pk: int):
             ),
             # Decided here because a template cannot pass the viewer to a
             # method, and the answer depends on who is looking.
+            # Who the work went to is between the two of them. Anyone else who
+            # can open this page — somebody who applied and was passed over,
+            # somebody who declined an offer — reads the job without reading
+            # the name of whoever ended up with it.
+            "is_a_party": job.parties_only(request.user),
             "can_review": job.can_be_reviewed_by(request.user),
             "my_review": job.review_from(request.user),
             # Which booking this day belongs to, if it belongs to one. Both
@@ -429,6 +434,19 @@ def job_cancel(request, pk: int):
 # ---------------------------------------------------------------------------
 
 
+def _back_to(request, job):
+    """The job page if they can still see it, the board if they cannot.
+
+    A refusal that redirects to the thing being refused used to be harmless:
+    every public post was readable by everyone. Now that a taken job is only
+    open to the people it is between, sending a stranger there answers "you
+    can't apply" with a 404 — technically the truth and useless as an answer.
+    """
+    if job.is_visible_to(request.user):
+        return redirect("jobs:detail", pk=job.pk)
+    return redirect("jobs:list")
+
+
 @login_required
 def job_apply(request, pk: int):
     job = get_object_or_404(Job.objects.select_related("trade"), pk=pk)
@@ -444,7 +462,7 @@ def job_apply(request, pk: int):
         raise Http404("No job matches the given query.")
     if not job.is_open:
         messages.error(request, "This job is no longer taking applications.")
-        return redirect("jobs:detail", pk=job.pk)
+        return _back_to(request, job)
 
     existing = job.application_from(worker)
     if request.method == "POST":
@@ -1326,12 +1344,25 @@ def _post_counter_to_thread(counter, *, job, worker, sender):
     """
     from messaging.models import Conversation, Message
 
+    # Every field on a counter is nullable, and a null means "unchanged" — not
+    # "empty". A worker who accepts the day and the hours and asks only for
+    # more money leaves the date null, and formatting that null crashed the
+    # whole submission: the counter was written, the thread message raised, and
+    # the reader saw a 500 for an offer that had in fact gone through.
+    #
+    # So each term falls back to the job's own, which is what the null says.
+    # The message then describes the arrangement being proposed rather than
+    # the half of it that was typed.
+    #
     # Django's own formatters, so a figure in a message reads the way the same
     # figure reads on the page it came from. date_format's "D j M" is also the
     # portable choice — strftime's unpadded "%-d" raises on Windows.
-    when = date_format(counter.gig_date, "D j M")
-    hours = floatformat(counter.gig_hours, "-2")
-    pay = f"{rules.CURRENCY_SYMBOL}{counter.fixed_pay:,.2f}"
+    when = date_format(counter.gig_date or job.gig_date, "D j M")
+    hours = floatformat(
+        counter.gig_hours if counter.gig_hours is not None else job.gig_hours, "-2"
+    )
+    amount = counter.fixed_pay if counter.fixed_pay is not None else job.fixed_pay
+    pay = f"{rules.CURRENCY_SYMBOL}{amount:,.2f}"
 
     # use_escrow is nullable: a counter that only moves the money says nothing
     # about how it is handled, and inventing an answer here would put words in

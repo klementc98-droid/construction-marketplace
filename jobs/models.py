@@ -737,21 +737,71 @@ class Job(TimestampedModel):
     def is_visible_to(self, user) -> bool:
         """May this person see the post at all?
 
-        Only ever restrictive for direct offers. A public post is public — the
-        board is browsable signed out, and that is the point of a marketplace.
+        A public post that is still open is public — the board is browsable
+        signed out and that is the point of a marketplace. Two things narrow
+        it, and they are different questions.
+
+        **Private posts** are written for one named worker and were never on
+        the board.
+
+        **Taken posts** were, and stopped being. Once somebody has the work it
+        is no longer an advertisement, it is an arrangement between two people
+        — who is doing it, for how much, on which days, and where. It stayed
+        world-readable at that URL, so anybody holding the link could read a
+        booking they had nothing to do with, complete with the worker's name.
+        Nobody browses to it: it is off the board, off the feed and out of
+        search the moment it is taken. It leaks by being pasted, which is
+        exactly the case a state-blind check cannot catch.
+
+        The test is "has somebody got this", not "is it still open". A post
+        that expired or was called off with nobody on it is a dead
+        advertisement, not an arrangement — it was public while it stood and
+        there is nothing in it to protect, so an old link to one still opens.
+
+        People who *were* part of it keep their access. A worker who applied,
+        or who was offered it and said no, has the job in their own lists and
+        would otherwise get a 404 from their own history — see the assigned-to
+        block in the template for what they still do not get to see.
         """
-        if not self.is_private:
-            return True
+        arranged = (
+            self.is_private
+            or self.assigned_worker_id is not None
+            or self.is_finished
+        )
+        if arranged:
+            if not getattr(user, "is_authenticated", False):
+                return False
+            if self.client.user_id == user.pk:
+                return True
+            worker = getattr(user, "worker_profile", None)
+            if worker is None:
+                return False
+            if self.assigned_worker_id == worker.pk:
+                return True
+            # Any offer or application, not just a live one: somebody who
+            # declined should still be able to open the thing they declined,
+            # and somebody passed over should still reach what they applied to.
+            return (
+                self.offers.filter(worker=worker).exists()
+                or self.applications.filter(worker=worker).exists()
+            )
+        return True
+
+    def parties_only(self, user) -> bool:
+        """Is this one of the two people the job is actually between?
+
+        Narrower than :meth:`is_visible_to`, which lets everyone who was ever
+        involved read the page. Who ended up with the work is between the pair
+        who agreed it — a rival applicant reading "assigned to X" off a job
+        they lost is a different disclosure from being able to find the post
+        they applied to.
+        """
         if not getattr(user, "is_authenticated", False):
             return False
         if self.client.user_id == user.pk:
             return True
         worker = getattr(user, "worker_profile", None)
-        if worker is None:
-            return False
-        # Any offer, not just the pending one: a worker who declined should
-        # still be able to open the thing they declined.
-        return self.offers.filter(worker=worker).exists()
+        return worker is not None and self.assigned_worker_id == worker.pk
 
 
 class OfferStatus(models.TextChoices):

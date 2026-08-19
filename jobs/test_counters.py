@@ -729,6 +729,46 @@ class PublicBoardTests(CounterFixture):
         self.assertEqual(self.job.counters.count(), 0)
 
 
+class PartialCounterTests(CounterFixture):
+    """A counter names only what it wants changed, and the rest is null.
+
+    Null means "unchanged", not "empty" — and the message that announces a
+    counter in the thread formatted those nulls straight. A worker who accepted
+    the day and the hours and asked only for more money left the date blank and
+    got a 500 for a counter that had in fact been written.
+    """
+
+    def test_a_counter_that_leaves_the_date_alone_goes_through(self):
+        self.as_worker()
+        response = self.post_counter(gig_date="")
+
+        self.assertEqual(response.status_code, 302)
+        counter = Counter.objects.get(job=self.job)
+        self.assertIsNone(counter.gig_date)
+
+    def test_and_the_thread_message_falls_back_to_the_job(self):
+        from django.utils.formats import date_format
+        from messaging.models import Message
+
+        self.as_worker()
+        self.post_counter(gig_date="")
+
+        body = Message.objects.latest("created_at").body
+        # The job's own day, since the counter did not move it.
+        self.assertIn(date_format(self.job.gig_date, "D j M"), body)
+
+    def test_a_counter_about_the_money_alone_still_reads_whole(self):
+        """Nothing but the price, so date and hours both fall back."""
+        self.as_worker()
+        self.post_counter(gig_date="", gig_hours="", fixed_pay="300")
+
+        from messaging.models import Message
+
+        body = Message.objects.latest("created_at").body
+        self.assertIn("300", body)
+        self.assertIn("8", body)
+
+
 class CounterFormTests(CounterFixture):
     def test_a_counter_that_changes_nothing_is_rejected(self):
         """It would offer the other side terms they had already been given."""
