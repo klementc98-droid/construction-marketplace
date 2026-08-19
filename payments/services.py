@@ -8,6 +8,7 @@ dispute must move exactly the same money in exactly the same way.
 
 from __future__ import annotations
 
+import logging
 from decimal import Decimal
 
 from django.db import IntegrityError, transaction
@@ -22,6 +23,9 @@ from jobs.models import Job, JobType
 
 from . import gateway
 from .models import EscrowPayment, EscrowStatus, StripeAccount
+
+
+logger = logging.getLogger(__name__)
 
 
 class EscrowError(RuntimeError):
@@ -283,7 +287,41 @@ def mark_authorized(escrow: EscrowPayment, payment_intent_id: str) -> EscrowPaym
     escrow.status = EscrowStatus.AUTHORIZED
     escrow.authorized_at = authorized_at
 
-    claim(Job, job.pk, expect=job.state, to=JobState.ESCROW_HELD)
+    # Checked, unlike before — but not reordered, and the difference from
+    # release is worth being exact about. There, claiming the job first means a
+    # lost race costs nothing because Stripe has not been called yet. Here the
+    # hold already exists: this function runs *because* Stripe said so. There
+    # is no ordering that makes the money go away.
+    #
+    # So the two failures are told apart. The record of the hold is kept
+    # whatever happens — an authorisation on a real card with nothing in this
+    # database pointing at it is the one outcome nobody can clean up. What is
+    # not done is pretend the job is funded when it is no longer the job we
+    # read: ``expire_stale_gigs`` moves ACCEPTED gigs whose day has passed, and
+    # a client funding one as the hourly sweep runs is exactly this collision.
+    if not claim(Job, job.pk, expect=job.state, to=JobState.ESCROW_HELD):
+        job.refresh_from_db()
+        divergence = (
+            f"Hold recorded, but the job had moved to {job.state} and was not "
+            f"marked funded. The authorisation is live and needs a decision."
+        )
+        EscrowPayment.objects.filter(pk=escrow.pk).update(
+            last_error=divergence[:500], updated_at=timezone.now()
+        )
+        escrow.last_error = divergence
+        # Loud, because nothing else will notice: no state is wrong enough for
+        # a constraint to catch, and both rows are individually plausible.
+        logger.error(
+            "escrow %s authorized on job %s in state %s — not marked funded",
+            escrow.pk,
+            job.pk,
+            job.state,
+        )
+        # And no "the money is held" email. On a job that has expired or been
+        # called off that sentence is worse than silence: it is an invitation
+        # to turn up.
+        return escrow
+
     job.state = JobState.ESCROW_HELD
 
     # The one an escrow worker most needs. ACCEPTED and ESCROW_HELD are
@@ -340,6 +378,27 @@ def release(
     # @transaction.atomic puts the status back to AUTHORIZED and the next run
     # tries again.
     released_at = timezone.now()
+
+    # The job is claimed first, and its result is checked. Both halves of that
+    # sentence were missing, and the second one is the bug.
+    #
+    # Two rows have to agree here, and only one of them was being decided
+    # honestly. The escrow was claimed with a conditional UPDATE; the job was
+    # moved with one whose answer was thrown away. So a client approving in the
+    # same second as somebody raising a dispute could leave the money captured,
+    # the escrow RELEASED, and the job sitting in DISPUTED — a dispute that can
+    # never be honoured, because what it is disputing has already been paid.
+    #
+    # Claiming the job first is what makes losing that race cost nothing:
+    # nothing external has happened yet, so the answer is simply "somebody
+    # moved this, stop". Doing it after the capture would mean discovering the
+    # collision with the money already gone.
+    if not claim(Job, job.pk, expect=job.state, to=JobState.PAID_OUT):
+        raise EscrowError(
+            "This job moved while the payment was being released — nothing has "
+            "been captured. Open it and see where it stands before trying again."
+        )
+
     if not claim(
         EscrowPayment,
         escrow.pk,
@@ -358,7 +417,7 @@ def release(
     escrow.released_at = released_at
     escrow.save(update_fields=["captured_amount", "updated_at"])
 
-    claim(Job, job.pk, expect=job.state, to=JobState.PAID_OUT)
+    # Already claimed above; this only brings the instance in hand up to date.
     job.state = JobState.PAID_OUT
 
     notify(
@@ -395,6 +454,17 @@ def refund(escrow: EscrowPayment, *, actor: str) -> EscrowPayment:
     # resolving the same dispute is rarer than a cron meeting a click, but it
     # cancels the same intent twice and reads exactly as badly.
     refunded_at = timezone.now()
+
+    # The job first and checked, for the reason given at length on release: two
+    # rows have to agree, and a claim whose answer is discarded decides
+    # nothing. Losing it here costs nothing at all, because the hold has not
+    # been cancelled yet.
+    if not claim(Job, job.pk, expect=job.state, to=JobState.REFUNDED):
+        raise EscrowError(
+            "This job moved while the payment was being returned — the hold is "
+            "untouched. Open it and see where it stands before trying again."
+        )
+
     if not claim(
         EscrowPayment,
         escrow.pk,
@@ -410,8 +480,6 @@ def refund(escrow: EscrowPayment, *, actor: str) -> EscrowPayment:
 
     escrow.status = EscrowStatus.REFUNDED
     escrow.refunded_at = refunded_at
-
-    claim(Job, job.pk, expect=job.state, to=JobState.REFUNDED)
     job.state = JobState.REFUNDED
     return escrow
 

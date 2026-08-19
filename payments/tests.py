@@ -486,6 +486,176 @@ class RefundTests(EscrowTestCase):
 
 
 @override_settings(STRIPE_SECRET_KEY="sk_test_x", STRIPE_WEBHOOK_SECRET="whsec_x")
+class TwoRowsMustAgreeTests(EscrowTestCase):
+    """The escrow and the job are two rows, and both claims decide something.
+
+    Only one of them was being decided. The escrow was claimed with a
+    conditional UPDATE and checked; the job was moved with one whose answer was
+    discarded — so when the job moved underneath, the code carried on as if it
+    had not. The states that produced are individually plausible and jointly
+    impossible, which is why nothing else would ever notice.
+
+    Each race here is staged the same way: the function is handed an instance
+    that says one thing while the database says another. That is precisely what
+    a concurrent write leaves behind, and unlike threads it happens the same
+    way every run.
+    """
+
+    def setUp(self):
+        self.ready_account()
+        self.job = self.make_gig(state=JobState.COMPLETED)
+        self.escrow = EscrowPayment.objects.create(
+            job=self.job,
+            worker=self.worker_profile,
+            amount=Decimal("90"),
+            platform_fee=Decimal("10.80"),
+            worker_payout=Decimal("79.20"),
+            status=EscrowStatus.AUTHORIZED,
+            payment_intent_id="pi_held",
+            authorized_at=timezone.now(),
+        )
+
+    def stale(self, job, *, reads_as, actually):
+        """A read taken before somebody else moved the row."""
+        Job.objects.filter(pk=job.pk).update(state=actually)
+        held = Job.objects.get(pk=job.pk)
+        held.state = reads_as
+        return held
+
+    def held_job(self, state=JobState.ACCEPTED):
+        """An escrow on a fresh job, for the authorising cases."""
+        return EscrowPayment.objects.create(
+            job=self.make_gig(state=state, days_ahead=1),
+            worker=self.worker_profile,
+            amount=Decimal("90"),
+            platform_fee=Decimal("10.80"),
+            worker_payout=Decimal("79.20"),
+        )
+
+    # -- releasing -------------------------------------------------------
+
+    @patch("payments.gateway.capture_payment_intent")
+    def test_a_dispute_landing_first_stops_the_release(self, capture):
+        """The case that used to capture money into a disputed job."""
+        held = self.stale(
+            self.job, reads_as=JobState.COMPLETED, actually=JobState.DISPUTED
+        )
+
+        with patch.object(Job.objects, "get", return_value=held):
+            with self.assertRaises(services.EscrowError):
+                services.release(self.escrow, actor=Actor.CLIENT)
+
+        capture.assert_not_called()
+        self.escrow.refresh_from_db()
+        self.job.refresh_from_db()
+        self.assertEqual(self.escrow.status, EscrowStatus.AUTHORIZED)
+        self.assertEqual(self.job.state, JobState.DISPUTED)
+
+    @patch("payments.gateway.capture_payment_intent")
+    def test_nothing_is_half_done_when_the_release_is_refused(self, capture):
+        """Both rows are as they were: the whole thing rolls back."""
+        held = self.stale(
+            self.job, reads_as=JobState.COMPLETED, actually=JobState.DISPUTED
+        )
+        with patch.object(Job.objects, "get", return_value=held):
+            with self.assertRaises(services.EscrowError):
+                services.release(self.escrow, actor=Actor.CLIENT)
+
+        self.escrow.refresh_from_db()
+        self.assertIsNone(self.escrow.released_at)
+        self.assertIsNone(self.escrow.captured_amount)
+
+    @patch("payments.gateway.capture_payment_intent")
+    def test_the_ordinary_release_still_moves_both_rows(self, capture):
+        capture.return_value = {"amount_received": Decimal("90.00")}
+
+        services.release(self.escrow, actor=Actor.CLIENT)
+
+        self.escrow.refresh_from_db()
+        self.job.refresh_from_db()
+        self.assertEqual(self.escrow.status, EscrowStatus.RELEASED)
+        self.assertEqual(self.job.state, JobState.PAID_OUT)
+
+    # -- refunding -------------------------------------------------------
+
+    @patch("payments.gateway.cancel_payment_intent")
+    def test_a_job_that_moved_stops_the_refund(self, cancel):
+        """Losing here costs nothing, because the hold is still untouched."""
+        held = self.stale(
+            self.job, reads_as=JobState.DISPUTED, actually=JobState.PAID_OUT
+        )
+
+        with patch.object(Job.objects, "get", return_value=held):
+            with self.assertRaises(services.EscrowError):
+                services.refund(self.escrow, actor=Actor.ADMIN)
+
+        cancel.assert_not_called()
+        self.escrow.refresh_from_db()
+        self.assertEqual(self.escrow.status, EscrowStatus.AUTHORIZED)
+
+    # -- authorising -----------------------------------------------------
+
+    def test_a_hold_is_recorded_even_when_the_job_moved_under_it(self):
+        """The money exists whatever the job says, so the record must too.
+
+        An authorisation on a real card with nothing in this database pointing
+        at it is the one outcome nobody can clean up afterwards.
+        """
+        escrow = self.held_job()
+        held = self.stale(
+            escrow.job, reads_as=JobState.ACCEPTED, actually=JobState.EXPIRED
+        )
+
+        with patch.object(Job.objects, "get", return_value=held):
+            services.mark_authorized(escrow, "pi_live")
+
+        escrow.refresh_from_db()
+        self.assertEqual(escrow.status, EscrowStatus.AUTHORIZED)
+        self.assertEqual(escrow.payment_intent_id, "pi_live")
+
+    def test_but_the_job_is_not_claimed_to_be_funded(self):
+        escrow = self.held_job()
+        held = self.stale(
+            escrow.job, reads_as=JobState.ACCEPTED, actually=JobState.EXPIRED
+        )
+
+        with patch.object(Job.objects, "get", return_value=held):
+            services.mark_authorized(escrow, "pi_live")
+
+        self.assertEqual(
+            Job.objects.get(pk=escrow.job_id).state, JobState.EXPIRED
+        )
+
+    def test_and_the_divergence_is_written_down(self):
+        """Nothing else will notice: both rows are individually plausible."""
+        escrow = self.held_job()
+        held = self.stale(
+            escrow.job, reads_as=JobState.ACCEPTED, actually=JobState.EXPIRED
+        )
+
+        with patch.object(Job.objects, "get", return_value=held):
+            with self.assertLogs("payments.services", level="ERROR"):
+                services.mark_authorized(escrow, "pi_live")
+
+        escrow.refresh_from_db()
+        self.assertIn("expired", escrow.last_error)
+
+    def test_no_money_is_held_email_on_a_job_that_moved(self):
+        """That sentence on an expired job is an invitation to turn up."""
+        from notifications.models import Notification
+
+        escrow = self.held_job()
+        held = self.stale(
+            escrow.job, reads_as=JobState.ACCEPTED, actually=JobState.EXPIRED
+        )
+
+        before = Notification.objects.count()
+        with patch.object(Job.objects, "get", return_value=held):
+            services.mark_authorized(escrow, "pi_live")
+
+        self.assertEqual(Notification.objects.count(), before)
+
+
 class ConnectAccountTests(EscrowTestCase):
     """Creating the worker's Stripe account, without leaving one behind.
 

@@ -194,6 +194,18 @@ together. A job's state and its money's state are the same fact, and modelling
 them separately is how you end up with a completed job holding an uncaptured
 authorisation.
 
+One machine, but still two rows — the job and the escrow — and they are kept in
+step by claiming each with a conditional UPDATE and *checking both answers*.
+That second half was missing, and the gap was exactly the size of the sentence
+above: a release could capture the money into a job somebody had just moved to
+disputed. The job is claimed first now, before the escrow and long before
+Stripe, so losing that race costs nothing.
+
+Stripe is a third system and no amount of this makes it transactional with the
+database. A capture that succeeds followed by a commit that fails leaves the
+two disagreeing, and the answer to that is reconciliation rather than a bigger
+transaction. It is not written yet.
+
 ---
 
 ## Tests
