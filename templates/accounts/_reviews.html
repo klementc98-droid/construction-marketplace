@@ -1,0 +1,45 @@
+{% comment %} What the other side said, on both kinds of profile.
+
+  A star average is a number nobody can argue with and nobody learns anything
+  from: 4.3 does not say whether the complaint was about the work or about a
+  van that turned up late. The comments are the part somebody deciding whether
+  to hire actually reads, and until now they were written, stored, and shown to
+  no one.
+
+  Shared by worker_detail and client_detail because a review reads the same
+  either way round — only the direction of the query differs, and that is the
+  view's business, not this file's.
+{% endcomment %}
+{% load account_extras i18n %}
+
+<h2>{% translate "Reviews" %} <span class="muted">({{ reviews|length }})</span></h2>
+
+{% if reviews %}
+  {% for review in reviews %}
+    <div class="card">
+      <p style="margin:0">
+        <strong>{{ review.rating|stars }}</strong>
+        <span class="muted">
+          — {{ review.author.short_name|default:review.author }},
+          {{ review.created_at|date:"j M Y" }}
+        </span>
+      </p>
+      {% if review.comment %}
+        <p style="margin:8px 0 0">{{ review.comment|linebreaksbr }}</p>
+      {% else %}
+        {% comment %} A score with no words is still a data point — see the Review
+           model. Saying so is better than a card that looks half-rendered. {% endcomment %}
+        <p class="muted" style="margin:8px 0 0">{% translate "No comment left." %}</p>
+      {% endif %}
+      <p class="muted" style="margin:8px 0 0">
+        <a href="{{ review.job.get_absolute_url }}">{{ review.job.title }}</a>
+      </p>
+    </div>
+  {% endfor %}
+{% else %}
+  <div class="card">
+    <p class="muted" style="margin:0">
+      {% translate "No reviews yet — they arrive once a job is finished and rated." %}
+    </p>
+  </div>
+{% endif %}

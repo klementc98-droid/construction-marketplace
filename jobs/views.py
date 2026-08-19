@@ -43,6 +43,13 @@ from .forms import (
     OfferResponseForm,
     WorkerFilterForm,
 )
+from .services import (
+    ReviewError,
+    booked_days_among,
+    clashing_dates,
+    describe_dates,
+    leave_review,
+)
 from .waiting import waiting_for
 from .models import (
     Application,
@@ -594,6 +601,21 @@ def application_select(request, pk: int):
     # once for all five days; being given Tuesday and left waiting on Wednesday
     # is not an answer to what they asked.
     days = _booking_days(job)
+
+    # And not if they are already spoken for on any of those days. Said here,
+    # by name and with the dates, rather than left to the constraint — "that
+    # job isn't available" would be a lie about which of the two things went
+    # wrong, and the client's next move (pick somebody else, or shift a day)
+    # depends on knowing which days are the problem.
+    clash = clashing_dates(application.worker, days)
+    if clash:
+        messages.error(
+            request,
+            _("%(who)s is already booked on %(days)s. Nothing has been changed.")
+            % {"who": application.worker.user, "days": describe_dates(clash)},
+        )
+        return redirect("jobs:applicants", pk=job.pk)
+
     now = timezone.now()
     sealed = []
     with transaction.atomic():
@@ -669,6 +691,25 @@ def _offerable_jobs(client):
     )
 
 
+def _mark_unofferable(worker, bookings):
+    """Tell each suggested booking which of its days this worker cannot take.
+
+    Answered here, once, off the days already collapsed onto the row, rather
+    than per row in the template — and it is the same question ``_seal`` asks
+    at the other end, so a booking that reads as blocked here is exactly the
+    one that would be refused there.
+
+    A worker with a pending *offer* on that day is not blocked: two clients may
+    both ask, and it is the answer that makes the second impossible. Only a day
+    they have actually said yes to counts.
+    """
+    for booking in bookings:
+        dates = getattr(booking, "group_dates", None) or [booking.gig_date]
+        booking.clash_dates = booked_days_among(worker, dates)
+        booking.clash_said = describe_dates(booking.clash_dates)
+    return bookings
+
+
 def _offer_existing(request, *, worker, offerable, bookings):
     """Send one of the client's existing posts, note and all.
 
@@ -707,6 +748,22 @@ def _offer_existing(request, *, worker, offerable, bookings):
     job = form.cleaned_data["job"]
     note = form.cleaned_data["note"]
     days = _booking_days(job)
+
+    # The row for this one is disabled on the page, so reaching here means the
+    # page was stale or the control was edited. Either way the answer is the
+    # same one the accept would give, said earlier and with the days named.
+    clash = clashing_dates(worker, days)
+    if clash:
+        form.add_error(
+            "job",
+            _("%(who)s is already booked on %(days)s.")
+            % {"who": worker.user, "days": describe_dates(clash)},
+        )
+        return render(
+            request,
+            "jobs/offer_choose.html",
+            {"form": form, "worker": worker, "bookings": bookings},
+        )
 
     try:
         with transaction.atomic():
@@ -812,7 +869,7 @@ def offer_create(request, worker_pk: int):
     # has to stay on the URL so that a form which fails validation redisplays
     # as the writer rather than bouncing back to the list.
     offerable = _offerable_jobs(client)
-    bookings = collapse_groups(list(offerable))
+    bookings = _mark_unofferable(worker, collapse_groups(list(offerable)))
     choosing = "pick" in request.POST or (
         request.method == "GET" and bookings and not request.GET.get("new")
     )
@@ -980,6 +1037,20 @@ def offer_respond(request, pk: int):
     # timestamp belong to the day — and each day's own counter is what gets
     # written, because terms are agreed per day.
     days = _booking_days(job)
+
+    # Not if they have already said yes to somebody else on one of these days.
+    # The dates are named because the answer is usually "so decline this one",
+    # and that decision needs to know which days overlap.
+    clash = clashing_dates(worker, days)
+    if clash:
+        messages.error(
+            request,
+            _("You're already booked on %(days)s, so this one can't be accepted "
+              "as it stands. Nothing has been changed.")
+            % {"days": describe_dates(clash)},
+        )
+        return redirect("jobs:detail", pk=job.pk)
+
     day_offers = {
         o.job_id: o
         for o in Offer.objects.filter(job__in=days, worker=worker, status=OfferStatus.PENDING)
@@ -1019,7 +1090,21 @@ def offer_respond(request, pk: int):
         note=note[:300],
     )
 
-    if len(sealed) > 1:
+    # Honest about a partial answer. Every day of the booking is claimed on its
+    # own — one can be taken, cancelled or blocked while the others go through
+    # — and saying "all N days are yours" while one of them is still sitting
+    # open on the board is how somebody ends up believing they have a week they
+    # have not got.
+    missed = len(day_offers) - len(sealed)
+    if missed:
+        messages.warning(
+            request,
+            _("Took %(taken)s of the %(total)s days. %(missed)s could not be "
+              "accepted — it was taken, cancelled or clashes with work you "
+              "already have. The rest are yours.")
+            % {"taken": len(sealed), "total": len(day_offers), "missed": missed},
+        )
+    elif len(sealed) > 1:
         messages.success(
             request,
             _("Accepted — all %(count)s days are yours.") % {"count": len(sealed)},
@@ -1153,9 +1238,20 @@ def _seal(job_id, worker, counter, now, offer=None, actor=Actor.WORKER):
     # the same as every other .update() in this file.
     job.updated_at = now
 
-    claimed = Job.objects.filter(pk=job_id, state=JobState.POSTED).update(
-        **{name: getattr(job, name) for name in dict.fromkeys(fields)}
-    )
+    try:
+        # Its own savepoint. The claim can now fail on the double-booking
+        # index — two clients confirming the same worker for the same day in
+        # the same second, which is the case the pre-flight check in the views
+        # above cannot see — and an IntegrityError left to escape would mark
+        # the whole surrounding transaction as broken, taking the other days of
+        # the booking with it. Losing the race means the same thing here as
+        # losing it to a state change: nothing was claimed.
+        with transaction.atomic():
+            claimed = Job.objects.filter(pk=job_id, state=JobState.POSTED).update(
+                **{name: getattr(job, name) for name in dict.fromkeys(fields)}
+            )
+    except IntegrityError:
+        return None
     if not claimed:
         return None
 
@@ -1409,6 +1505,27 @@ def counter_respond(request, pk: int):
     # counter just wrote across them, which _seal already spreads for the
     # payment method.
     days = _booking_days(job)
+
+    # Accepting a counter seals the booking too, so the same rule applies. The
+    # wording follows who is pressing it: the worker is told about their own
+    # diary, the client about the worker's.
+    clash = clashing_dates(worker, days)
+    if clash:
+        if party == Party.WORKER:
+            messages.error(
+                request,
+                _("You're already booked on %(days)s, so this one can't be "
+                  "accepted as it stands. Nothing has been changed.")
+                % {"days": describe_dates(clash)},
+            )
+        else:
+            messages.error(
+                request,
+                _("%(who)s is already booked on %(days)s. Nothing has been changed.")
+                % {"who": worker.user, "days": describe_dates(clash)},
+            )
+        return redirect("jobs:detail", pk=job.pk)
+
     actor = Actor.WORKER if party == Party.WORKER else Actor.CLIENT
 
     all_sealed = []
@@ -1632,17 +1749,28 @@ def review_create(request, pk: int):
     if request.method == "POST":
         form = ReviewForm(request.POST)
         if form.is_valid():
-            with transaction.atomic():
-                review = form.save(commit=False)
-                review.job = job
-                review.author = request.user
-                review.direction = direction
-                review.save()
-                # The running average lives on the profile being rated, folded
-                # in with F() expressions — see WorkerProfile.record_rating.
-                subject = review.subject_profile
-                if subject is not None:
-                    subject.record_rating(review.rating)
+            try:
+                # Through the service, not written here. The rule about who
+                # may rate what, and when, lived twice — once in this view and
+                # once in leave_review — and the two had already drifted: the
+                # service refused anything but PAID_OUT while this view happily
+                # rated a CLOSED job. One of them had to be the rule, and it is
+                # not the one that also renders a page. It folds the score into
+                # the subject's average in the same transaction.
+                review = leave_review(
+                    job,
+                    request.user,
+                    rating=form.cleaned_data["rating"],
+                    comment=form.cleaned_data.get("comment", "") or "",
+                )
+            except ReviewError as refusal:
+                # The checks above already cover the ordinary cases, so this is
+                # the narrow one they cannot: two tabs, or a second submit that
+                # arrives while the first is still in flight. The service and
+                # the constraint underneath it decide, and the loser is told
+                # rather than shown a 500.
+                messages.info(request, str(refusal))
+                return redirect("jobs:detail", pk=job.pk)
             notify(
                 (
                     job.assigned_worker.user

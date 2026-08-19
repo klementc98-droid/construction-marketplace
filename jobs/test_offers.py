@@ -17,6 +17,7 @@ from django.db import IntegrityError, transaction
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.formats import date_format
 
 from accounts.models import AvailabilityStatus, WorkerProfile
 from core.state_machine import JobState
@@ -607,6 +608,268 @@ class MultiDayOfferTests(JobFactoryMixin, TestCase):
         self.assertEqual(Offer.objects.count(), 0)
 
 
+class DoubleBookingTests(JobFactoryMixin, TestCase):
+    """One worker, one of each day.
+
+    Nothing used to say so. A booking was sealed a day at a time and no step
+    asked whether the day was already spoken for, so the same person could be
+    confirmed for the same week twice by two clients who each believed they had
+    them — and the first either would learn of it is a morning nobody turns up
+    to.
+    """
+
+    def days(self, count, *, start_in=3):
+        start = timezone.localdate() + timedelta(days=start_in)
+        return [start + timedelta(days=n) for n in range(count)]
+
+    def booked(self, dates, *, worker=None):
+        """A booking already sealed on these dates."""
+        import uuid
+
+        group = uuid.uuid4()
+        return [
+            self.gig(
+                offer_group=group,
+                gig_date=day,
+                state=JobState.ACCEPTED,
+                assigned_worker=worker or self.worker_profile,
+            )
+            for day in dates
+        ]
+
+    def offer_on(self, dates):
+        """A pending offer to our worker covering these dates."""
+        import uuid
+
+        group = uuid.uuid4()
+        jobs = [
+            self.gig(offer_group=group, gig_date=day, is_private=True)
+            for day in dates
+        ]
+        offers = [
+            Offer.objects.create(job=job, worker=self.worker_profile)
+            for job in jobs
+        ]
+        return jobs, offers
+
+    # -- the worker's own diary -------------------------------------------
+
+    def test_a_worker_cannot_accept_an_offer_over_days_they_have_sold(self):
+        dates = self.days(3)
+        self.booked(dates[:2])
+        _, offers = self.offer_on(dates)
+
+        self.client.force_login(self.worker_user)
+        response = self.client.post(
+            reverse("jobs:offer_respond", args=[offers[0].pk]), {"answer": "accept"}
+        )
+
+        # Nothing half-done: the days that did not clash are not taken either,
+        # because a booking is answered whole or not at all.
+        for offer in offers:
+            offer.refresh_from_db()
+            offer.job.refresh_from_db()
+            self.assertEqual(offer.status, OfferStatus.PENDING)
+            self.assertEqual(offer.job.state, JobState.POSTED)
+            self.assertIsNone(offer.job.assigned_worker)
+        self.assertEqual(response.status_code, 302)
+
+    def test_the_refusal_names_the_days(self):
+        """"Already booked" without the dates leaves them hunting."""
+        dates = self.days(2)
+        self.booked(dates)
+        _, offers = self.offer_on(dates)
+
+        self.client.force_login(self.worker_user)
+        response = self.client.post(
+            reverse("jobs:offer_respond", args=[offers[0].pk]),
+            {"answer": "accept"},
+            follow=True,
+        )
+
+        body = response.content.decode()
+        self.assertIn("already booked", body.lower())
+        for day in dates:
+            self.assertIn(date_format(day, "j M"), body)
+
+    def test_an_offer_that_does_not_clash_is_still_accepted(self):
+        """The rule must not be a blanket "no" to anybody with work on."""
+        self.booked(self.days(2))
+        free = self.days(2, start_in=30)
+        _, offers = self.offer_on(free)
+
+        self.client.force_login(self.worker_user)
+        self.client.post(
+            reverse("jobs:offer_respond", args=[offers[0].pk]), {"answer": "accept"}
+        )
+
+        for offer in offers:
+            offer.job.refresh_from_db()
+            self.assertEqual(offer.job.state, JobState.ACCEPTED)
+
+    # -- the client's side -------------------------------------------------
+
+    def test_a_client_cannot_confirm_an_applicant_who_is_already_booked(self):
+        dates = self.days(2)
+        self.booked(dates)
+
+        import uuid
+
+        group = uuid.uuid4()
+        posted = [
+            self.gig(offer_group=group, gig_date=day) for day in dates
+        ]
+        application = Application.objects.create(
+            job=posted[0], worker=self.worker_profile
+        )
+
+        self.client.force_login(self.client_user)
+        response = self.client.post(
+            reverse("jobs:application_select", args=[application.pk]), follow=True
+        )
+
+        for job in posted:
+            job.refresh_from_db()
+            self.assertEqual(job.state, JobState.POSTED)
+            self.assertIsNone(job.assigned_worker)
+        self.assertIn("already booked", response.content.decode().lower())
+
+    # -- and the guarantee underneath --------------------------------------
+
+    def test_the_database_refuses_two_live_jobs_on_one_day(self):
+        """The view check explains; this is what makes it true.
+
+        Two clients can confirm the same worker in the same second and neither
+        view sees the other.
+        """
+        day = self.days(1)[0]
+        self.booked([day])
+
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                self.gig(
+                    gig_date=day,
+                    state=JobState.ACCEPTED,
+                    assigned_worker=self.worker_profile,
+                )
+
+    def test_history_may_hold_the_overlaps_it_now_prevents(self):
+        """The index covers live states only.
+
+        A day that has been paid out or closed is history — and this app has
+        real history containing exactly the overlap this now stops.
+        """
+        day = self.days(1)[0]
+        self.gig(gig_date=day, state=JobState.CLOSED, assigned_worker=self.worker_profile)
+        self.gig(gig_date=day, state=JobState.PAID_OUT, assigned_worker=self.worker_profile)
+
+        self.assertEqual(
+            Job.objects.filter(
+                assigned_worker=self.worker_profile, gig_date=day
+            ).count(),
+            2,
+        )
+
+
+class OfferPageLinksTests(JobFactoryMixin, TestCase):
+    """The links on an offer a worker is looking at have to point at the job."""
+
+    def test_ask_for_different_terms_points_at_the_job(self):
+        """It pointed at the offer's id, which is a different number entirely.
+
+        The URL took a job pk, the template handed it the offer's, and the two
+        are unrelated sequences — so the button led to whatever job happened to
+        share that id, or, more often, to a 404.
+        """
+        # Push the two sequences apart first: in a fresh database the first
+        # job and the first offer are both id 1, and a test that passes on that
+        # coincidence would have passed on the bug too.
+        for _ in range(3):
+            self.gig(is_private=True)
+
+        job = self.gig(is_private=True)
+        offer = Offer.objects.create(job=job, worker=self.worker_profile)
+        self.assertNotEqual(offer.pk, job.pk)
+
+        self.client.force_login(self.worker_user)
+        page = self.client.get(reverse("jobs:detail", args=[job.pk]))
+
+        self.assertContains(page, reverse("jobs:counter", args=[job.pk]))
+        self.assertNotContains(page, reverse("jobs:counter", args=[offer.pk]))
+
+    def test_and_the_link_actually_opens(self):
+        job = self.gig(is_private=True)
+        Offer.objects.create(job=job, worker=self.worker_profile)
+
+        self.client.force_login(self.worker_user)
+        response = self.client.get(reverse("jobs:counter", args=[job.pk]))
+        self.assertEqual(response.status_code, 200)
+
+
+class EditingADayOfABookingTests(JobFactoryMixin, TestCase):
+    """A booking cannot be edited into holding the same day twice.
+
+    It could, and the consequence was the one that gets reported rather than
+    noticed: a three-day booking edited to 20th, 21st, 20th is two rows for one
+    day. The worker accepts, two days seal, the duplicate cannot — and the
+    client is looking at a job somebody accepted that is still open.
+    """
+
+    def booking(self, dates):
+        import uuid
+
+        group = uuid.uuid4()
+        return [
+            self.gig(offer_group=group, gig_date=day) for day in dates
+        ]
+
+    def edit(self, job, dates):
+        self.client.force_login(self.client_user)
+        return self.client.post(
+            reverse("jobs:edit", args=[job.pk]),
+            {
+                "trade": job.trade.pk,
+                "region": job.region.pk,
+                "title": job.title,
+                "description": job.description,
+                "gig_dates": ", ".join(d.isoformat() for d in dates),
+                "gig_hours": "8",
+                "fixed_pay": "90",
+                "use_escrow": "False",
+            },
+        )
+
+    def test_a_day_cannot_be_moved_onto_one_the_booking_already_has(self):
+        start = timezone.localdate() + timedelta(days=3)
+        days = self.booking([start, start + timedelta(days=1), start + timedelta(days=2)])
+
+        response = self.edit(days[2], [start])
+
+        self.assertEqual(response.status_code, 200)   # redisplayed, not saved
+        days[2].refresh_from_db()
+        self.assertEqual(days[2].gig_date, start + timedelta(days=2))
+        self.assertContains(response, "already has")
+
+    def test_a_day_can_still_be_moved_somewhere_free(self):
+        start = timezone.localdate() + timedelta(days=3)
+        days = self.booking([start, start + timedelta(days=1)])
+        moved_to = start + timedelta(days=9)
+
+        self.edit(days[1], [moved_to])
+
+        days[1].refresh_from_db()
+        self.assertEqual(days[1].gig_date, moved_to)
+
+    def test_a_job_outside_a_booking_is_unaffected(self):
+        job = self.gig()
+        moved_to = timezone.localdate() + timedelta(days=20)
+
+        self.edit(job, [moved_to])
+
+        job.refresh_from_db()
+        self.assertEqual(job.gig_date, moved_to)
+
+
 class PaymentMethodCounterTests(JobFactoryMixin, TestCase):
     """A worker offered cash-in-hand can come back asking for escrow.
 
@@ -799,6 +1062,94 @@ class ReviewTests(JobFactoryMixin, TestCase):
         self.assertTrue(job.can_be_reviewed_by(self.client_user))
         self.rate(job, self.client_user)
         self.assertEqual(Review.objects.count(), 1)
+
+    def test_a_booking_can_only_be_rated_once_however_many_days_it_runs(self):
+        """The rule that was a view's habit rather than a rule.
+
+        review_create collapsed to the first day before writing, so through the
+        button one booking meant one rating. Underneath, the service checked
+        the day and so did the constraint — which left a second rating on the
+        same booking representable, and it happened.
+        """
+        import uuid
+
+        from core.state_machine import JobState
+        from jobs.models import Review
+        from jobs.services import ReviewError, leave_review
+
+        group = uuid.uuid4()
+        days = [
+            self.gig(
+                offer_group=group,
+                state=JobState.CLOSED,
+                assigned_worker=self.worker_profile,
+                gig_date=timezone.localdate() - timedelta(days=n),
+            )
+            for n in (3, 2, 1)
+        ]
+
+        leave_review(days[0], self.client_user, rating=5, comment="First day.")
+
+        # Every other day of the same booking now refuses, from either end.
+        for day in days[1:]:
+            with self.subTest(day=day.gig_date):
+                with self.assertRaises(ReviewError):
+                    leave_review(day, self.client_user, rating=1, comment="Again.")
+
+        self.assertEqual(Review.objects.filter(booking=group).count(), 1)
+
+    def test_the_database_refuses_a_second_rating_on_a_booking(self):
+        """Not only the service. The constraint is the thing that cannot drift."""
+        import uuid
+
+        from django.db import IntegrityError, transaction
+
+        from core.state_machine import JobState
+        from jobs.models import Review, ReviewDirection
+
+        group = uuid.uuid4()
+        first, second = [
+            self.gig(
+                offer_group=group,
+                state=JobState.CLOSED,
+                assigned_worker=self.worker_profile,
+                gig_date=timezone.localdate() - timedelta(days=n),
+            )
+            for n in (2, 1)
+        ]
+        Review.objects.create(
+            job=first, author=self.client_user,
+            direction=ReviewDirection.CLIENT_ON_WORKER, rating=5,
+        )
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                Review.objects.create(
+                    job=second, author=self.client_user,
+                    direction=ReviewDirection.CLIENT_ON_WORKER, rating=2,
+                )
+
+    def test_the_average_counts_a_booking_once(self):
+        """A week rated once must move the average by one job, not by five."""
+        import uuid
+
+        from core.state_machine import JobState
+        from jobs.services import leave_review
+
+        group = uuid.uuid4()
+        days = [
+            self.gig(
+                offer_group=group,
+                state=JobState.CLOSED,
+                assigned_worker=self.worker_profile,
+                gig_date=timezone.localdate() - timedelta(days=n),
+            )
+            for n in (2, 1)
+        ]
+        leave_review(days[0], self.client_user, rating=4)
+
+        self.worker_profile.refresh_from_db()
+        self.assertEqual(self.worker_profile.rating_count, 1)
+        self.assertEqual(self.worker_profile.rating_sum, 4)
 
     def test_a_stranger_gets_a_404_not_a_refusal(self):
         """Confirming the job exists would leak who is hiring, and for what."""

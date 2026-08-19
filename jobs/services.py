@@ -37,6 +37,7 @@ from __future__ import annotations
 from django.db import transaction
 from django.utils import timezone
 from django.utils.formats import date_format
+from django.utils.translation import gettext as _
 
 from config import business_rules as rules
 from core.state_machine import (
@@ -192,6 +193,95 @@ def expire_stale_gigs(*, today=None) -> list[Job]:
 #   check in a view, because the view is not the only way rows get made.
 
 
+# ---------------------------------------------------------------------------
+# Double booking
+# ---------------------------------------------------------------------------
+#
+# A worker has one of each day. Nothing used to say so: a booking was sealed a
+# day at a time, and no step asked whether that day was already spoken for — so
+# the same person could be confirmed for the 19th to the 25th twice over, by
+# two clients who each believed they had them. The first anybody would learn of
+# it is when nobody turned up.
+#
+# Enforced in two places on purpose. Here, before anything is written, so the
+# person pressing the button is told which days clash and by whom they are
+# already held; and in the database, as a partial unique index over the states
+# that mean "committed", so that two clients confirming the same worker in the
+# same second cannot both win. The check here is the explanation; the index is
+# the guarantee.
+
+
+#: The states in which a worker is spoken for. Starts at ACCEPTED rather than
+#: at escrow for the same reason ``WorkerProfile.active_jobs`` does: from the
+#: worker's side, having said yes is what makes them unavailable, funded or
+#: not. Terminal states are absent — a finished day is history, and history is
+#: allowed to contain the overlaps this now prevents.
+COMMITTED_STATES = (
+    JobState.ACCEPTED,
+    JobState.ESCROW_HELD,
+    JobState.IN_PROGRESS,
+    JobState.ENDED_EARLY,
+    JobState.COMPLETED,
+)
+
+
+def booked_days_among(worker, dates, *, ignore=()) -> list:
+    """Which of these dates the worker is already committed to.
+
+    The one question behind every "they can't take this" in the app, asked of
+    dates so that it can be answered before a job exists — which is what the
+    offer screens need. ``ignore`` drops job ids from the answer, for the case
+    where the days being asked about are themselves the booking in question.
+    """
+    if worker is None:
+        return []
+    wanted = {day for day in dates if day}
+    if not wanted:
+        # A standing position has no date to collide on.
+        return []
+    taken = Job.objects.filter(
+        assigned_worker=worker,
+        gig_date__in=wanted,
+        state__in=COMMITTED_STATES,
+    )
+    if ignore:
+        taken = taken.exclude(pk__in=ignore)
+    return sorted(set(taken.values_list("gig_date", flat=True)))
+
+
+def clashing_dates(worker, days) -> list:
+    """Which of ``days`` this worker is already committed to elsewhere.
+
+    ``days`` is the booking about to be sealed — Job rows, not dates, because
+    the days of the booking itself must not count as a clash with themselves.
+    Returns the dates in order, so the caller can name them.
+    """
+    return booked_days_among(
+        worker,
+        [getattr(day, "gig_date", None) for day in days],
+        ignore=[day.pk for day in days],
+    )
+
+
+def describe_dates(dates) -> str:
+    """"19, 20 and 25 Aug" — dates as a person would say them.
+
+    One string built here rather than joined in a template, because the last
+    separator is a word and words are translated.
+    """
+    shown = [date_format(day, "j M") for day in dates]
+    if not shown:
+        # Callers ask this of every row, including the ones with nothing to
+        # report, rather than guarding each call site.
+        return ""
+    if len(shown) == 1:
+        return shown[0]
+    return _("%(list)s and %(last)s") % {
+        "list": ", ".join(shown[:-1]),
+        "last": shown[-1],
+    }
+
+
 class ReviewError(RuntimeError):
     """A refusal phrased for the person who hit it."""
 
@@ -210,15 +300,62 @@ def _direction_for(job: Job, user) -> str:
     raise ReviewError("You weren't part of this job.")
 
 
+def _booking_reviews(job: Job, direction: str):
+    """Every review of this booking in that direction — usually none or one.
+
+    The unit is the booking, not the day. A rating is written against the
+    booking's first day and answers for the whole arrangement, so asking the
+    day the reader happens to be on is asking the wrong row eight times out
+    of nine.
+    """
+    found = Review.objects.filter(direction=direction)
+    if job.offer_group:
+        return found.filter(job__offer_group=job.offer_group)
+    return found.filter(job=job)
+
+
+#: When a rating becomes owed. Both terminal states where the work actually
+#: happened — escrow paid out, or the two of them settling directly. It was
+#: PAID_OUT alone here while the model's ``is_finished`` said both, which meant
+#: the service refused ratings the button offered. One rule, one list.
+RATEABLE = (JobState.PAID_OUT, JobState.CLOSED)
+
+
 def can_review(job: Job, user) -> bool:
-    """Is there a review this person could still leave on this job?"""
-    if job.state != JobState.PAID_OUT or job.assigned_worker_id is None:
+    """Is there a review this person could still leave on this booking?"""
+    if job.state not in RATEABLE or job.assigned_worker_id is None:
         return False
     try:
         direction = _direction_for(job, user)
     except ReviewError:
         return False
-    return not Review.objects.filter(job=job, direction=direction).exists()
+    return not _booking_reviews(job, direction).exists()
+
+
+def reviews_of(profile, *, limit: int = 20):
+    """Every review written about this profile, newest first.
+
+    The direction is derived from what kind of profile this is rather than
+    passed in, for the same reason the review view derives it from who is
+    asking: a caller that can choose the direction is a caller that can show a
+    worker the reviews they *wrote* under the heading of reviews they received.
+
+    Sliced rather than paginated. A profile page is a first impression, and the
+    twenty most recent are the ones anybody reads; the average above them is
+    what speaks for the rest.
+    """
+    from accounts.models import WorkerProfile
+
+    if isinstance(profile, WorkerProfile):
+        found = Review.objects.filter(
+            direction=ReviewDirection.CLIENT_ON_WORKER, job__assigned_worker=profile
+        )
+    else:
+        found = Review.objects.filter(
+            direction=ReviewDirection.WORKER_ON_CLIENT, job__client=profile
+        )
+    # Ordering is the model's ("-created_at"), so the slice is the newest.
+    return list(found.select_related("author", "job")[:limit])
 
 
 def review_by(job: Job, user) -> "Review | None":
@@ -227,7 +364,7 @@ def review_by(job: Job, user) -> "Review | None":
         direction = _direction_for(job, user)
     except ReviewError:
         return None
-    return Review.objects.filter(job=job, direction=direction).first()
+    return _booking_reviews(job, direction).first()
 
 
 @transaction.atomic
@@ -239,14 +376,17 @@ def leave_review(job: Job, author, *, rating: int, comment: str = "") -> "Review
     the app, which is worse than no review at all — it would look like the
     feature was working.
     """
-    if job.state != JobState.PAID_OUT:
-        raise ReviewError("You can rate a job once it's been paid out.")
+    if job.state not in RATEABLE:
+        raise ReviewError("You can rate a job once it's finished.")
     if job.assigned_worker_id is None:
         raise ReviewError("Nobody was booked on this job.")
 
     direction = _direction_for(job, author)
-    if Review.objects.filter(job=job, direction=direction).exists():
-        raise ReviewError("You've already rated this job.")
+    if _booking_reviews(job, direction).exists():
+        # Phrased as the booking, because that is what was rated. "You've
+        # already rated this job" on a Thursday nobody has touched reads as a
+        # bug rather than as the rule it is.
+        raise ReviewError("You've already rated this booking.")
     if not rules.RATING_MIN <= rating <= rules.RATING_MAX:
         raise ReviewError(
             f"Ratings run from {rules.RATING_MIN} to {rules.RATING_MAX}."

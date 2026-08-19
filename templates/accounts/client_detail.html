@@ -98,6 +98,8 @@
     {% endfor %}
   {% endif %}
 
+  {% include "accounts/_reviews.html" %}
+
   {% if is_own %}
     <div class="btn-row">
       <a class="btn secondary" href="{% url 'accounts:client_edit' %}">{% translate "Edit hiring profile" %}</a>

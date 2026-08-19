@@ -405,6 +405,37 @@ class Job(TimestampedModel):
                 | models.Q(rate_max__gte=models.F("rate_min")),
                 name="job_rate_max_not_below_min",
             ),
+            # One worker, one of each day. A gig is a dated shift, so two live
+            # gigs on the same date for the same person is two clients each
+            # believing they have them — and the first either of them learns of
+            # it is a morning nobody turns up to.
+            #
+            # Partial, over the committed states only, and both halves of that
+            # matter. A day that has been paid out or closed is history, and
+            # history is allowed to contain the overlaps this prevents from
+            # here on. A day that is merely *offered* is not a commitment
+            # either — being sent two offers for Tuesday is ordinary, and the
+            # answer to one of them is what makes the other impossible.
+            #
+            # In the database and not only in the view, because two clients can
+            # confirm the same worker in the same second and neither view sees
+            # the other. See ``clashing_dates`` in services for the half of
+            # this that produces a sentence rather than an error.
+            models.UniqueConstraint(
+                fields=["assigned_worker", "gig_date"],
+                condition=models.Q(
+                    assigned_worker__isnull=False,
+                    gig_date__isnull=False,
+                    state__in=[
+                        "accepted",
+                        "escrow_held",
+                        "in_progress",
+                        "ended_early",
+                        "completed",
+                    ],
+                ),
+                name="one_booking_per_worker_per_day",
+            ),
         ]
         indexes = [
             # The browse page's default query: open posts of a trade, newest
@@ -517,16 +548,36 @@ class Job(TimestampedModel):
         direction = self.review_direction_for(user)
         if direction is None:
             return False
-        return not self.reviews.filter(direction=direction).exists()
+        return self.booking_review(direction) is None
 
     def review_from(self, user):
-        """Their review of this job, if they have written one."""
+        """Their review of this booking, if they have written one."""
         if not getattr(user, "is_authenticated", False):
             return None
         direction = self.review_direction_for(user)
         if direction is None:
             return None
-        return self.reviews.filter(direction=direction).first()
+        return self.booking_review(direction)
+
+    def booking_review(self, direction):
+        """The review of this booking in that direction, whichever day holds it.
+
+        Asked of the booking rather than of the row, because that is where the
+        answer is: ``review_create`` deliberately writes one rating for the
+        whole booking and stores it against the first day, so a nine-day job
+        rated once has one Review row and eight days with none.
+
+        Looking only at ``self.reviews`` therefore told eight of those days
+        that a rating was still owed. The reader saw it as a badge that would
+        not clear — "1 completed job to review", still there after reviewing
+        it, pointing at a page whose only button led to "You've already rated
+        this one." The write side treated the booking as one thing; this is
+        the read side agreeing.
+        """
+        reviews = Review.objects.filter(direction=direction)
+        if self.offer_group:
+            return reviews.filter(job__offer_group=self.offer_group).first()
+        return reviews.filter(job=self).first()
 
     @property
     def is_finished(self) -> bool:
@@ -1112,6 +1163,21 @@ class Review(TimestampedModel):
     #: prose is how you get "good" a thousand times.
     comment = models.TextField(max_length=1000, blank=True)
 
+    #: The booking this rates, copied down from the job at write time — the
+    #: same denormalisation, for the same reason, as ``Notification.booking``.
+    #:
+    #: It exists to be constrained. "One rating per booking" was true only
+    #: because one view happened to collapse to the first day before writing;
+    #: the service underneath checked the day, and so did the database. A
+    #: second rating on a nine-day booking was therefore always representable,
+    #: and it happened — two ratings in each direction on one week's work, both
+    #: folded into an average that is meant to say how many jobs somebody has
+    #: been rated on.
+    #:
+    #: Null for a job that is not part of a booking, where the per-job
+    #: constraint below is already the whole rule.
+    booking = models.UUIDField(null=True, blank=True, db_index=True)
+
     class Meta:
         ordering = ("-created_at",)
         constraints = [
@@ -1119,6 +1185,15 @@ class Review(TimestampedModel):
             # somebody stack five reviews onto one day's work.
             models.UniqueConstraint(
                 fields=["job", "direction"], name="one_review_per_direction_per_job"
+            ),
+            # And one per side per *booking*, which is the rule that matters:
+            # a week worked for one client is one opinion, not five. Partial,
+            # because a job outside a booking has no group to be unique on and
+            # the constraint above already covers it.
+            models.UniqueConstraint(
+                fields=["booking", "direction"],
+                condition=models.Q(booking__isnull=False),
+                name="one_review_per_direction_per_booking",
             ),
             models.CheckConstraint(
                 condition=models.Q(
@@ -1128,6 +1203,17 @@ class Review(TimestampedModel):
             ),
         ]
         indexes = [models.Index(fields=["direction", "-created_at"])]
+
+    def save(self, *args, **kwargs):
+        """Copy the booking down before writing.
+
+        Here rather than in the service, so that the constraint cannot be
+        stepped around by the admin, a data migration, or the next piece of
+        code that writes a Review without knowing this rule exists.
+        """
+        if self.booking is None and self.job_id:
+            self.booking = self.job.offer_group
+        return super().save(*args, **kwargs)
 
     def __str__(self) -> str:
         return f"{self.author} rated {self.rating}/5 on {self.job}"

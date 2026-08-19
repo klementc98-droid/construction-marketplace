@@ -19,7 +19,7 @@ from django.db.models import Q
 
 from core.state_machine import JobState
 
-from .models import count_bookings, Job, Offer, OfferStatus, Review
+from .models import collapse_groups, count_bookings, Job, Offer, OfferStatus, Review
 
 
 @dataclass(frozen=True)
@@ -80,15 +80,20 @@ def waiting_for(user) -> Waiting:
     # rows rather than by an anti-join on Review, because "have I rated this?"
     # depends on which side of the job they are — which is a property of the
     # row, not something a single filter expresses.
-    # In bookings too: a week worked for one client is one rating to leave.
+    #
+    # Collapsed to one day per booking *before* the question is asked, not
+    # after. A week worked for one client is one rating to leave, and the
+    # rating is written against the booking rather than the day — so asking
+    # all nine days is nine queries to answer one question, eight of them
+    # about rows that never hold the answer.
     ratings = 0
     finished = Job.objects.filter(
         Q(client=client) | Q(assigned_worker=worker),
         state__in=[JobState.PAID_OUT, JobState.CLOSED],
     ).select_related("client", "assigned_worker")
     if client is not None or worker is not None:
-        ratings = count_bookings(
-            job.offer_group for job in finished if job.can_be_reviewed_by(user)
+        ratings = sum(
+            1 for job in collapse_groups(finished) if job.can_be_reviewed_by(user)
         )
 
     return Waiting(offers=offers, confirmations=confirmations, ratings=ratings)

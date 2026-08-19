@@ -16,7 +16,7 @@ from accounts.models import ClientProfile, WorkerProfile
 from core.models import Region, Trade
 from core.state_machine import JobState
 
-from .models import Application, ApplicationStatus, Job, JobType, Offer
+from .models import booking_of, Application, ApplicationStatus, Job, JobType, Offer
 from .waiting import waiting_for
 
 User = get_user_model()
@@ -55,6 +55,21 @@ class JobFactoryMixin:
             fixed_pay=Decimal("90"),
         )
         return Job.objects.create(**(defaults | overrides))
+
+    def day_arrives(self, job):
+        """Move the gig to today, so the work can honestly be signed off.
+
+        These walk a whole deal in one test, and a deal starts with a gig in
+        the future — a date that has passed cannot be posted or countered. The
+        sign-off at the other end now refuses a day that has not come yet,
+        which is the point of it: nobody can say next Thursday's work happened.
+        So the test does what the calendar would: it lets the day arrive.
+        """
+        for day in booking_of(job):
+            day.gig_date = timezone.localdate()
+            day.save(update_fields=["gig_date"])
+        job.refresh_from_db()
+        return job
 
     def standing(self, **overrides):
         defaults = dict(
@@ -544,6 +559,48 @@ class WaitingPanelTests(JobFactoryMixin, TestCase):
         for url in (reverse("accounts:home"), reverse("jobs:mine")):
             with self.subTest(url=url):
                 self.assertContains(self.client.get(url), "Waiting on you")
+
+    def test_rating_a_booking_once_clears_it_for_every_day(self):
+        """The badge that would not go away.
+
+        A rating is written for the whole booking and stored against its first
+        day — see ``review_create``. Asking each day whether it holds a review
+        therefore left the other eight saying one was still owed, and the
+        reader saw "1 completed job to review" that survived reviewing it.
+        """
+        import uuid
+        from core.state_machine import JobState
+        from jobs.models import Review, ReviewDirection
+        from jobs.waiting import waiting_for
+
+        group = uuid.uuid4()
+        days = [
+            self.gig(
+                offer_group=group,
+                gig_date=timezone.localdate() + timedelta(days=n),
+                state=JobState.CLOSED,
+                assigned_worker=self.worker_profile,
+            )
+            for n in range(3)
+        ]
+
+        self.assertEqual(waiting_for(self.client_user).ratings, 1)
+
+        # Written against the first day only, exactly as the view does it.
+        Review.objects.create(
+            job=days[0], author=self.client_user,
+            direction=ReviewDirection.CLIENT_ON_WORKER, rating=5,
+        )
+
+        self.assertEqual(waiting_for(self.client_user).ratings, 0)
+        for day in days:
+            with self.subTest(day=day.gig_date):
+                self.assertFalse(day.can_be_reviewed_by(self.client_user))
+                self.assertIsNotNone(day.review_from(self.client_user))
+
+        # The other side is untouched: one direction being answered says
+        # nothing about whether the other has been.
+        self.assertEqual(waiting_for(self.worker_user).ratings, 1)
 
     def test_a_signed_out_visitor_is_never_asked_for_anything(self):
         from jobs.waiting import waiting_for

@@ -15,6 +15,8 @@ from config import business_rules as rules
 from core.models import Region, Trade
 from core.state_machine import JobState
 from jobs.models import Job, collapse_groups
+from core.dates import month_grids
+from jobs.services import reviews_of
 from jobs.waiting import waiting_for
 
 from .forms import (
@@ -282,7 +284,16 @@ def worker_detail(request, pk: int):
     return render(
         request,
         "accounts/worker_detail.html",
-        {"profile": profile, "is_own": profile.user_id == request.user.pk},
+        {
+            "profile": profile,
+            "is_own": profile.user_id == request.user.pk,
+            "reviews": reviews_of(profile),
+            # The same days as the badges above them, drawn as months. A client
+            # deciding whether to offer next Thursday reads a calendar faster
+            # than a list, and a calendar is the only shape that shows the free
+            # days between the booked ones.
+            "booked_months": month_grids(profile.booked_dates),
+        },
     )
 
 
@@ -320,6 +331,7 @@ def client_detail(request, pk: int):
         {
             "profile": profile,
             "is_own": profile.user_id == request.user.pk,
+            "reviews": reviews_of(profile),
             # What they have open right now says more about a client than any
             # of the counters do.
             #

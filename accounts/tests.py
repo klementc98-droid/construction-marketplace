@@ -474,6 +474,155 @@ class PublicProfileTests(TestCase):
             client_page, reverse("accounts:worker_detail", args=[self.worker.pk])
         )
 
+    def _accepted_job(self, *, days_ahead=2, state=None):
+        from datetime import timedelta
+        from decimal import Decimal
+
+        from django.utils import timezone
+
+        from core.models import Trade
+        from core.state_machine import JobState
+        from jobs.models import Job, JobType
+
+        # Unique per call: a test that books two days calls this twice, and a
+        # fixed address collides on the second.
+        hirer = make_user(f"books-them-{days_ahead}@example.com")
+        return Job.objects.create(
+            client=ClientProfile.objects.create(user=hirer, region=self.region),
+            job_type=JobType.GIG,
+            trade=Trade.objects.first(),
+            region=self.region,
+            title="Framing",
+            description="A day of it.",
+            gig_date=timezone.localdate() + timedelta(days=days_ahead),
+            gig_hours=Decimal("8"),
+            fixed_pay=Decimal("120"),
+            state=state or JobState.ACCEPTED,
+            assigned_worker=self.worker,
+        )
+
+    def test_a_booked_day_shows_on_the_profile(self):
+        """A client about to offer Tuesday needs to know Tuesday is gone."""
+        from django.utils import formats
+
+        job = self._accepted_job()
+        self.assertEqual(self.worker.booked_dates, [job.gig_date])
+
+        page = self.client.get(
+            reverse("accounts:worker_detail", args=[self.worker.pk])
+        )
+        self.assertContains(page, formats.date_format(job.gig_date, "D j M"))
+
+    def test_a_day_already_gone_is_not_still_shown_as_booked(self):
+        """A gig can sit active past its date while a sign-off is waited on."""
+        self._accepted_job(days_ahead=-3)
+        self.assertEqual(self.worker.booked_dates, [])
+
+    def test_a_finished_day_frees_the_diary(self):
+        from core.state_machine import JobState
+
+        self._accepted_job(state=JobState.CLOSED)
+        self.assertEqual(self.worker.booked_dates, [])
+
+    def test_a_profile_with_nothing_booked_shows_no_such_section(self):
+        page = self.client.get(
+            reverse("accounts:worker_detail", args=[self.worker.pk])
+        )
+        self.assertNotContains(page, "Already booked")
+
+    def test_a_free_day_inside_a_run_of_booked_ones_stays_free(self):
+        """Booked the 25th and the 30th does not make the 26th taken.
+
+        The 26th is exactly the day somebody is about to try to hire them for,
+        and a horizon test — everything up to the last booked day — answered
+        "no" to it.
+        """
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        booked = self._accepted_job(days_ahead=2)
+        far = self._accepted_job(days_ahead=6)
+        gap = timezone.localdate() + timedelta(days=4)
+
+        self.assertEqual(self.worker.booked_dates, [booked.gig_date, far.gig_date])
+        self.assertFalse(self.worker.is_free_on(booked.gig_date))
+        self.assertFalse(self.worker.is_free_on(far.gig_date))
+        self.assertTrue(self.worker.is_free_on(gap))
+
+    def test_the_headline_counts_the_days_rather_than_claiming_a_block(self):
+        self._accepted_job(days_ahead=2)
+        self._accepted_job(days_ahead=6)
+        self.assertIn("Booked 2 days", str(self.worker.availability_headline))
+
+    def test_a_solid_run_still_reads_as_busy_until(self):
+        """The old wording is right when the diary really is solid."""
+        self._accepted_job(days_ahead=1)
+        self._accepted_job(days_ahead=2)
+        self.assertIn("Busy until", str(self.worker.availability_headline))
+
+    def _finished_job_with_reviews(self):
+        """One closed job, rated by both sides, and everyone involved."""
+        from datetime import timedelta
+        from decimal import Decimal
+
+        from django.utils import timezone
+
+        from core.models import Trade
+        from core.state_machine import JobState
+        from jobs.models import Job, JobType, Review, ReviewDirection
+
+        hirer = make_user("hirer-with-views@example.com")
+        hirer.full_name = "Maria Georgiou"
+        hirer.save()
+        client_profile = ClientProfile.objects.create(user=hirer, region=self.region)
+        job = Job.objects.create(
+            client=client_profile,
+            job_type=JobType.GIG,
+            trade=Trade.objects.first(),
+            region=self.region,
+            title="Loft conversion",
+            description="Two days of framing.",
+            gig_date=timezone.localdate() - timedelta(days=2),
+            gig_hours=Decimal("8"),
+            fixed_pay=Decimal("120"),
+            state=JobState.CLOSED,
+            assigned_worker=self.worker,
+        )
+        Review.objects.create(
+            job=job, author=hirer, direction=ReviewDirection.CLIENT_ON_WORKER,
+            rating=5, comment="Turned up early and cleared up after.",
+        )
+        Review.objects.create(
+            job=job, author=self.person, direction=ReviewDirection.WORKER_ON_CLIENT,
+            rating=4, comment="Paid the day it was done.",
+        )
+        return client_profile
+
+    def test_a_worker_profile_shows_the_words_clients_wrote(self):
+        """An average is a number nobody learns anything from on its own."""
+        self._finished_job_with_reviews()
+        page = self.client.get(
+            reverse("accounts:worker_detail", args=[self.worker.pk])
+        )
+        self.assertContains(page, "Turned up early and cleared up after.")
+        # Not the review pointing the other way — that belongs on the client.
+        self.assertNotContains(page, "Paid the day it was done.")
+
+    def test_a_client_profile_shows_the_words_workers_wrote(self):
+        client_profile = self._finished_job_with_reviews()
+        page = self.client.get(
+            reverse("accounts:client_detail", args=[client_profile.pk])
+        )
+        self.assertContains(page, "Paid the day it was done.")
+        self.assertNotContains(page, "Turned up early and cleared up after.")
+
+    def test_a_profile_with_no_reviews_says_so_rather_than_showing_nothing(self):
+        page = self.client.get(
+            reverse("accounts:worker_detail", args=[self.worker.pk])
+        )
+        self.assertContains(page, "No reviews yet")
+
     def test_a_client_profile_shows_what_they_have_open(self):
         from jobs.models import Job, JobType
 
