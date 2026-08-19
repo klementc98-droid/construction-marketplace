@@ -151,6 +151,19 @@ nothing is lost while it is being fixed. Run it every few minutes.
 Run it once each evening; running it more often is harmless, because the day is
 part of the deduplication key rather than a property of the schedule.
 
+On a development machine there is no cron, and the failure that causes is a
+quiet one: every request writes its notification correctly, the table fills up,
+and not one email is ever sent. `run_timers` is the stand-in — it runs all four
+on their own intervals in one process.
+
+```bash
+python manage.py run_timers          # loop until Ctrl-C; leave it beside runserver
+python manage.py run_timers --once   # one pass of each, then exit
+```
+
+It is a convenience, not a deployment story: it keeps no record of when it last
+ran and stops when the terminal closes. Use cron in anything real.
+
 Two things are emailed and nothing else: a direct offer, and that night-before
 reminder. Every other event is wired, worded and translated but switched off in
 `notifications.services.ENABLED` — an inbox that fills with mail nobody asked
