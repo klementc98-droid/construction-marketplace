@@ -1,15 +1,46 @@
 {% extends "base.html" %}
-{% block title %}Your jobs — Construction's Finest{% endblock %}
+{% load i18n money_extras %}
+{% block title %}{% translate "Your jobs — Construction's Finest" %}{% endblock %}
 
 {% block content %}
-  <h1>Your jobs</h1>
+  {% include "jobs/_waiting.html" %}
+
+  {% comment %} Finished work still owed a rating. The panel above counts these and
+     links here, so the list has to exist here or the count is a dead end —
+     which is exactly what it was: the only way to a rating was to know to open
+     the job itself.
+  {% endcomment %}
+  {% if to_rate %}
+    <h2>{% translate "Rate these" %}</h2>
+    {% for job in to_rate %}
+      <div class="card action-panel">
+        <div class="row-top">
+          <span class="title">{{ job.title }}</span>
+          <span class="badge state-{{ job.state_tone }}">{{ job.get_state_display }}</span>
+        </div>
+        <div class="row-meta">
+          {{ job.trade }}
+          {% if job.group_days > 1 %}
+            · {{ job.group_dates.0|date:"j M" }} – {{ job.group_dates|last|date:"j M" }}
+            · {% blocktranslate count n=job.group_days %}{{ n }} day{% plural %}{{ n }} days{% endblocktranslate %}
+          {% elif job.gig_date %} · {{ job.gig_date|date:"D j M" }}{% endif %}
+        </div>
+        <div class="btn-row">
+          <a class="btn" href="{% url 'jobs:review' job.pk %}">{% translate "Leave a rating" %}</a>
+          <a class="btn secondary" href="{% url 'jobs:detail' job.pk %}">{% translate "See the job" %}</a>
+        </div>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <h1>{% translate "Your jobs" %}</h1>
 
   {% comment %} Offers first, above everything. A gig offered for Thursday is worth nothing
      if it is read on Friday, and unlike an application — where the waiting is
      someone else's — this is a decision only this person can make.
   {% endcomment %}
   {% if offers %}
-    <h2>Offered to you</h2>
+    <h2>{% translate "Offered to you" %}</h2>
     {% for offer in offers %}
       {% comment %} Only highlighted while the answer is actually theirs to give. An offer
          sitting with the client after this worker countered is not a decision
@@ -22,27 +53,40 @@
             <span class="title">{{ offer.job.title }}</span>
             {# The figure on the table, which is the counter's once there is one. #}
             <span class="pay">
-              {% if offer.live_counter.fixed_pay %}${{ offer.live_counter.fixed_pay|floatformat:0 }}
+              {% if offer.live_counter.fixed_pay %}{{ offer.live_counter.fixed_pay|money }}
+              {% elif offer.job.group_days > 1 %}
+                {% blocktranslate with pay=offer.job.fixed_pay|money %}{{ pay }} per day{% endblocktranslate %}
               {% else %}{{ offer.job.pay_display }}{% endif %}
             </span>
           </div>
           <div class="row-meta">
             {% if offer.live_counter %}
               {% if offer.awaiting_from == 'worker' %}
-                <span class="badge gig">New terms — your move</span>
+                <span class="badge gig">{% translate "New terms — your move" %}</span>
               {% else %}
-                <span class="badge state">Your terms are with them</span>
+                <span class="badge state">{% translate "Your terms are with them" %}</span>
               {% endif %}
             {% else %}
-              <span class="badge gig">Offer</span>
+              <span class="badge gig">{% translate "Offer" %}</span>
             {% endif %}
-            {% if offer.job.starts_in %}<span class="badge state">{{ offer.job.starts_in }}</span>{% endif %}
-            {{ offer.job.gig_date|date:"D j M" }}
-            · {{ offer.job.gig_hours|floatformat:"-1" }} hrs
-            {% if offer.job.implied_hourly %} · ≈${{ offer.job.implied_hourly }}/hr{% endif %}
+            {% comment %} A week offered is one offer, so it reads as the week: the count,
+               the span, and what it comes to in all. Naming only the first day
+               would describe a smaller job than the one being offered.
+            {% endcomment %}
+            {% if offer.job.group_days > 1 %}
+              <span class="badge gig">{% blocktranslate count n=offer.job.group_days %}{{ n }} day{% plural %}{{ n }} days{% endblocktranslate %}</span>
+              {{ offer.job.group_dates.0|date:"j M" }} – {{ offer.job.group_dates|last|date:"j M" }}
+              · {% blocktranslate with total=offer.job.group_pay|money n=offer.job.group_days %}{{ total }} total for {{ n }} days{% endblocktranslate %}
+              · {% blocktranslate with h=offer.job.group_hours|floatformat:"-1" %}{{ h }} hrs in all{% endblocktranslate %}
+            {% else %}
+              {% if offer.job.starts_in %}<span class="badge state">{{ offer.job.starts_in }}</span>{% endif %}
+              {{ offer.job.gig_date|date:"D j M" }}
+              · {{ offer.job.gig_hours|floatformat:"-1" }} hrs
+              {% if offer.job.implied_hourly %} · ≈{{ offer.job.implied_hourly|money }}/{% translate "hr" %}{% endif %}
+            {% endif %}
             <br>
             From {{ offer.job.client.company_name|default:offer.job.client.user }}
-            · {{ offer.job.trade.name }}
+            · {{ offer.job.trade }}
             {% if offer.job.location %} · {{ offer.job.location }}{% endif %}
             · sent {{ offer.created_at|timesince }} ago
           </div>
@@ -52,7 +96,7 @@
   {% endif %}
 
   {% if offers_sent %}
-    <h2>Offers you've sent</h2>
+    <h2>{% translate "Offers you've sent" %}</h2>
     {% for offer in offers_sent %}
       <a class="job-row" href="{% url 'jobs:detail' offer.job.pk %}">
         <div class="card">
@@ -65,11 +109,17 @@
                three offers out needs to see which one is waiting on them.
             {% endcomment %}
             {% if offer.awaiting_from == 'client' %}
-              <span class="badge gig">Your move — they countered</span>
+              <span class="badge gig">{% translate "Your move — they countered" %}</span>
             {% else %}
               <span class="badge">Waiting on {{ offer.worker.user }}</span>
             {% endif %}
-            {{ offer.job.gig_date|date:"D j M" }} · {{ offer.job.trade.name }}
+            {% if offer.job.group_days > 1 %}
+              <span class="badge gig">{% blocktranslate count n=offer.job.group_days %}{{ n }} day{% plural %}{{ n }} days{% endblocktranslate %}</span>
+              {{ offer.job.group_dates.0|date:"j M" }} – {{ offer.job.group_dates|last|date:"j M" }}
+            {% else %}
+              {{ offer.job.gig_date|date:"D j M" }}
+            {% endif %}
+            · {{ offer.job.trade }}
             · sent {{ offer.created_at|timesince }} ago
           </div>
         </div>
@@ -78,7 +128,7 @@
   {% endif %}
 
   {% if posted is not None %}
-    <h2>Posted by you</h2>
+    <h2>{% translate "Posted by you" %}</h2>
     {% for job in posted %}
       <a class="job-row" href="{% url 'jobs:detail' job.pk %}">
         <div class="card">
@@ -87,50 +137,60 @@
             <span class="pay">{{ job.pay_display }}</span>
           </div>
           <div class="row-meta">
-            {% if job.is_private %}<span class="badge">Private offer</span>{% endif %}
+            {% if job.is_private %}<span class="badge">{% translate "Private offer" %}</span>{% endif %}
             {% if not job.is_open %}<span class="badge state-{{ job.state_tone }}">{{ job.get_state_display }}</span>{% endif %}
             {% if job.assigned_worker %}
               {{ job.assigned_worker.user }} has it
             {% elif job.is_private %}
               {# A private gig takes no applications — the offer is the whole story. #}
-              Offered directly
+              {% translate "Offered directly" %}
             {% elif job.applicant_count %}
               {{ job.applicant_count }} applicant{{ job.applicant_count|pluralize }} waiting
             {% else %}
-              No applicants yet
+              {% translate "No applicants yet" %}
             {% endif %}
-            · {{ job.trade.name }}
+            · {{ job.trade }}
           </div>
         </div>
       </a>
     {% empty %}
       <div class="card empty">
         <svg class="empty-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-jobs"/></svg>
-        <p><strong>You haven't posted anything yet.</strong></p>
+        <p><strong>{% translate "You haven't posted anything yet." %}</strong></p>
         <p class="muted">
-          A gig is one dated shift at a fixed price. A position is ongoing work
-          at a rate. Both take about a minute.
+          {% translate "A gig is one dated shift at a fixed price. A position is ongoing work at a rate. Both take about a minute." %}
         </p>
       </div>
     {% endfor %}
     <div class="btn-row">
-      <a class="btn" href="{% url 'jobs:post_choose' %}">Post a job</a>
+      <a class="btn" href="{% url 'jobs:post_choose' %}">{% translate "Post a job" %}</a>
     </div>
   {% endif %}
 
   {% if applications is not None %}
-    <h2>You applied to</h2>
+    <h2>{% translate "You applied to" %}</h2>
     {% for application in applications %}
       <a class="job-row" href="{% url 'jobs:detail' application.job.pk %}">
         <div class="card">
           <div class="row-top">
             <span class="title">{{ application.job.title }}</span>
-            <span class="pay">{{ application.job.pay_display }}</span>
+            <span class="pay">
+              {% if application.job.group_days > 1 %}
+                {% blocktranslate with pay=application.job.fixed_pay|money %}{{ pay }} per day{% endblocktranslate %}
+              {% else %}{{ application.job.pay_display }}{% endif %}
+            </span>
           </div>
           <div class="row-meta">
             <span class="badge {% if application.status == 'selected' %}gig{% endif %}">
               {{ application.get_status_display }}</span>
-            {{ application.job.trade.name }} ·
+            {% comment %} One application covers every day of the booking, so it says so
+               here rather than listing the days as separate applications.
+            {% endcomment %}
+            {% if application.job.group_days > 1 %}
+              <span class="badge gig">{% blocktranslate count n=application.job.group_days %}{{ n }} day{% plural %}{{ n }} days{% endblocktranslate %}</span>
+              {{ application.job.group_dates.0|date:"j M" }} – {{ application.job.group_dates|last|date:"j M" }} ·
+            {% endif %}
+            {{ application.job.trade }} ·
             {{ application.job.client.company_name|default:application.job.client.user }}
           </div>
         </div>
@@ -138,12 +198,11 @@
     {% empty %}
       <div class="card empty">
         <svg class="empty-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-mine"/></svg>
-        <p><strong>You haven't applied to anything yet.</strong></p>
+        <p><strong>{% translate "You haven't applied to anything yet." %}</strong></p>
         <p class="muted">
-          Applying is free and the board is public — you can read every post
-          before you decide.
+          {% translate "Applying is free and the board is public — you can read every post before you decide." %}
         </p>
-        <a class="btn secondary" href="{% url 'jobs:list' %}">Browse work</a>
+        <a class="btn secondary" href="{% url 'jobs:list' %}">{% translate "Browse work" %}</a>
       </div>
     {% endfor %}
   {% endif %}

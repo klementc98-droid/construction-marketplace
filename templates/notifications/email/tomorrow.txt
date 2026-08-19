@@ -1,0 +1,8 @@
+{% load i18n money_extras %}{% blocktranslate %}You're working tomorrow: {{ title }}.{% endblocktranslate %}
+
+{% blocktranslate with amount=pay|money h=hours|floatformat:"-2" %}{{ amount }} for {{ h }} hours{% endblocktranslate %}{% if where %} · {{ where }}{% endif %}
+{% blocktranslate %}For {{ client }}.{% endblocktranslate %}
+{% if of_days %}
+{% blocktranslate with n=of_days %}Day {{ day_number }} of {{ n }} on this booking.{% endblocktranslate %}
+{% endif %}
+{% translate "If something has changed, say so now rather than on the day — the thread is on the job page." %}

@@ -1,5 +1,6 @@
 {% extends "base.html" %}
-{% block title %}Messages — Construction's Finest{% endblock %}
+{% load i18n %}
+{% block title %}{% translate "Messages — Construction's Finest" %}{% endblock %}
 
 {% comment %}
 A DM list, not a list of cards. Rows sit directly on the page separated by a
@@ -14,7 +15,7 @@ decided the row is interesting.
 {% endcomment %}
 
 {% block content %}
-  <h1>Messages</h1>
+  <h1>{% translate "Messages" %}</h1>
 
   {% if conversations %}
     <div class="dm-list">
@@ -31,11 +32,11 @@ decided the row is interesting.
   {% else %}
     <div class="card empty">
       <svg class="empty-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-messages"/></svg>
-      <p>No conversations yet.</p>
+      <p>{% translate "No conversations yet." %}</p>
       <p class="muted">
-        Threads open once a worker applies to one of your jobs, or once you apply to one.
+        {% translate "Threads open once a worker applies to one of your jobs, or once you apply to one." %}
       </p>
-      <a class="btn secondary" href="{% url 'jobs:list' %}">Browse work</a>
+      <a class="btn secondary" href="{% url 'jobs:list' %}">{% translate "Browse work" %}</a>
     </div>
   {% endif %}
 {% endblock %}

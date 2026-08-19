@@ -16,8 +16,10 @@ from __future__ import annotations
 from decimal import Decimal
 
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 
 from accounts.models import WorkerProfile
+from core.money import money
 from core.models import TimestampedModel
 from jobs.models import Job
 
@@ -61,19 +63,19 @@ class StripeAccount(TimestampedModel):
 
 
 class EscrowStatus(models.TextChoices):
-    PENDING = "pending", "Awaiting payment"
+    PENDING = "pending", _("Awaiting payment")
     """A checkout session exists; the client has not completed it."""
 
-    AUTHORIZED = "authorized", "Funds held"
+    AUTHORIZED = "authorized", _("Funds held")
     """The card is authorised and the money is committed but not taken."""
 
-    RELEASED = "released", "Released to worker"
+    RELEASED = "released", _("Released to worker")
     """Captured. Terminal."""
 
-    REFUNDED = "refunded", "Returned to client"
+    REFUNDED = "refunded", _("Returned to client")
     """The authorisation was cancelled or the charge refunded. Terminal."""
 
-    FAILED = "failed", "Failed"
+    FAILED = "failed", _("Failed")
     """Stripe refused. ``last_error`` says why. Terminal for this attempt."""
 
 
@@ -114,7 +116,18 @@ class EscrowPayment(TimestampedModel):
     )
 
     checkout_session_id = models.CharField(max_length=255, blank=True, db_index=True)
+    #: Where that session sends the client. Stored rather than rebuilt, so a
+    #: second press of Fund can hand back the checkout already open instead of
+    #: opening another one — see ``start_funding``.
+    checkout_url = models.URLField(max_length=500, blank=True)
     payment_intent_id = models.CharField(max_length=255, blank=True, db_index=True)
+
+    #: How many times funding has been *started*, not how many times it
+    #: succeeded. It exists to be part of the Stripe idempotency key: within
+    #: one attempt a repeated call must return the same session, and a client
+    #: who abandons checkout and comes back tomorrow must be able to get a new
+    #: one. A counter is the smallest thing that says which of the two this is.
+    funding_attempts = models.PositiveIntegerField(default=0)
 
     authorized_at = models.DateTimeField(null=True, blank=True)
     released_at = models.DateTimeField(null=True, blank=True)
@@ -126,7 +139,7 @@ class EscrowPayment(TimestampedModel):
         ordering = ("-created_at",)
 
     def __str__(self) -> str:
-        return f"${self.amount} for {self.job}"
+        return f"{money(self.amount, 2)} for {self.job}"
 
     @property
     def is_held(self) -> bool:

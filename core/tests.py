@@ -55,10 +55,16 @@ class StateMachineTests(TestCase):
         for src, dst, actor in path:
             assert_transition(src, dst, actor)  # must not raise
 
-    def test_work_cannot_start_before_escrow_is_funded(self):
-        """The rule the whole design exists to enforce."""
-        with self.assertRaises(IllegalTransition):
-            assert_transition(JobState.ACCEPTED, JobState.IN_PROGRESS, Actor.WORKER)
+    def test_starting_work_from_accepted_is_legal(self):
+        """Because a deal settled directly has no funding step to wait for.
+
+        This used to be refused here, when every gig went through escrow. The
+        rule it enforced — nobody travels to a site on a hold that was never
+        funded — has not gone anywhere; it moved to worklog.services.check_in,
+        which is where it can ask the question the table cannot: does *this*
+        job use escrow? See NoEscrowLifecycleTests and CheckInTests.
+        """
+        assert_transition(JobState.ACCEPTED, JobState.IN_PROGRESS, Actor.WORKER)
 
     def test_job_cannot_skip_straight_to_payout(self):
         for src in (JobState.POSTED, JobState.ACCEPTED, JobState.ESCROW_HELD):
@@ -177,94 +183,61 @@ class SeedDataTests(TestCase):
         self.assertTrue(region.is_active)
 
 
-class AboutPageTests(TestCase):
-    """The public explanation of how the money works.
+class WhitepaperLanguageTests(TestCase):
+    """The document exists once per language, and the page picks by reader.
 
-    Readable signed out — someone deciding whether to trust us with a day's pay
-    should not have to hand over an account to find out the terms.
+    Not gettext: two thousand words of prose in a catalogue is unreadable to
+    whoever maintains it and unusable to whoever translates it. The unit a
+    translator works in is the document, so the unit stored is the document.
     """
 
-    def test_readable_without_an_account(self):
-        response = self.client.get(reverse("core:about"))
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "What we do")
+    def test_greek_gets_the_greek_document(self):
+        from django.utils import translation
 
-    def test_quotes_the_real_platform_fee(self):
-        """The page must not be able to disagree with business_rules.
+        from core.views import _whitepaper_html
 
-        A hardcoded "12%" in the template would survive a fee change and become
-        a false statement about someone's pay. Reading it from the view is what
-        makes that impossible, and this is the test that keeps it that way.
+        with translation.override("el"):
+            html = _whitepaper_html("el")
+        self.assertIn("Περίληψη", html)
+        self.assertNotIn("The problem", html)
+
+    def test_english_gets_the_original(self):
+        from core.views import _whitepaper_html
+
+        html = _whitepaper_html("en")
+        self.assertIn("The problem", html)
+
+    def test_a_language_with_no_document_falls_back(self):
+        """An untranslated language reads English rather than an empty page."""
+        from core.views import _whitepaper_path
+
+        self.assertEqual(_whitepaper_path("fr").name, "whitepaper.md")
+
+    def test_a_regional_code_finds_the_language_document(self):
+        from core.views import _whitepaper_path
+
+        self.assertEqual(_whitepaper_path("el-gr").name, "whitepaper.el.md")
+
+    def test_the_page_renders_in_greek(self):
+        """Through a request, which is where the language is actually decided.
+
+        translation.override does not reach a test client request — the locale
+        middleware works it out from the request itself — so the header is what
+        makes this a test of the page rather than of the function under it.
         """
-        response = self.client.get(reverse("core:about"))
-        expected = f"{rules.PLATFORM_FEE_PCT * 100:.2f}".rstrip("0").rstrip(".")
-        self.assertContains(response, f"{expected}%")
-
-    def test_states_the_approval_window_in_hours(self):
-        response = self.client.get(reverse("core:about"))
-        hours = int(rules.CLIENT_APPROVAL_WINDOW.total_seconds() // 3600)
-        self.assertContains(response, f"{hours} hours")
-
-    def test_says_we_do_not_verify_licences(self):
-        """A promise we deliberately do not make, stated where people look."""
-        response = self.client.get(reverse("core:about"))
-        self.assertContains(response, "do not verify licence numbers")
-
-    def test_links_to_the_whitepaper(self):
-        response = self.client.get(reverse("core:about"))
-        self.assertContains(response, reverse("core:whitepaper"))
-
-
-class WhitepaperTests(TestCase):
-    """Served from docs/whitepaper.md, so the file and the page cannot differ."""
-
-    def test_readable_without_an_account(self):
-        response = self.client.get(reverse("core:whitepaper"))
+        response = self.client.get(
+            reverse("core:whitepaper"), headers={"accept-language": "el"}
+        )
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Μηχανική εμπιστοσύνης")
 
-    def test_renders_the_repository_file(self):
-        from core.views import WHITEPAPER_PATH
+    def test_both_documents_keep_the_table_and_the_diagram(self):
+        """Section 4 is a table and section 6 is a diagram; without the
+        extensions they render as a wall of text in either language."""
+        from core.views import _whitepaper_html
 
-        self.assertTrue(WHITEPAPER_PATH.exists())
-        response = self.client.get(reverse("core:whitepaper"))
-        self.assertContains(response, "Deliberate limits of v1")
-
-    def test_markdown_is_converted_not_dumped(self):
-        """A page showing raw '## 1. Summary' means the renderer silently failed."""
-        body = self.client.get(reverse("core:whitepaper")).content.decode()
-        self.assertIn("<h2", body)
-        self.assertNotIn("## 1. Summary", body)
-
-    def test_the_lifecycle_diagram_survives_as_a_code_block(self):
-        """It is ASCII art; without fenced_code it collapses into a paragraph."""
-        body = self.client.get(reverse("core:whitepaper")).content.decode()
-        self.assertIn("<pre>", body)
-        self.assertIn("escrow_held", body)
-
-    def test_the_comparison_table_survives(self):
-        body = self.client.get(reverse("core:whitepaper")).content.decode()
-        self.assertIn("<table>", body)
-
-    def test_reachable_from_the_footer_on_any_page(self):
-        response = self.client.get(reverse("jobs:list"))
-        self.assertContains(response, reverse("core:whitepaper"))
-
-    def test_reachable_from_the_top_bar(self):
-        """Two routes, because the footer alone proved easy to miss."""
-        body = self.client.get(reverse("jobs:list")).content.decode()
-        nav = body.split('class="desktop-nav"')[1].split("</nav>")[0]
-        self.assertIn(reverse("core:whitepaper"), nav)
-
-    def test_the_top_bar_link_marks_itself_current_on_the_page(self):
-        body = self.client.get(reverse("core:whitepaper")).content.decode()
-        nav = body.split('class="desktop-nav"')[1].split("</nav>")[0]
-        self.assertIn('aria-current="page"', nav)
-
-    def test_a_missing_file_is_a_404_not_a_500(self):
-        from core import views
-
-        with patch.object(views, "WHITEPAPER_PATH", Path("/nope/missing.md")):
-            views._rendered = None
-            response = self.client.get(reverse("core:whitepaper"))
-        views._rendered = None
-        self.assertEqual(response.status_code, 404)
+        for language in ("en", "el"):
+            with self.subTest(language=language):
+                html = _whitepaper_html(language)
+                self.assertIn("<table>", html)
+                self.assertIn("<pre>", html)

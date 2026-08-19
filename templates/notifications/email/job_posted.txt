@@ -1,0 +1,5 @@
+{% load i18n money_extras %}{% blocktranslate %}New work in {{ trade }}: {{ title }}.{% endblocktranslate %}
+
+{% blocktranslate with amount=pay|money h=hours|floatformat:"-2" %}{{ amount }} for {{ h }} hours{% endblocktranslate %}{% if when %} · {{ when }}{% endif %}{% if where %} · {{ where }}{% endif %}
+
+{% translate "Nobody has been picked yet. Apply, or name your own price if the money isn't right." %}

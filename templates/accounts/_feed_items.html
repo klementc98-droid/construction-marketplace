@@ -1,4 +1,4 @@
-{% comment %}
+{% load i18n money_extras %}{% comment %}
 One page of feed cards. Rendered on its own for `?partial=1`, which is what
 the scroll loader fetches and appends — so a card looks identical whether it
 arrived with the page or afterwards.
@@ -13,23 +13,43 @@ arrived with the page or afterwards.
     <a href="{% url 'jobs:detail' job.pk %}" class="feed-body">
       <div class="feed-headline">
         <h3>{{ job.title }}</h3>
-        <span class="pay">{{ job.pay_display }}</span>
+        {% comment %} On a booking the headline is the per-day figure, said as such.
+           pay_display alone reads as the total for the whole thing, which on
+           four days is wrong by a factor of four.
+        {% endcomment %}
+        <span class="pay">
+          {% if job.group_days > 1 %}
+            {% blocktranslate with pay=job.fixed_pay|money %}{{ pay }} per day{% endblocktranslate %}
+          {% else %}{{ job.pay_display }}{% endif %}
+        </span>
       </div>
 
       <p class="feed-tags">
         {% if job.is_gig %}
-          {% if job.starts_in %}
-            <span class="badge {% if job.is_urgent %}state{% else %}gig{% endif %}">{{ job.starts_in }}</span>
+          {% comment %} A booking of several days is one card. Five cards differing
+             only by date read as the same job posted five times.
+          {% endcomment %}
+          {% if job.group_days > 1 %}
+            <span class="badge gig">{% blocktranslate count n=job.group_days %}{{ n }} day{% plural %}{{ n }} days{% endblocktranslate %}</span>
+            <span class="badge">{{ job.group_dates.0|date:"j M" }} – {{ job.group_dates|last|date:"j M" }}</span>
+            <span class="badge">{% blocktranslate with total=job.group_pay|money n=job.group_days %}{{ total }} total for {{ n }} days{% endblocktranslate %}</span>
+            <span class="badge">{% blocktranslate with h=job.group_hours|floatformat:"-1" %}{{ h }} hrs in all{% endblocktranslate %}</span>
           {% else %}
-            <span class="badge gig">Gig</span>
+            {% if job.starts_in %}
+              <span class="badge {% if job.is_urgent %}state{% else %}gig{% endif %}">{{ job.starts_in }}</span>
+            {% else %}
+              <span class="badge gig">{% translate "Gig" %}</span>
+            {% endif %}
+            <span class="badge">{{ job.gig_date|date:"D j M" }}</span>
           {% endif %}
-          <span class="badge">{{ job.gig_date|date:"D j M" }}</span>
-          <span class="badge">{{ job.gig_hours|floatformat:"-1" }} hrs</span>
-          {% if job.implied_hourly %}<span class="badge">≈${{ job.implied_hourly }}/hr</span>{% endif %}
+          {% if job.group_days == 1 %}
+            <span class="badge">{% blocktranslate with n=job.gig_hours|floatformat:"-1" %}{{ n }} hrs{% endblocktranslate %}</span>
+          {% endif %}
+          {% if job.implied_hourly %}<span class="badge">≈{{ job.implied_hourly|money }}/{% translate "hr" %}</span>{% endif %}
         {% else %}
           <span class="badge">{{ job.get_position_type_display }}</span>
         {% endif %}
-        <span class="badge">{{ job.trade.name }}</span>
+        <span class="badge">{{ job.trade }}</span>
       </p>
 
       <p class="feed-text">{{ job.description|truncatewords:34 }}</p>
@@ -38,14 +58,14 @@ arrived with the page or afterwards.
         {{ job.location|default:job.region.name }}
         <span class="sep">·</span>
         {% if job.client.average_rating %}{{ job.client.average_rating }}★ client
-        {% else %}New client{% endif %}
+        {% else %}{% translate "New client" %}{% endif %}
       </p>
     </a>
 
     <footer class="feed-actions">
-      <a class="btn secondary" href="{% url 'jobs:detail' job.pk %}">See the job</a>
+      <a class="btn secondary" href="{% url 'jobs:detail' job.pk %}">{% translate "See the job" %}</a>
       {% if user.is_authenticated and user.is_worker and job.is_open %}
-        <a class="btn" href="{% url 'jobs:apply' job.pk %}">Apply</a>
+        <a class="btn" href="{% url 'jobs:apply' job.pk %}">{% translate "Apply" %}</a>
       {% endif %}
     </footer>
   </article>
@@ -72,52 +92,19 @@ arrived with the page or afterwards.
         <div class="sk w-60"></div>
       </div>
     {% endfor %}
-    <span class="sr-only" role="status">Loading more work…</span>
+    <span class="sr-only" role="status">{% translate "Loading more work…" %}</span>
   </div>
 {% else %}
-  {% comment %} Past the live jobs. Everything from here is explicitly not available —
-     labelled hard, with no Apply button, because a filler card that looked
-     applicable would waste somebody's afternoon.
+  {% comment %} Past the live jobs. Nothing is appended here: workers have their own
+     tab on the home page, and finished work is not listed at all. The scroll
+     loader appends this file once per page, so anything added here arrives
+     again every time somebody scrolls.
   {% endcomment %}
-  {% if filler_workers %}
-    <h2>People on Construction's Finest</h2>
-    <p class="muted" style="margin:-4px 0 12px; font-size:13.5px">
-      Available now or free soon. Tap someone to see their full profile and
-      offer them a job.
-    </p>
-    {% for worker in filler_workers %}
-      {% include "accounts/_worker_card.html" %}
-    {% endfor %}
-  {% endif %}
-
-  {% if filler_jobs %}
-    <h2>Recently filled</h2>
-    <p class="muted" style="margin:-4px 0 12px; font-size:13.5px">
-      Closed already — here to show the kind of work that goes up.
-    </p>
-    {% for job in filler_jobs %}
-      <a class="job-row faded" href="{% url 'jobs:detail' job.pk %}">
-        <div class="card">
-          <div class="row-top">
-            <span class="title">{{ job.title }}</span>
-            <span class="pay dim">{{ job.pay_display }}</span>
-          </div>
-          <div class="row-meta">
-            <span class="badge state-{{ job.state_tone }}">{{ job.get_state_display }}</span>
-            {{ job.trade.name }}
-            {% if job.location %} · {{ job.location }}{% endif %}
-            · {{ job.created_at|timesince }} ago
-          </div>
-        </div>
-      </a>
-    {% endfor %}
-  {% endif %}
-
-  {% if page.number > 1 or filler_jobs or filler_workers %}
+  {% if page.number > 1 %}
     <p class="empty" style="padding:30px 16px">
-      That's everything for now.
+      {% translate "That's everything for now." %}
       {% if user.is_authenticated and user.is_client %}
-        <br><a href="{% url 'jobs:post_choose' %}">Post a job</a>
+        <br><a href="{% url 'jobs:post_choose' %}">{% translate "Post a job" %}</a>
       {% endif %}
     </p>
   {% endif %}

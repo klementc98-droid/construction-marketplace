@@ -1,4 +1,4 @@
-{% comment %}
+{% load i18n %}{% comment %}
 The offer to fill this form in by chat instead, shown above the form itself.
 
 Expects `form_key` — one of the keys in assistant/registry.py.
@@ -23,13 +23,12 @@ cannot be taken up.
       <path d="M20.5 11.5c0 4.1-3.8 7.4-8.5 7.4a9.7 9.7 0 0 1-2.7-.4L4 20.5l1.6-3.7a7 7 0 0 1-2.1-5c0-4.1 3.8-7.4 8.5-7.4s8.5 3.3 8.5 7.4Z"/>
     </svg>
     <div class="chat-offer-b">
-      <strong>Rather just answer a few questions?</strong>
-      <span>I'll ask one thing at a time and fill this in for you. You'll see the
-        finished form here before anything is saved.</span>
+      <strong>{% translate "Rather just answer a few questions?" %}</strong>
+      <span>{% translate "I'll ask one thing at a time and fill this in for you. You'll see the finished form here before anything is saved." %}</span>
     </div>
     <button class="btn secondary chat-offer-go" type="button"
             data-assistant-form="{{ form_key }}">
-      Fill it in by chat
+      {% translate "Fill it in by chat" %}
     </button>
   </div>
 {% endif %}

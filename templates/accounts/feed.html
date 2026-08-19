@@ -1,5 +1,6 @@
 {% extends "base.html" %}
-{% block title %}Construction's Finest — find work, hire crew{% endblock %}
+{% load i18n %}
+{% block title %}{% translate "Construction's Finest — find work, hire crew" %}{% endblock %}
 
 {% block content %}
   {% if not user.is_authenticated %}
@@ -9,10 +10,9 @@
        it costs to look.
     {% endcomment %}
     <section class="hero">
-      <h1>Find work. <span class="hot">Hire crew.</span></h1>
+      <h1>{% translate "Find work." %} <span class="hot">{% translate "Hire crew." %}</span></h1>
       <p>
-        Day gigs and standing positions for the trades, with gig pay held in
-        escrow until the job's done.
+        {% translate "Day gigs and standing positions for the building trades. Find the work, find the people, agree it between you." %}
       </p>
       <a class="btn" href="{% url 'google_login' %}?process=login">
         <svg viewBox="0 0 24 24" aria-hidden="true" width="17" height="17">
@@ -21,63 +21,108 @@
           <path fill="currentColor" d="M6.4 13.89a6 6 0 0 1 0-3.83V7.47H3.08a10 10 0 0 0 0 9.01l3.32-2.59Z" opacity=".6"/>
           <path fill="currentColor" d="M12 5.94c1.47 0 2.79.5 3.83 1.5l2.86-2.86C16.95 2.98 14.7 2 12 2a10 10 0 0 0-8.92 5.47l3.32 2.59C7.2 7.7 9.4 5.94 12 5.94Z" opacity=".85"/>
         </svg>
-        Continue with Google
+        {% translate "Continue with Google" %}
       </a>
       {# For the half who want to know how the money works before handing over an account. #}
-      <p class="hero-more"><a href="{% url 'core:about' %}">How it works&nbsp;→</a></p>
+      <p class="hero-more"><a href="{% url 'core:about' %}">{% translate "How it works&nbsp;→" %}</a></p>
 
       <ul class="hero-points">
         <li>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-shield"/></svg>
-          <span><strong>Money held first</strong>The client funds a gig before you turn up.</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-workers"/></svg>
+          <span><strong>{% translate "Real people, named trades" %}</strong>{% translate "Profiles with the trade, the rate and the days they are free." %}</span>
         </li>
         <li>
           <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-clock"/></svg>
-          <span><strong>Paid on a timer</strong>Escrow releases on its own once the day's signed off.</span>
+          <span><strong>{% translate "Agree it between you" %}</strong>{% translate "Offer, counter, message, and settle it the way you both want." %}</span>
         </li>
         <li>
           <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check"/></svg>
-          <span><strong>Free to look</strong>Browse the whole board without an account.</span>
+          <span><strong>{% translate "Free to look" %}</strong>{% translate "Browse the whole board without an account." %}</span>
         </li>
       </ul>
     </section>
-  {% else %}
-    <div class="feed-head">
-      <h1>Latest work</h1>
-      <a class="muted" href="{% url 'jobs:list' %}">Filter&nbsp;→</a>
-    </div>
   {% endif %}
 
-  {% comment %} Both notices sit above the feed, not after it. What follows an empty board
-     is filler — profiles and closed jobs — and a reader who has scrolled all the
-     way past that has already worked out there is nothing open. The explanation
-     is only useful before they start scrolling.
+  {% comment %}
+  The two halves of the site, as a switch at the top left rather than two
+  stacked lists. Only one is on screen at a time, so neither is buried under
+  the other — the job feed is unbounded, and anything placed below it is
+  effectively at the bottom of the page.
+
+  Links, not buttons: the choice lives in the URL, so it survives a refresh,
+  works with JavaScript off, goes in the back button, and can be sent to
+  somebody. The scroll loader builds its request from window.location, so
+  ?show= carries through to it untouched.
+
   {% endcomment %}
-  {% if not page.object_list and not filler_jobs and not filler_workers %}
+  {% include "jobs/_waiting.html" %}
+
+  <nav class="home-tabs" aria-label="{% translate "What to browse" %}">
+    <a class="home-tab{% if showing == 'work' %} on{% endif %}"
+       href="{% url 'accounts:home' %}"
+       {% if showing == 'work' %}aria-current="page"{% endif %}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-jobs"/></svg>
+      {% translate "Find work" %}
+    </a>
+    <a class="home-tab{% if showing == 'workers' %} on{% endif %}"
+       href="{% url 'accounts:home' %}?show=workers"
+       {% if showing == 'workers' %}aria-current="page"{% endif %}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-workers"/></svg>
+      {% translate "Find workers" %}
+    </a>
+  </nav>
+
+  {% if showing == 'workers' %}
+    <section class="home-section">
+      <div class="section-head">
+        <h2>{% translate "Find workers" %}</h2>
+        <a class="section-more" href="{% url 'jobs:worker_list' %}">{% translate "See all" %}&nbsp;→</a>
+      </div>
+      <p class="section-sub">
+        {% translate "Available now or free soon. Tap someone to see their full profile and offer them a job." %}
+      </p>
+      {% for worker in workers %}
+        {% include "accounts/_worker_card.html" %}
+      {% empty %}
+        <div class="card empty">
+          <svg class="empty-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-workers"/></svg>
+          <p><strong>{% translate "Nobody's listed here yet." %}</strong></p>
+          <p class="muted">{% translate "New profiles go up daily — check back." %}</p>
+        </div>
+      {% endfor %}
+    </section>
+  {% else %}
+  <section class="home-section">
+    <div class="section-head">
+      <h2>{% translate "Find work" %}</h2>
+      <a class="section-more" href="{% url 'jobs:list' %}">{% translate "See all" %}&nbsp;→</a>
+    </div>
+    <p class="section-sub">
+      {% translate "Open posts, newest first. Applying is free." %}
+    </p>
+
+  {% comment %} Above the feed, not after it. The explanation is only useful before
+     somebody starts scrolling; a reader who has reached the bottom has already
+     worked out there is nothing open.
+
+     One branch, not two. The second used to cover "no open work, but there is
+     filler below" — there is no filler any more, so both said the same thing.
+  {% endcomment %}
+  {% if not page.object_list %}
     <div class="card empty">
       <svg class="empty-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-jobs"/></svg>
-      <p>Nothing on the board yet.</p>
+      <p><strong>{% translate "No open work at the moment." %}</strong></p>
       {% if user.is_authenticated and user.is_client %}
-        <a class="btn" href="{% url 'jobs:post_choose' %}">Post the first job</a>
+        <a class="btn" href="{% url 'jobs:post_choose' %}">{% translate "Post a job" %}</a>
       {% else %}
-        <p class="muted">Check back — new gigs go up daily.</p>
-      {% endif %}
-    </div>
-  {% elif not page.object_list %}
-    <div class="card">
-      <p class="flush"><strong>No open work at the moment.</strong></p>
-      <p class="muted" style="margin:8px 0 0">
-        Here's who's around and what's been going up lately.
-      </p>
-      {% if user.is_authenticated and user.is_client %}
-        <div class="btn-row">
-          <a class="btn" href="{% url 'jobs:post_choose' %}">Post a job</a>
-        </div>
+        <p class="muted">{% translate "Check back — new gigs go up daily." %}</p>
       {% endif %}
     </div>
   {% endif %}
 
-  <div id="feed" data-feed>
-    {% include "accounts/_feed_items.html" %}
-  </div>
+    <div id="feed" data-feed>
+      {% include "accounts/_feed_items.html" %}
+    </div>
+  </section>
+  {% endif %}
 {% endblock %}

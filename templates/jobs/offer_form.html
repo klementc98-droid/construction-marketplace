@@ -1,71 +1,38 @@
 {% extends "base.html" %}
-{% block title %}Offer {{ worker.user }} a job — Construction's Finest{% endblock %}
+{% load i18n %}
+{% block title %}{% blocktranslate with who=worker.user %}Offer {{ who }} a job{% endblocktranslate %} — Construction's Finest{% endblock %}
 
 {% block content %}
-  <h1>Offer {{ worker.user.short_name|default:worker.user }} a job</h1>
+  <h1>{% blocktranslate with who=worker.user.short_name|default:worker.user %}Offer {{ who }} a job{% endblocktranslate %}</h1>
   <p class="lede">
-    A gig written for them alone. It never goes on the public board — only
-    they can see it, and only they can accept it.
+    {% translate "A gig written for them alone. It never goes on the public board — only they can see it, and only they can accept it." %}
   </p>
 
-  {% comment %} Who you are writing to, kept in front of the person writing. It is easy to
-     open three profiles and lose track of which tab you are in, and the price
-     you are about to type depends on whose rate you have in mind.
-  {% endcomment %}
-  <div class="card">
-    <div class="media">
-      {% include "_avatar.html" with person=worker.user size="md" %}
-      <div class="media-body">
-        <div class="row-top">
-          <span class="title">
-            <a href="{% url 'accounts:worker_detail' worker.pk %}">{{ worker.user }}</a>
-          </span>
-          <span class="pay">{{ worker.rate_display }}</span>
-        </div>
-        <p class="avail avail-{{ worker.availability_tone }}">
-          <span class="avail-dot" aria-hidden="true"></span>{{ worker.availability_headline }}
-        </p>
-        <p class="row-meta" style="margin-top:5px">
-          {{ worker.years_experience }} yr{{ worker.years_experience|pluralize }} in the trade
-          <span class="sep">·</span>{{ worker.jobs_completed }} job{{ worker.jobs_completed|pluralize }} done on Construction's Finest
-          <span class="sep">·</span>
-          {% if worker.average_rating %}{{ worker.average_rating }}★{% else %}New here{% endif %}
-        </p>
-        {% if worker.trades.all %}
-          <p class="worker-trades">
-            {% for t in worker.trades.all %}<span class="pill">{{ t.name }}</span>{% endfor %}
-          </p>
-        {% endif %}
-      </div>
-    </div>
+  {% if has_open_jobs %}
+    {% comment %} Only when there is something to go back to. Somebody who reached this
+       page because they have no open posts is not being offered a list.
+    {% endcomment %}
+    <p class="note">
+      {% translate "Already have the work posted?" %}
+      <a href="{% url 'jobs:offer' worker.pk %}">{% translate "Offer them one of your open jobs instead." %}</a>
+    </p>
+  {% endif %}
 
-    {% if worker.upcoming_dates %}
-      <p class="note">
-        They've said they're free on
-        {% for d in worker.upcoming_dates %}{{ d.date|date:"D j M" }}{% if not forloop.last %}, {% endif %}{% endfor %}.
-        Those are the days to aim for — you can still ask about any other.
-      </p>
-    {% elif worker.available_from %}
-      <p class="note">
-        Booked until {{ worker.busy_until|date:"D j M" }}, free from
-        {{ worker.available_from|date:"D j M" }}.
-      </p>
-    {% endif %}
-  </div>
+  {% include "jobs/_offer_worker.html" %}
 
   <form method="post">
     {% csrf_token %}
     {{ form.non_field_errors }}
 
     <div class="card">
-      <h2>The work</h2>
+      <h2>{% translate "The work" %}</h2>
       {% include "_required_note.html" %}
       {% for field in form %}
         {% if field.name != "note" %}{% include "_field.html" %}{% endif %}
       {% endfor %}
       <p class="trust">
         <svg class="trust-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-shield"/></svg>
-        Nothing is charged by sending this. You fund escrow only if they accept.
+        {% translate "Nothing is charged by sending this. How it is paid is the choice above, and it stays between you unless you both pick escrow." %}
       </p>
     </div>
 
@@ -74,22 +41,20 @@
        and it is the first thing they read.
     {% endcomment %}
     <div class="card">
-      <h2>Your message to them</h2>
+      <h2>{% translate "Your message to them" %}</h2>
       {% include "_field.html" with field=form.note %}
       <p class="note">
-        Sent as your first message in a thread, so they can ask a question
-        without having to say no first.
+        {% translate "Sent as your first message in a thread, so they can ask a question without having to say no first." %}
       </p>
     </div>
 
     <div class="btn-row" style="margin-top:0">
-      <button class="btn" type="submit" data-busy-label="Sending…">Send the offer</button>
-      <a class="btn secondary" href="{% url 'accounts:worker_detail' worker.pk %}">Cancel</a>
+      <button class="btn" type="submit" data-busy-label="Sending…">{% translate "Send the offer" %}</button>
+      <a class="btn secondary" href="{% url 'accounts:worker_detail' worker.pk %}">{% translate "Cancel" %}</a>
     </div>
   </form>
 
   <p class="note">
-    Nothing is charged now. If they accept, you fund the escrow and the money
-    is held until the day's work is signed off.
+    {% if form.instance.use_escrow %}{% translate "Nothing is charged now. If they accept, you fund the escrow and the money is held until the day's work is signed off." %}{% else %}{% translate "Nothing is charged now or later — you and the worker settle this between you." %}{% endif %}
   </p>
 {% endblock %}

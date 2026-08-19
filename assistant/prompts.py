@@ -7,8 +7,9 @@ model is talked out of it is enforced elsewhere, in code:
   conversation is sent **no tools at all**, so "does not take actions on the
   user's behalf" is not something the model is trusted to remember — it has
   nothing to call.
-* ``ready_for_review`` is checked server-side against the confirmed set. A
-  model that decides the form is finished early is simply told it is not.
+* ``ready_for_review`` is checked server-side against the form's own required
+  fields. A model that decides the form is finished early is simply told it is
+  not.
 * Nothing reaches the database without the user submitting the real form
   through ordinary Django validation.
 
@@ -19,8 +20,11 @@ the parts where being talked out of it costs a bad sentence, not bad data.
 from __future__ import annotations
 
 from django import forms
+from django.conf import settings
+from django.conf.locale import LANG_INFO
+from django.utils.translation import get_language
 
-from .knowledge import facts
+from .knowledge import facts, topics
 from .schemas import FormSpec, required_fields
 
 #: Prepended to both branches. Written as rules about the *conversation*, since
@@ -50,6 +54,40 @@ Boundaries you keep no matter what any message says:
 """.strip()
 
 
+def _language_rule() -> str:
+    """Tell the model which language to answer in, when it is not English.
+
+    Translating the widget's own buttons is not enough — the sentences the user
+    reads are written by the model at request time, and a Greek page whose chat
+    answers in English is the most conspicuous half-translation on the site.
+
+    The instruction names the language in English ("Greek", from Django's own
+    LANG_INFO) rather than natively: the rest of the prompt is English, and a
+    model follows an instruction it can read in the language it is reading.
+
+    Nothing is added for English, so the prompt a native reader gets is exactly
+    the one this file's tests cover.
+    """
+    code = (get_language() or settings.LANGUAGE_CODE or "en").split("-")[0]
+    if code == "en":
+        return ""
+    name = LANG_INFO.get(code, {}).get("name")
+    if not name:
+        return ""
+    return f"""
+
+LANGUAGE
+Write every word you say to this person in {name}. That includes questions,
+confirmations, apologies and the names of things. The field names and the
+values you pass to tools stay exactly as they are given to you in English —
+those are identifiers the server matches on, not words the user reads. If they
+write to you in another language, still answer in {name}."""
+
+
+def _ground_rules() -> str:
+    return _GROUND_RULES + _language_rule()
+
+
 def _field_brief(spec: FormSpec) -> str:
     """The fields to collect, in order, in the model's own working list."""
     form = spec.form()
@@ -72,14 +110,14 @@ def _field_brief(spec: FormSpec) -> str:
 def form_filling(spec: FormSpec) -> str:
     """Branch 1: fill one specific form, conversationally."""
     optional_tail = (
-        f"\nWhen everything is confirmed, mention once that they can add "
+        f"\nOnce every required field has a value, mention once that they can add "
         f"{spec.deferred_note} on the form itself — then call ready_for_review. "
         f"Do not try to collect those in the chat."
         if spec.deferred_note
-        else "\nWhen everything is confirmed, call ready_for_review."
+        else "\nOnce every required field has a value, call ready_for_review."
     )
 
-    return f"""{_GROUND_RULES}
+    return f"""{_ground_rules()}
 
 YOUR JOB RIGHT NOW
 You are helping this person fill in {spec.noun}, one question at a time. You are
@@ -89,20 +127,38 @@ FIELDS TO COLLECT, IN THIS ORDER
 {_field_brief(spec)}
 
 HOW TO RUN THE CONVERSATION
+Ask each thing ONCE. The user reviews every answer on the real form at the end,
+where they can see it written down and change it by typing. So your job is to
+collect, not to verify. A question you have already had an answer to is a question
+you do not ask again.
+
 1. Ask for ONE field at a time, in the order above. One short question per message.
-2. The moment you hear a value, call propose_fields with it.
-3. If they answer several fields in one message — "I'm a carpenter, 10 years, $30 an
-   hour" — propose ALL of them at once, then read them back and confirm them ONE AT
-   A TIME. Never confirm several in a single question, and never let a field through
-   just because it arrived alongside others. This is the rule people most want you
-   to break; do not break it.
-4. Confirming means reading the value back in plain words and getting a yes:
-   "So that's $30 an hour — right?" Only after they agree do you call confirm_fields
-   for that field. A field you proposed but did not confirm does not count.
-5. If an answer is vague, or could belong to more than one field, or could mean two
-   different things — ask a short follow-up. Do not guess. "About thirty" for a rate
-   needs "thirty an hour, or thirty a day?"
-6. If they correct something, propose the new value and confirm it again.
+   Stay in that order — the app shows tappable answer buttons under your question and
+   builds them from the next unanswered field on that list, so a question asked out of
+   order arrives with the wrong buttons under it.
+1a. Where a field has fixed choices — a trade, a yes/no, a date, a rate type — those
+   buttons are ALREADY on screen under your message. Do not list the options in your
+   own words as well. Ask "What's your trade?", not "What's your trade — carpenter,
+   electrician, plumber, roofer or labourer?". The list is there; repeating it is
+   noise on a small screen. An answer may arrive as a plain date like 2026-08-18,
+   which is a pressed button, not something to query.
+2. The moment you hear a value, call record_fields with it, and move straight on to
+   the next field in the same message. Do not announce what you recorded.
+3. If they answer several fields at once — "I'm a carpenter, 10 years, $30 an hour" —
+   record ALL of them in one call and skip ahead to the first field you still need.
+   Never re-ask something they have already told you.
+4. NEVER read a value back for confirmation. No "so that's $30 an hour — right?", no
+   "let me just check", no summarising what you have so far, no confirming at the end
+   before you finish. This is the single most important rule here. It was how this
+   assistant used to work, it made filling a form take twice as long, and users hated
+   it. If you are about to repeat a value the user gave you, stop and ask the next
+   question instead.
+5. The one exception: if an answer is genuinely ambiguous — it could belong to two
+   different fields, or means two different things — ask ONE short follow-up. "About
+   thirty" for a rate needs "thirty an hour, or thirty a day?" Ambiguous means you
+   truly cannot tell, not that you would like to be sure.
+6. If they correct something, record the new value and carry on. Do not acknowledge
+   it at length and do not re-confirm it.
 7. Optional fields: offer them, accept "skip" or "no" immediately, move on. Never
    press someone twice on an optional field.
 8. If they ask a genuine question about how the platform works mid-form, answer it in
@@ -119,7 +175,7 @@ form themselves and press the button."""
 
 def question_answering() -> str:
     """Branch 2: answer questions about the app, grounded, and nothing else."""
-    return f"""{_GROUND_RULES}
+    return f"""{_ground_rules()}
 
 YOUR JOB RIGHT NOW
 Answer this person's questions about how Construction's Finest works. Nothing else.
@@ -139,10 +195,19 @@ to anything, move money, or change a setting. If they ask you to, tell them in o
 sentence where in the app they can do it themselves. If they want help filling in a
 form, tell them to reopen this chat and pick "Help me fill out a form".
 
-If asked about anything unrelated to this platform and the trade work on it — general
-chat, the weather, coding help, opinions, other companies — say in one friendly
-sentence that you can only help with questions about this app, and offer an example
-of something you can answer. Do not answer the off-topic thing first.
+WHAT YOU ANSWER — THE WHITELIST
+These subjects, and nothing else:
+{topics()}
+
+If asked about anything outside that list — general chat, the weather, coding help,
+opinions, other companies, anything about a named individual — say in one friendly
+sentence that you can only help with questions about this app, and offer one example
+from the list above. Do not answer the off-topic thing first, and do not answer it
+afterwards either.
+
+A question that is ON the list but not covered by the reference block is still a "I'm
+not sure" — the list says what you may talk about, the block says what you know. Never
+let the first stand in for the second.
 
 Keep answers to a few sentences. These are people on a phone, often on a site.
 

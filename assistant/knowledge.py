@@ -21,6 +21,37 @@ from config import business_rules as rules
 from core.state_machine import TRANSITIONS, JobState
 
 
+#: What the Q&A branch will answer about — the whitelist.
+#:
+#: Two jobs, and the second is the reason it is a list rather than a sentence.
+#: It tells the model where its ground truth ends, so "can you look up my bank
+#: balance" gets a boundary rather than an invention. And it is what the widget
+#: shows a user who does not know what to ask.
+#:
+#: Kept beside the facts on purpose: a topic added here without the facts to
+#: answer it invites exactly the confident wrong answer this module exists to
+#: prevent, and the pairing makes that hard to miss. Whitelist and knowledge
+#: are updated together or not at all.
+TOPICS: tuple[tuple[str, str], ...] = (
+    ("Pay and fees", "what you take home, the platform fee and when it applies"),
+    (
+        "Paying hand to hand or by escrow",
+        "the two ways money moves, that direct is the default, who funds escrow and when",
+    ),
+    ("Check-in and sign-off", "checking in on site, marking a job done, approval"),
+    ("Disputes", "how to raise one, what freezes, who decides"),
+    ("Posting work", "gigs vs standing positions, multi-day bookings, expiry"),
+    ("Applying and offers", "applying, direct offers, countering, being picked"),
+    ("Ratings and profiles", "how ratings work, when stats appear, licences"),
+    ("Accounts and navigation", "signing in, roles, where to find things"),
+)
+
+
+def topics() -> str:
+    """The whitelist, as lines the model can both obey and read back."""
+    return "\n".join(f"- {name}: {detail}" for name, detail in TOPICS)
+
+
 def _hours(delta) -> int:
     return int(delta.total_seconds() // 3600)
 
@@ -61,14 +92,36 @@ def facts() -> str:
     return f"""
 MONEY
 - Platform fee: {rules.PLATFORM_FEE_PCT * 100:.2f}% of the gig payout, rounded half-up to
-  the cent. Deducted from the WORKER'S PAYOUT at release, never added to the client's
-  charge. A gig advertised at $400 costs the client exactly $400.
+  the cent. It applies ONLY to a gig running through escrow. Deducted from the
+  WORKER'S PAYOUT at release, never added to the client's charge. A gig advertised at
+  $400 costs the client exactly $400.
+- On a gig settled hand to hand the platform takes NOTHING — no fee, no cut, no
+  deduction. The advertised price is what the client hands over and what the worker
+  keeps. Never quote the fee at someone who is not using escrow.
 - Fee and payout are computed as a pair; payout is the remainder, so they always
   sum to the captured total exactly.
-- Currency: {rules.CURRENCY.upper()}. Single currency.
-- Standing positions carry NO escrow and NO fee. Only dated gigs run through escrow.
+- Currency: {rules.CURRENCY.upper()} ({rules.CURRENCY_SYMBOL}). Single currency.
+- Standing positions carry NO escrow. Only dated gigs can use escrow.
 
-ESCROW TIMING
+THE TWO WAYS MONEY MOVES — DIRECT IS THE DEFAULT, ESCROW IS OPTIONAL
+- Paying hand to hand — cash, bank transfer, whatever the two of them arrange between
+  themselves — is the DEFAULT and the ordinary case. The platform is not in the middle
+  of it: it does not hold the money, does not move it, and takes nothing from it.
+- Escrow is OFF by default. A gig runs without it unless both sides agree to use it.
+  Most jobs on this board settle directly between the two people, and that is normal
+  and expected — not a worse or riskier way to work.
+- On a direct gig the worker marks the day done and the client confirms it. There is
+  no hold to release, so NOTHING happens on a timer: no automatic release, no approval
+  countdown. The two of them settle up between themselves.
+- Escrow is agreed as part of the terms, the same way the price is: it can be proposed in
+  a counter-offer and it takes effect when the other side accepts. Nobody is forced
+  into it and nobody is charged for declining it.
+- Never tell someone their money is "held safely" or "protected" unless escrow is
+  actually on for that job. On a direct-settlement gig the platform is not holding
+  anything, and saying otherwise is the most damaging wrong answer available here.
+- Everything below under ESCROW TIMING applies ONLY when escrow is on.
+
+ESCROW TIMING (only when escrow is on)
 - A client may fund a gig at most {rules.ESCROW_AUTHORIZATION_MAX_DAYS} days before the
   gig date. Reason: an uncaptured card authorisation expires (~7 days), so a hold
   placed earlier would be dead before the day arrives. This is a card-network limit,
@@ -91,6 +144,9 @@ CHECK-IN
   and a worker who is genuinely present must never be blocked.
 
 DISPUTES
+- Raising a dispute is open to either side on any gig, but what it can do depends on
+  how the gig pays. With no escrow there is no hold to freeze and nothing for an admin
+  to move — the record is marked and the money stays wherever it already is.
 - A dispute freezes escrow and requires a human to resolve. There is no timer out of a
   dispute, by design — an automatic release would defeat the point of raising one.
 - An admin resolves it either to paid_out (worker) or refunded (client).
@@ -107,8 +163,42 @@ JOB LIFECYCLE (single state machine covering job and payment together)
 {_lifecycle()}
 
 THE TWO POST TYPES
-- Gig: one dated shift, fixed total price. Runs through escrow.
-- Standing position: ongoing role paid at a rate (optionally a range). No escrow.
+- Gig: one dated shift at a fixed price for that day. Can use escrow.
+- Standing position: ongoing role paid at a rate (optionally a range). No escrow, no
+  single day to sign off.
+
+MULTI-DAY BOOKINGS — ONE JOB, NOT SEVERAL
+- A client posting four days creates ONE booking. Everywhere a person looks — the
+  board, the feed, their own lists, offers, applications — it is a single entry
+  reading "4 days" with the date span, never one card per day.
+- Underneath, each day is its own row, because each day carries its own escrow, its
+  own sign-off and its own expiry: Tuesday going to dispute must not freeze
+  Wednesday's money. That is bookkeeping and NOT something to explain to a user
+  unless they ask why a day can be cancelled on its own.
+- Applying once applies to the whole booking. Nobody applies for Tuesday and is left
+  wondering about Wednesday. Confirming somebody books every day of it.
+- The advertised price is PER DAY. A 4-day booking at 150 is 600 in all; lists show
+  both the per-day figure and the total, so quote whichever they asked for and do not
+  multiply a total by the days again.
+
+GIGS THAT NOBODY TAKES
+- A dated gig whose day passes with no worker committed moves to "expired" on its
+  own. It is not deleted and it is not a black mark on anyone — it simply stops being
+  something people can apply to.
+- Expired and cancelled jobs stay on both parties' own lists and in their track
+  record. Nothing is erased.
+
+NEGOTIATION
+- Either side can counter: a worker proposes terms for themselves, a client answers
+  one named person. A counter is a PROPOSAL about the job — it changes nothing until
+  it is accepted. The job keeps its posted terms until then.
+- A counter can carry a different price, and can also propose using escrow or not.
+- Accepting is what writes the new terms. On a multi-day booking, accepting applies
+  across the booking rather than to one day.
+
+MESSAGING
+- Every offer opens a message thread from the start, so a question can be asked
+  without having to decline first. Messages live at /messages/.
 
 TRADES CONFIGURED: {_trades()}
 
@@ -121,4 +211,11 @@ ACCOUNT AND NAVIGATION
 - Two ways to get hired: apply to a public post, or receive a direct offer written for
   you by name. A direct offer never appears on the public board. Declining needs no reason.
 - Minimum age to use the platform: {rules.MINIMUM_WORKING_AGE}.
+- The chat assistant can help fill in a worker profile, a gig or a standing position by
+  asking one question at a time. It never saves anything: it opens the real form with
+  the answers filled in, and the person presses save themselves.
+
+WHAT YOU CAN BE ASKED ABOUT
+{topics()}
+Anything outside that list is not something to answer from guesswork.
 """.strip()

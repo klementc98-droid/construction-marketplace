@@ -6,7 +6,8 @@
       "Bash(.venv/Scripts/python.exe manage.py makemigrations messaging)",
       "Bash(.venv/Scripts/python.exe manage.py check)",
       "Bash(grep -n \"^\\\\s*\\\\\\(function\\\\|const\\\\|//\\\\s*---\\\\\\)\" static/js/crew.js)",
-      "Bash(python -)"
+      "Bash(python -)",
+      "Bash(git checkout *)"
     ]
   }
 }

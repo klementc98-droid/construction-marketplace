@@ -39,15 +39,33 @@
 
   var THEME_KEY = "crew-theme";
 
+  /* Two themes, cycled by the one button: white and gold, black and gold. The
+     lime dark theme that used to sit between them has gone — it was the last
+     green in the app once the light theme moved to gold, and a second dark
+     theme earning its place on paint alone is not a choice worth making
+     somebody press through. Luxe is now what dark means here, which is also
+     why it is what an untouched toggle resolves to on an OS set to dark. */
+  var THEMES = ["light", "luxe"];
+
+  /* Which browser colour-scheme each one is. Luxe is a dark theme wearing
+     different paint; telling the browser "luxe" would mean telling it nothing
+     and form controls would come back white. */
+  var SCHEME = { light: "light", luxe: "dark" };
+
   function storedTheme() {
     try { return localStorage.getItem(THEME_KEY); } catch (e) { return null; }
   }
 
   function activeTheme() {
     var chosen = root.getAttribute("data-theme");
+    /* "dark" is a value this app no longer has, and it is still sitting in the
+       localStorage of everyone who pressed the button before it went. Read as
+       luxe rather than ignored, so their next press moves them on by one
+       instead of appearing to do nothing. */
+    if (chosen === "dark") return "luxe";
     if (chosen) return chosen;
     return window.matchMedia &&
-      window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      window.matchMedia("(prefers-color-scheme: dark)").matches ? "luxe" : "light";
   }
 
   /* `persist` is deliberately opt-in. The inline bootstrap sets data-theme on
@@ -56,7 +74,7 @@
      toggle. Only an actual press is a choice. */
   function applyTheme(theme, persist) {
     root.setAttribute("data-theme", theme);
-    root.style.colorScheme = theme;
+    root.style.colorScheme = SCHEME[theme] || theme;
 
     if (persist) {
       try { localStorage.setItem(THEME_KEY, theme); } catch (e) { /* private mode */ }
@@ -70,10 +88,17 @@
     }
 
     $$("[data-theme-toggle]").forEach(function (btn) {
-      var next = theme === "dark" ? "light" : "dark";
+      var next = nextTheme(theme);
       btn.setAttribute("aria-label", "Switch to " + next + " theme");
       btn.setAttribute("title", "Switch to " + next + " theme");
     });
+  }
+
+  /* An unrecognised value — an old key, a hand-edited one — lands on light
+     rather than throwing, which is the same answer a first-time visitor gets. */
+  function nextTheme(theme) {
+    var i = THEMES.indexOf(theme);
+    return THEMES[(i + 1) % THEMES.length] || THEMES[0];
   }
 
   function initTheme() {
@@ -84,7 +109,7 @@
 
     toggles.forEach(function (btn) {
       on(btn, "click", function () {
-        applyTheme(activeTheme() === "dark" ? "light" : "dark", true);
+        applyTheme(nextTheme(activeTheme()), true);
       });
     });
 
@@ -376,11 +401,15 @@
   /* ======================================================================
      Date lists
      ----------------------------------------------------------------------
-     A worker's available days are stored as one comma-separated string, and
-     typing "2026-08-04, 2026-08-11" by hand is a chore that also invites
-     typos. This turns that input into a native date picker plus a row of
-     removable chips: one tap opens the OS calendar on the current month, one
-     tap adds the day.
+     A set of days is stored as one comma-separated string, and typing
+     "2026-08-04, 2026-08-11" by hand is a chore that also invites typos. This
+     replaces that input with a calendar the reader taps days on, plus a row of
+     removable chips showing what is picked.
+
+     Drawn here rather than handed to <input type="date"> because a native
+     picker closes on the first choice. Booking somebody for three days would
+     be three rounds of open-pick-close, which is exactly the friction this
+     field exists to remove. The panel stays open until it is dismissed.
 
      The original input is never replaced, only hidden — it stays the value
      that submits, so the server parses exactly what it always did. With the
@@ -395,31 +424,90 @@
   function initDateLists() {
     $$("input[data-date-list]").forEach(function (input) {
       var floor = input.getAttribute("data-date-list") || "";
+      var lang = doc.documentElement.getAttribute("lang") || undefined;
+      /* One day rather than a set — a counter-offer moves the date, it does
+         not collect dates. Same calendar, two rules changed: picking replaces,
+         and the panel closes on the pick. */
+      var one = input.hasAttribute("data-date-one");
+
+      /* Days this worker has already sold. Refused by the calendar so nobody
+         fills in a whole offer for a day that cannot be accepted — the form
+         checks them again on submit, because a disabled cell is a courtesy
+         and the rule lives on the server. */
+      var taken = (input.getAttribute("data-date-taken") || "")
+        .split(",")
+        .filter(function (value) { return value; });
+
+      var words = {};
+      try {
+        words = JSON.parse(input.getAttribute("data-date-list-i18n") || "{}");
+      } catch (e) { /* fall through to the defaults below */ }
+      function word(key, fallback) { return words[key] || fallback; }
+
+      /* --- structure --- */
 
       var wrap = doc.createElement("div");
-      wrap.className = "datelist";
+      wrap.className = "datecal";
 
       var chips = doc.createElement("div");
       chips.className = "datelist-chips";
 
-      var picker = doc.createElement("input");
-      picker.type = "date";
-      picker.className = "datelist-pick";
-      if (floor) picker.min = floor;
+      var toggle = doc.createElement("button");
+      toggle.type = "button";
+      toggle.className = "datecal-toggle";
+      toggle.setAttribute("aria-expanded", "false");
 
-      // If the browser has no date input the value stays free text, and
-      // hiding the only usable control would strand the field.
-      if (picker.type !== "date") return;
+      var panel = doc.createElement("div");
+      panel.className = "datecal-panel";
+      panel.hidden = true;
+
+      var head = doc.createElement("div");
+      head.className = "datecal-head";
+      var prev = doc.createElement("button");
+      prev.type = "button";
+      prev.className = "datecal-nav";
+      prev.innerHTML = "&lsaquo;";
+      prev.setAttribute("aria-label", word("prev", "Previous month"));
+      var title = doc.createElement("strong");
+      title.className = "datecal-month";
+      title.setAttribute("aria-live", "polite");
+      var next = doc.createElement("button");
+      next.type = "button";
+      next.className = "datecal-nav";
+      next.innerHTML = "&rsaquo;";
+      next.setAttribute("aria-label", word("next", "Next month"));
+      head.appendChild(prev);
+      head.appendChild(title);
+      head.appendChild(next);
+
+      var week = doc.createElement("div");
+      week.className = "datecal-week";
+
+      var grid = doc.createElement("div");
+      grid.className = "datecal-grid";
+
+      var foot = doc.createElement("div");
+      foot.className = "datecal-foot";
+      var done = doc.createElement("button");
+      done.type = "button";
+      done.className = "btn datecal-done";
+      done.textContent = word("done", "Done");
+      foot.appendChild(done);
+
+      panel.appendChild(head);
+      panel.appendChild(week);
+      panel.appendChild(grid);
+      panel.appendChild(foot);
 
       // The field's own label points at the input we are about to hide, so it
       // moves to the control that replaces it — otherwise clicking "Which
       // days?" focuses something nobody can see.
       var lbl = input.id ? $('label[for="' + input.id + '"]') : null;
       if (lbl) {
-        picker.id = input.id + "-pick";
-        lbl.setAttribute("for", picker.id);
+        toggle.id = input.id + "-toggle";
+        lbl.setAttribute("for", toggle.id);
       } else {
-        picker.setAttribute("aria-label", "Add a date");
+        toggle.setAttribute("aria-label", word("open", "Pick days"));
       }
 
       input.classList.add("sr-only");
@@ -427,7 +515,10 @@
       input.setAttribute("aria-hidden", "true");
       input.parentNode.insertBefore(wrap, input.nextSibling);
       wrap.appendChild(chips);
-      wrap.appendChild(picker);
+      wrap.appendChild(toggle);
+      wrap.appendChild(panel);
+
+      /* --- the value --- */
 
       function read() {
         return input.value
@@ -440,52 +531,231 @@
 
       function write(list) {
         input.value = list.join(", ");
-        render(list);
+        renderChips();
+        if (!panel.hidden) drawGrid();
       }
 
-      function label(iso) {
-        var parts = iso.split("-");
+      function iso(d) {
+        var m = d.getMonth() + 1;
+        var day = d.getDate();
+        return d.getFullYear() + "-" + (m < 10 ? "0" : "") + m + "-" + (day < 10 ? "0" : "") + day;
+      }
+
+      function label(value) {
+        var parts = value.split("-");
         // Constructed from parts rather than `new Date(iso)`, which parses a
         // bare ISO date as UTC and can render the day before in the Americas.
         var d = new Date(+parts[0], +parts[1] - 1, +parts[2]);
-        return isNaN(d) ? iso
-          : d.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
+        return isNaN(d) ? value
+          : d.toLocaleDateString(lang, { weekday: "short", day: "numeric", month: "short" });
       }
 
-      function render(list) {
+      /* --- the calendar --- */
+
+      // First of the month currently on screen. Starts on the month holding
+      // the earliest picked day, so reopening the panel returns to where the
+      // work was, not to today.
+      var picked = read();
+      var view = new Date();
+      if (picked.length) {
+        var p = picked[0].split("-");
+        view = new Date(+p[0], +p[1] - 1, 1);
+      } else {
+        view = new Date(view.getFullYear(), view.getMonth(), 1);
+      }
+
+      function weekdayNames() {
+        // Monday first. Derived from a known Monday so the names follow the
+        // page's language rather than being hardcoded English.
+        var names = [];
+        var base = new Date(2024, 0, 1);          // a Monday
+        for (var i = 0; i < 7; i++) {
+          var d = new Date(base.getFullYear(), base.getMonth(), base.getDate() + i);
+          names.push(d.toLocaleDateString(lang, { weekday: "narrow" }));
+        }
+        return names;
+      }
+
+      function drawWeekdays() {
+        week.textContent = "";
+        weekdayNames().forEach(function (name) {
+          var cell = doc.createElement("span");
+          cell.textContent = name;
+          week.appendChild(cell);
+        });
+      }
+
+      function drawGrid() {
+        grid.textContent = "";
+        title.textContent = view.toLocaleDateString(lang, {
+          month: "long", year: "numeric"
+        });
+
+        var chosen = read();
+        var first = new Date(view.getFullYear(), view.getMonth(), 1);
+        // getDay() is Sunday-based; shift so Monday is column 0.
+        var lead = (first.getDay() + 6) % 7;
+        var days = new Date(view.getFullYear(), view.getMonth() + 1, 0).getDate();
+
+        for (var b = 0; b < lead; b++) {
+          grid.appendChild(doc.createElement("span"));
+        }
+
+        for (var n = 1; n <= days; n++) {
+          var date = new Date(view.getFullYear(), view.getMonth(), n);
+          var value = iso(date);
+          var cell = doc.createElement("button");
+          cell.type = "button";              // never submits the form it sits in
+          cell.className = "datecal-day";
+          cell.textContent = String(n);
+          cell.dataset.date = value;
+
+          if (floor && value < floor) {
+            cell.disabled = true;
+          } else if (taken.indexOf(value) !== -1) {
+            cell.disabled = true;
+            cell.classList.add("taken");
+            cell.title = word("taken", "Already booked");
+            cell.setAttribute("aria-label", word("taken", "Already booked"));
+          } else {
+            var isOn = chosen.indexOf(value) !== -1;
+            cell.setAttribute("aria-pressed", isOn ? "true" : "false");
+            if (isOn) cell.classList.add("on");
+          }
+          if (value === iso(new Date())) cell.classList.add("today");
+          grid.appendChild(cell);
+        }
+      }
+
+      // One listener for the whole grid rather than one per cell: the grid is
+      // redrawn on every pick, and re-binding forty buttons each time is how a
+      // calendar starts feeling slow on a phone.
+      on(grid, "click", function (event) {
+        var cell = event.target.closest ? event.target.closest(".datecal-day") : null;
+        if (!cell || cell.disabled) return;
+        var value = cell.dataset.date;
+
+        if (one) {
+          // Replace, never toggle. Re-tapping the chosen day is a confirmation,
+          // not a request to leave the field empty — the chip's x is how it is
+          // cleared, the same as a native date input, which also has no way to
+          // unset by tapping the day again.
+          var prevOn = $(".datecal-day.on", grid);
+          if (prevOn && prevOn !== cell) {
+            prevOn.classList.remove("on");
+            prevOn.setAttribute("aria-pressed", "false");
+          }
+          cell.classList.add("on");
+          cell.setAttribute("aria-pressed", "true");
+          input.value = value;
+          renderChips();
+          close();
+          toggle.focus();
+          return;
+        }
+
+        var list = read();
+        var at = list.indexOf(value);
+        var isOn = at === -1;
+        if (isOn) list.push(value); else list.splice(at, 1);
+
+        // Toggled in place, deliberately not by redrawing the grid. Redrawing
+        // replaces the button being clicked while its own click is still
+        // bubbling, and a detached node is inside nothing — so the
+        // outside-click handler below saw it as a click outside the calendar
+        // and shut the panel on the first date. Which is precisely the
+        // behaviour this widget exists to get rid of.
+        cell.classList.toggle("on", isOn);
+        cell.setAttribute("aria-pressed", isOn ? "true" : "false");
+
+        input.value = list.sort().join(", ");
+        renderChips();
+        // Deliberately no close here. Booking three days should be three taps,
+        // not three rounds of open-pick-close.
+      });
+
+      on(prev, "click", function () {
+        view = new Date(view.getFullYear(), view.getMonth() - 1, 1);
+        drawGrid();
+      });
+      on(next, "click", function () {
+        view = new Date(view.getFullYear(), view.getMonth() + 1, 1);
+        drawGrid();
+      });
+
+      /* --- open and close --- */
+
+      function open() {
+        panel.hidden = false;
+        toggle.setAttribute("aria-expanded", "true");
+        drawGrid();
+      }
+
+      function close() {
+        panel.hidden = true;
+        toggle.setAttribute("aria-expanded", "false");
+      }
+
+      on(toggle, "click", function () {
+        if (panel.hidden) open(); else close();
+      });
+      on(done, "click", function () { close(); toggle.focus(); });
+
+      on(doc, "click", function (event) {
+        if (panel.hidden) return;
+        // Two ways a click is "not outside". The obvious one is that it landed
+        // inside the calendar. The other is that it landed on a node we have
+        // since thrown away: picking a day redraws the grid, so by the time
+        // the click reaches the document the button that was tapped has been
+        // replaced and is no longer in `wrap` — or anywhere in the document.
+        // Reading that as an outside click is what made the panel shut on the
+        // first date, which is the whole thing this widget exists to avoid.
+        if (wrap.contains(event.target)) return;
+        if (!doc.contains(event.target)) return;
+        close();
+      });
+      on(doc, "keydown", function (event) {
+        if (event.key === "Escape" && !panel.hidden) { close(); toggle.focus(); }
+      });
+
+      /* --- chips and the button's own label --- */
+
+      function renderChips() {
+        var list = read();
+
         chips.textContent = "";
         if (!list.length) {
           var none = doc.createElement("span");
           none.className = "datelist-none";
-          none.textContent = "No days picked yet.";
+          none.textContent = word("none", "No days picked yet.");
           chips.appendChild(none);
-          return;
-        }
-        list.forEach(function (iso) {
-          var chip = doc.createElement("button");
-          chip.type = "button";        // never submits the form it sits in
-          chip.className = "datelist-chip";
-          chip.innerHTML = "<span></span><i aria-hidden=\"true\">&times;</i>";
-          $("span", chip).textContent = label(iso);
-          chip.setAttribute("aria-label", "Remove " + label(iso));
-          on(chip, "click", function () {
-            write(read().filter(function (d) { return d !== iso; }));
-            picker.focus();
+        } else {
+          list.forEach(function (value) {
+            var chip = doc.createElement("button");
+            chip.type = "button";
+            chip.className = "datelist-chip";
+            chip.innerHTML = "<span></span><i aria-hidden=\"true\">&times;</i>";
+            $("span", chip).textContent = label(value);
+            chip.setAttribute(
+              "aria-label",
+              word("remove", "Remove") + " " + label(value)
+            );
+            on(chip, "click", function () {
+              write(read().filter(function (d) { return d !== value; }));
+            });
+            chips.appendChild(chip);
           });
-          chips.appendChild(chip);
-        });
+        }
+
+        // The count is the useful half of this label when there is a set to
+        // keep track of, and noise when there is exactly one day by design.
+        toggle.textContent = list.length
+          ? word("more", "Add or remove days") + (one ? "" : " (" + list.length + ")")
+          : word("open", "Pick days");
       }
 
-      on(picker, "change", function () {
-        var picked = picker.value;
-        if (!picked || (floor && picked < floor)) { picker.value = ""; return; }
-        var list = read();
-        if (list.indexOf(picked) === -1) list.push(picked);
-        write(list.sort());
-        picker.value = "";
-      });
-
-      render(read());
+      drawWeekdays();
+      renderChips();
     });
   }
 

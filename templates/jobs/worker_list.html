@@ -1,9 +1,12 @@
 {% extends "base.html" %}
-{% block title %}Find workers — Construction's Finest{% endblock %}
+{% load i18n %}
+{% block title %}{% translate "Find workers" %} — Construction's Finest{% endblock %}
 
 {% block content %}
-  <h1>Find workers</h1>
-  <p class="lede">{{ total }} worker{{ total|pluralize }}.</p>
+  <h1>{% translate "Find workers" %}</h1>
+  <p class="lede">
+    {% blocktranslate count counter=total %}{{ counter }} worker.{% plural %}{{ counter }} workers.{% endblocktranslate %}
+  </p>
 
   {% include "jobs/_filters.html" %}
 
@@ -18,20 +21,18 @@
     <div class="card empty">
       <svg class="empty-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-workers"/></svg>
       {% if request.GET %}
-        <p><strong>No workers match these filters.</strong></p>
+        <p><strong>{% translate "No workers match these filters." %}</strong></p>
         <p class="muted">
-          Try widening the search area, or drop the trade filter — most people
-          list more than one trade and only tag their main one.
+          {% translate "Try widening the search area, or drop the trade filter — most people list more than one trade and only tag their main one." %}
         </p>
-        <a class="btn secondary" href="{% url 'jobs:worker_list' %}">Clear filters</a>
+        <a class="btn secondary" href="{% url 'jobs:worker_list' %}">{% translate "Clear filters" %}</a>
       {% else %}
-        <p><strong>Nobody's listed here yet.</strong></p>
+        <p><strong>{% translate "Nobody's listed here yet." %}</strong></p>
         <p class="muted">
-          Post the job anyway — new workers see the board before they finish
-          their own profile, and posts are what bring them in.
+          {% translate "Post the job anyway — new workers see the board before they finish their own profile, and posts are what bring them in." %}
         </p>
         {% if user.is_authenticated and user.is_client %}
-          <a class="btn" href="{% url 'jobs:post_choose' %}">Post a job</a>
+          <a class="btn" href="{% url 'jobs:post_choose' %}">{% translate "Post a job" %}</a>
         {% endif %}
       {% endif %}
     </div>

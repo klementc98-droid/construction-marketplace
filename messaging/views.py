@@ -5,7 +5,7 @@ from __future__ import annotations
 from django import forms
 from django.contrib import messages as flash
 from django.contrib.auth.decorators import login_required
-from django.db import transaction
+from django.db import models, transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -13,7 +13,10 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from accounts.models import WorkerProfile
-from jobs.models import Job, JobType
+from jobs.models import Job, JobType, collapse_rows
+
+from notifications.models import Kind
+from notifications.services import booking_key, notify
 
 from .models import Conversation, Message, can_converse
 
@@ -50,8 +53,51 @@ def inbox(request):
         .with_unread_for(request.user)
         .with_preview()
         .select_related("job__trade", "job__client__user", "worker__user")
+        # Ordered here, not left to Meta.ordering, which does not survive this
+        # chain: with_unread_for annotates a Count, that makes it a GROUP BY
+        # query, and Django drops a model's default ordering on those. The
+        # inbox came back in whatever order the database chose — so whoever
+        # wrote to you most recently was not reliably at the top, which is the
+        # one thing an inbox has to get right.
+        #
+        # nulls_last because a thread opened with no message yet has no
+        # last_message_at, and "never used" belongs at the bottom rather than
+        # sorted among today's.
+        .order_by(models.F("last_message_at").desc(nulls_last=True), "-created_at")
     )
-    return render(request, "messaging/inbox.html", {"conversations": conversations})
+
+    # One row per booking, not per day. A four-day booking opens four threads,
+    # because a thread belongs to a job and each day is its own job — but the
+    # two people in them are the same two people talking about the same week,
+    # and an inbox listing the same name and the same trade four times over
+    # reads as the app being broken rather than as the work being four days.
+    #
+    # The same collapse the boards and the offer lists already do; see
+    # jobs.models.collapse_rows. The row that survives is the one that sorted
+    # highest, which is the most recently active — open the booking and you
+    # land where the talking is.
+    rows = collapse_rows(list(conversations), lambda c: c.job)
+
+    # Unread has to be summed rather than inherited. The badge answers "is
+    # there anything here for me", and a booking whose only unread message is
+    # on Wednesday's thread would have shown a clean row while an unanswered
+    # question sat inside it.
+    unread = _unread_by_group(conversations)
+    for row in rows:
+        row.unread_count = unread.get(row.job.offer_group, row.unread_count)
+
+    return render(request, "messaging/inbox.html", {"conversations": rows})
+
+
+def _unread_by_group(conversations):
+    """Total unread per booking, for the rows that stand for several threads."""
+    totals: dict = {}
+    for conversation in conversations:
+        group = conversation.job.offer_group
+        if group is None:
+            continue
+        totals[group] = totals.get(group, 0) + conversation.unread_count
+    return totals
 
 
 @login_required
@@ -78,6 +124,27 @@ def thread(request, pk: int):
                 message.save()
                 conversation.last_message_at = message.created_at
                 conversation.save(update_fields=["last_message_at", "updated_at"])
+
+                # The one notification that is worth more than the badge. A
+                # question asked on site is useless if it sits unseen until
+                # tonight, and the person it is for is on a roof, not on this
+                # page.
+                #
+                # Keyed on the booking and the sender rather than the message,
+                # so a run of five messages while somebody is not looking is
+                # one email rather than five. Whatever is still unsent when the
+                # command next runs is the one they get, which is the newest.
+                notify(
+                    conversation.other_party(request.user),
+                    Kind.MESSAGE,
+                    job=conversation.job,
+                    actor=request.user,
+                    dedupe=booking_key("message", conversation.job, request.user.pk),
+                    sender=str(request.user),
+                    job_title=conversation.job.title,
+                    preview=message.body[:300],
+                    path=reverse("messaging:thread", args=[conversation.pk]),
+                )
             # Land on what you just sent, not on the top of the thread. The
             # anchor is an empty element after the last bubble; without it a
             # long thread reloads scrolled to its oldest message, which is the

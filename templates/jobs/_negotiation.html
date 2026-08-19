@@ -1,4 +1,4 @@
-{% comment %}
+{% load i18n money_extras %}{% comment %}
 The negotiation panel, rendered for whichever side is looking.
 
 Expects: counter_worker, my_party, live_counter, my_turn, terms,
@@ -22,18 +22,18 @@ of them has seen.
             {{ job.client.company_name|default:job.client.user }} came back with different terms
           {% endif %}
         {% else %}
-          Your terms are with
+          {% translate "Your terms are with" %}
           {% if my_party == 'worker' %}{{ job.client.company_name|default:job.client.user }}
           {% else %}{{ counter_worker.user }}{% endif %}
         {% endif %}
       {% else %}
-        How the terms were agreed
+        {% translate "How the terms were agreed" %}
       {% endif %}
     </h2>
 
     {% if live_counter %}
       {% comment %} Before and after, never the new figure alone. Somebody being asked to
-         agree to "$280" cannot weigh it without knowing it was $240.
+         agree to "€280" cannot weigh it without knowing it was €240.
       {% endcomment %}
       <ul class="terms-diff">
         {% for label, before, after in live_counter.changes %}
@@ -55,26 +55,26 @@ of them has seen.
 
       {% if my_turn %}
         <p class="note">
-          Accepting agrees these terms and books the job.
-          {% if my_party == 'client' %}You fund escrow next.{% endif %}
+          {% translate "Accepting agrees these terms and books the job." %}
+          {% if my_party == 'client' and job.is_escrowed %}{% translate "You fund escrow next." %}{% endif %}
         </p>
         <div class="btn-row">
           <form method="post" action="{% url 'jobs:counter_respond' live_counter.pk %}">
             {% csrf_token %}
             <button class="btn" type="submit" name="answer" value="accept"
                     data-confirm="Agree to these terms and book the job?">
-              Accept — ${{ live_counter.fixed_pay|default:terms.fixed_pay|floatformat:0 }}
+              Accept — {{ live_counter.fixed_pay|default:terms.fixed_pay|money }}
             </button>
           </form>
           <a class="btn secondary"
              href="{% if my_party == 'client' %}{% url 'jobs:counter_to' job.pk counter_worker.pk %}{% else %}{% url 'jobs:counter' job.pk %}{% endif %}">
-            Counter again
+            {% translate "Counter again" %}
           </a>
           <form method="post" action="{% url 'jobs:counter_respond' live_counter.pk %}">
             {% csrf_token %}
             <button class="btn danger" type="submit" name="answer" value="decline"
                     data-confirm="Turn this down? That ends the negotiation — counter instead if you want to keep talking.">
-              No thanks
+              {% translate "No thanks" %}
             </button>
           </form>
         </div>
@@ -99,8 +99,8 @@ of them has seen.
               <div class="step-title">
                 {% if round.proposed_by == 'worker' %}{{ counter_worker.user }}
                 {% else %}{{ job.client.company_name|default:job.client.user }}{% endif %}
-                asked for
-                {% if round.fixed_pay %}${{ round.fixed_pay|floatformat:0 }}{% endif %}
+                {% translate "asked for" %}
+                {% if round.fixed_pay %}{{ round.fixed_pay|money }}{% endif %}
                 {% if round.gig_hours %}· {{ round.gig_hours|floatformat:"-1" }} hrs{% endif %}
                 {% if round.gig_date %}· {{ round.gig_date|date:"D j M" }}{% endif %}
               </div>

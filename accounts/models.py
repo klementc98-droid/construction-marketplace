@@ -20,8 +20,10 @@ from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.core.validators import FileExtensionValidator, MinValueValidator
 from django.db import models
 from django.utils import formats, timezone
+from django.utils.translation import gettext_lazy as _
 
 from config import business_rules as rules
+from core.money import money
 from core.models import Region, TimestampedModel, Trade
 
 
@@ -86,6 +88,23 @@ class User(AbstractUser):
     #: One line under the name. The trades version of a bio headline:
     #: "Framing and finish carpentry, own tools."
     headline = models.CharField(max_length=120, blank=True)
+
+    #: The language they last chose in the header switcher. The session already
+    #: remembers it for the browser; this remembers it for everything sent to
+    #: them, because an email is written by a background command that has no
+    #: session and no Accept-Language header to read.
+    #:
+    #: Blank means never chose — fall back to the site default rather than
+    #: guessing from whoever happened to trigger the message.
+    language = models.CharField(max_length=8, blank=True)
+
+    #: One switch, not a page of them. Somebody who does not want email wants
+    #: none of it, and a preferences grid with eleven rows in it is a way of
+    #: making people give up rather than choose.
+    email_notifications = models.BooleanField(
+        default=True,
+        help_text=_("Email me when something needs my answer."),
+    )
 
     #: Which dashboard to land on for a user who holds both roles. A UI
     #: convenience only — it grants nothing. Permission always derives from
@@ -238,6 +257,23 @@ class ReputationMixin(models.Model):
         """Too little history for percentage stats to be meaningful."""
         return self.completed_job_count < rules.MIN_JOBS_FOR_PUBLIC_STATS
 
+    def record_rating(self, score: int) -> None:
+        """Fold one review's score into the running average.
+
+        Written with F() expressions rather than read-modify-write: two
+        reviews landing on the same profile at the same moment would otherwise
+        both read the old sum and one would be lost. The database does the
+        addition, so concurrency is its problem and not ours.
+
+        Kept on the mixin so both profile types get it from one place — the
+        counters are the same two columns either way.
+        """
+        type(self).objects.filter(pk=self.pk).update(
+            rating_sum=models.F("rating_sum") + score,
+            rating_count=models.F("rating_count") + 1,
+        )
+        self.refresh_from_db(fields=["rating_sum", "rating_count"])
+
     def flag_for_review(self, reason: str) -> None:
         self.flagged_for_review = True
         self.flagged_reason = reason
@@ -255,15 +291,15 @@ class ReputationMixin(models.Model):
 
 
 class RateType(models.TextChoices):
-    HOURLY = "hourly", "Per hour"
-    DAILY = "daily", "Per day"
+    HOURLY = "hourly", _("Per hour")
+    DAILY = "daily", _("Per day")
 
 
 class AvailabilityStatus(models.TextChoices):
-    AVAILABLE_NOW = "available_now", "Available now"
-    SPECIFIC_DAYS = "specific_days", "Specific days"
-    ONGOING = "ongoing", "Open to ongoing work"
-    UNAVAILABLE = "unavailable", "Not currently available"
+    AVAILABLE_NOW = "available_now", _("Available now")
+    SPECIFIC_DAYS = "specific_days", _("Specific days")
+    ONGOING = "ongoing", _("Open to ongoing work")
+    UNAVAILABLE = "unavailable", _("Not currently available")
 
 
 def cv_upload_path(instance: "WorkerProfile", filename: str) -> str:
@@ -336,8 +372,8 @@ class WorkerProfile(ReputationMixin, TimestampedModel):
     open_to_full_time = models.BooleanField(
         null=True,
         blank=True,
-        verbose_name="Open to a full-time job?",
-        help_text="Full-time positions are posted as standing jobs, not day gigs.",
+        verbose_name=_("Open to a full-time job?"),
+        help_text=_("Full-time positions are posted as standing jobs, not day gigs."),
     )
 
     #: What this worker is after *right now*, in their own words.
@@ -349,8 +385,8 @@ class WorkerProfile(ReputationMixin, TimestampedModel):
     seeking = models.CharField(
         max_length=200,
         blank=True,
-        verbose_name="What are you looking for right now?",
-        help_text="Shown at the top of your profile. Change it as often as you like.",
+        verbose_name=_("What are you looking for right now?"),
+        help_text=_("Shown at the top of your profile. Change it as often as you like."),
     )
 
     bio = models.TextField(blank=True, max_length=2000)
@@ -360,7 +396,7 @@ class WorkerProfile(ReputationMixin, TimestampedModel):
         blank=True,
         null=True,
         validators=[FileExtensionValidator(list(rules.ALLOWED_CV_EXTENSIONS))],
-        help_text="Optional PDF résumé.",
+        help_text=_("Optional PDF résumé."),
     )
 
     # -- reputation counters (written by phases 4-6) -----------------------
@@ -379,11 +415,14 @@ class WorkerProfile(ReputationMixin, TimestampedModel):
     @property
     def rate_display(self) -> str:
         if self.rate_min is None:
-            return "Rate on request"
-        unit = "hr" if self.rate_type == RateType.HOURLY else "day"
+            return _("Rate on request")
+        # The unit is translated on its own because it is a unit, not a
+        # fragment of a sentence — "/hr" carries its whole meaning alone, and
+        # the surrounding string is only digits and punctuation.
+        unit = _("hr") if self.rate_type == RateType.HOURLY else _("day")
         if self.rate_max and self.rate_max != self.rate_min:
-            return f"${self.rate_min:,.0f}-${self.rate_max:,.0f}/{unit}"
-        return f"${self.rate_min:,.0f}/{unit}"
+            return f"{money(self.rate_min)}-{money(self.rate_max)}/{unit}"
+        return f"{money(self.rate_min)}/{unit}"
 
     # -- trust stats -------------------------------------------------------
 
@@ -450,11 +489,45 @@ class WorkerProfile(ReputationMixin, TimestampedModel):
 
         ``None`` with :attr:`has_open_ended_commitment` set means "committed,
         but nobody knows for how long" — a standing position has no end date.
+
+        Days that have already gone by are not counted. A gig can sit in an
+        active state well past its date — waiting on a sign-off, or an approval
+        window that has not run out — and the worker is plainly not busy on a
+        day that has been and gone. The check lives here rather than in each
+        caller because that is exactly how it went wrong: only
+        :attr:`availability_headline` made it, so the profile page and the
+        offer form both went on quoting a date in the past.
         """
+        today = timezone.localdate()
         dates = [
-            job.gig_date for job in self.active_jobs if job.gig_date is not None
+            job.gig_date
+            for job in self.active_jobs
+            if job.gig_date is not None and job.gig_date >= today
         ]
         return max(dates) if dates else None
+
+    @property
+    def booked_dates(self) -> list:
+        """The days ahead that are already spoken for, in order.
+
+        Dates and nothing else. *Which* job somebody is on is between them and
+        the client who hired them — the same rule :attr:`busy_until` follows —
+        but the days themselves are exactly what a client deciding whether to
+        offer them next Tuesday needs to know, and a headline reading "busy
+        until the 25th" hides that the 21st and 22nd are free.
+
+        Days gone by are left out for the reason given on :attr:`busy_until`: a
+        gig can sit in an active state well past its date while a sign-off is
+        waited on, and nobody is unavailable on a day that has already been.
+        """
+        today = timezone.localdate()
+        return sorted(
+            {
+                job.gig_date
+                for job in self.active_jobs
+                if job.gig_date is not None and job.gig_date >= today
+            }
+        )
 
     @property
     def has_open_ended_commitment(self) -> bool:
@@ -480,26 +553,42 @@ class WorkerProfile(ReputationMixin, TimestampedModel):
         would otherwise read as free.
         """
         if self.availability_status == AvailabilityStatus.UNAVAILABLE:
-            return "Not taking work right now"
+            return _("Not taking work right now")
 
         if self.has_open_ended_commitment:
-            return "On a longer-term placement"
+            return _("On a longer-term placement")
 
         end = self.busy_until
         if end is not None:
+            # busy_until never looks backwards now, so there is no stale case
+            # left to fall through — see the note on that property.
             today = timezone.localdate()
-            if end < today:
-                pass  # commitment has run its course; fall through to normal
-            elif end == today:
-                return "Busy today, free from tomorrow"
+            booked = self.booked_dates
+            span = (end - booked[0]).days + 1 if booked else 0
+            if end == today:
+                return _("Busy today, free from tomorrow")
+            elif len(booked) < span:
+                # A diary with holes in it. "Busy until the 30th" would be a
+                # straight untruth about the 26th, and the 26th is exactly the
+                # day somebody is about to ask for. The count is the honest
+                # summary; the days themselves are listed on the profile.
+                return _("Booked %(count)s days, %(from_date)s to %(to_date)s") % {
+                    "count": len(booked),
+                    "from_date": formats.date_format(booked[0], "j M"),
+                    "to_date": formats.date_format(end, "j M"),
+                }
             else:
-                return (
-                    f"Busy until {formats.date_format(end, 'D j M')}"
-                    f" — free from {formats.date_format(self.available_from, 'D j M')}"
-                )
+                # One string with both dates in it, not "Busy until" + a date +
+                # "free from" + a date. Greek does not order those words the way
+                # English does, and a translator handed " — free from" on its own
+                # has nothing to work with.
+                return _("Busy until %(from_date)s — free from %(to_date)s") % {
+                    "from_date": formats.date_format(end, "D j M"),
+                    "to_date": formats.date_format(self.available_from, "D j M"),
+                }
 
         if self.availability_status == AvailabilityStatus.AVAILABLE_NOW:
-            return "Available now"
+            return _("Available now")
         if self.availability_status == AvailabilityStatus.SPECIFIC_DAYS:
             upcoming = self.upcoming_dates
             if upcoming:
@@ -509,9 +598,14 @@ class WorkerProfile(ReputationMixin, TimestampedModel):
                     formats.date_format(entry.date, "D j M") for entry in upcoming[:3]
                 )
                 more = len(upcoming) - 3
-                return f"Free {shown}" + (f" +{more} more" if more > 0 else "")
-            return "Free on selected days"
-        return "Open to ongoing work"
+                if more > 0:
+                    return _("Free %(days)s +%(count)s more") % {
+                        "days": shown,
+                        "count": more,
+                    }
+                return _("Free %(days)s") % {"days": shown}
+            return _("Free on selected days")
+        return _("Open to ongoing work")
 
     def is_free_on(self, day) -> bool | None:
         """Is this worker free on ``day``?
@@ -527,9 +621,12 @@ class WorkerProfile(ReputationMixin, TimestampedModel):
             return False
         if self.has_open_ended_commitment:
             return False
-        end = self.busy_until
-        if end is not None and day <= end:
-            return False
+        # No test against busy_until here, deliberately. That is the *last* day
+        # they are committed, and treating everything before it as taken calls
+        # a worker booked on the 25th and the 30th unavailable on the 26th —
+        # a day that is free and that somebody is trying to hire them for. The
+        # exact-date check above is the whole answer; a booking is a set of
+        # days, not a block.
         if self.availability_status == AvailabilityStatus.SPECIFIC_DAYS:
             return self.availability_dates.filter(date=day).exists()
         if self.availability_status == AvailabilityStatus.AVAILABLE_NOW:
@@ -588,8 +685,13 @@ class WorkerProfile(ReputationMixin, TimestampedModel):
         """
         if self.availability_status == AvailabilityStatus.UNAVAILABLE:
             return "off"
-        if self.is_on_a_job:
-            return "soon" if self.available_from is not None else "off"
+        # Spelled out rather than asking is_on_a_job and then which kind: a
+        # dated gig whose day has passed leaves that property true while
+        # busy_until is None, and the worker read as unavailable for good.
+        if self.has_open_ended_commitment:
+            return "off"
+        if self.busy_until is not None:
+            return "soon"
         return "ok"
 
 

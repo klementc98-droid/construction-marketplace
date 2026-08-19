@@ -1,20 +1,19 @@
 {% extends "base.html" %}
-{% block title %}Post a job — Construction's Finest{% endblock %}
+{% load i18n %}
+{% block title %}{% translate "Post a job — Construction's Finest" %}{% endblock %}
 
 {% block content %}
-  <h1>What are you posting?</h1>
-  <p class="lede">The two work differently once someone takes it on.</p>
+  <h1>{% translate "What are you posting?" %}</h1>
+  <p class="lede">{% translate "The two work differently once someone takes it on." %}</p>
 
   <a class="job-row pick" href="{% url 'jobs:post' 'gig' %}">
     <div class="card">
       <div class="row-top">
-        <span class="title">A one-day gig</span>
-        <span class="badge gig">Gig</span>
+        <span class="title">{% translate "A one-day gig" %}</span>
+        <span class="badge gig">{% translate "Gig" %}</span>
       </div>
       <div class="row-meta">
-        A specific date, a set number of hours, one fixed price — "$90 for 8 hours
-        on the 14th". You pay up front into escrow when you confirm someone, and the
-        money is released after the day's work.
+        {% translate "A specific date, a set number of hours, one fixed price — &quot;€90 for 8 hours on the 14th&quot;. You agree it with the worker and settle it between you." %}
       </div>
     </div>
   </a>
@@ -22,12 +21,11 @@
   <a class="job-row pick" href="{% url 'jobs:post' 'standing' %}">
     <div class="card">
       <div class="row-top">
-        <span class="title">A standing position</span>
-        <span class="badge">Position</span>
+        <span class="title">{% translate "A standing position" %}</span>
+        <span class="badge">{% translate "Position" %}</span>
       </div>
       <div class="row-meta">
-        Ongoing or longer-term work at an hourly or daily rate. Workers apply, you
-        pick someone, and you settle up directly — no escrow.
+        {% translate "Ongoing or longer-term work at an hourly or daily rate. Workers apply, you pick someone, and you settle up directly." %}
       </div>
     </div>
   </a>

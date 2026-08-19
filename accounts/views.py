@@ -14,7 +14,10 @@ from assistant.conversation import take_handoff
 from config import business_rules as rules
 from core.models import Region, Trade
 from core.state_machine import JobState
-from jobs.models import Job
+from jobs.models import Job, collapse_groups
+from core.dates import month_grids
+from jobs.services import reviews_of
+from jobs.waiting import waiting_for
 
 from .forms import (
     AccountDetailsForm,
@@ -29,6 +32,16 @@ from .models import ClientProfile, PortfolioPhoto, TradeLicense, WorkerProfile
 #: Feed page size. Small enough that the first screen paints fast, large
 #: enough that a fast scroll does not out-run the loader.
 FEED_PAGE_SIZE = 8
+
+#: Workers shown under the home page's "Find workers" tab. The tab links on to
+#: the full list, which is where someone actually shopping goes.
+PREVIEW_WORKERS = 8
+
+#: The two halves of the home page. Held in the query string rather than in the
+#: session so the choice is in the URL: a link to the side you are looking at
+#: still shows that side when you send it to somebody.
+SHOW_WORK = "work"
+SHOW_WORKERS = "workers"
 
 
 def home(request):
@@ -47,31 +60,54 @@ def home(request):
     jobs = (
         Job.objects.public()
         .select_related("trade", "region", "client__user")
-        .order_by("-created_at")
+        .order_by("-created_at", "gig_date")
     )
-    page = Paginator(jobs, FEED_PAGE_SIZE).get_page(request.GET.get("page"))
+    # Collapsed before paging, not after: a booking of five days is one entry,
+    # and paging the rows first would put two days of the same booking on
+    # different pages and still show five cards.
+    rows = collapse_groups(jobs)
+    page = Paginator(rows, FEED_PAGE_SIZE).get_page(request.GET.get("page"))
 
-    context = {"page": page, "total": jobs.count()}
+    context = {
+        "page": page,
+        "total": len(rows),
+        # Same panel as "Mine", from the same counts — the answer to "is
+        # anything waiting on me?" must not depend on which page you opened.
+        "waiting": waiting_for(request.user),
+    }
 
-    # Once the open work runs out the feed keeps going rather than stopping at
-    # a blank screen. Everything below the live jobs is clearly labelled as
-    # not-available — a filler card that looked applicable would be worse than
-    # an empty page.
-    if not page.has_next():
-        context["filler_jobs"] = (
-            Job.objects.exclude(state=JobState.POSTED)
-            .select_related("trade", "region", "client__user")
-            .order_by("-created_at")[:6]
-        )
-        context["filler_workers"] = (
-            WorkerProfile.objects.select_related("user", "region")
-            .prefetch_related("trades")
-            .exclude(user=request.user.pk if request.user.is_authenticated else None)
-            .order_by("-created_at")[:6]
-        )
+    # Finished work is not shown here at all. It used to pad the end of the
+    # feed so an empty board did not read as a blank screen, but a board full
+    # of jobs nobody can apply to is worse than a short one — the reader has to
+    # check each card before finding out it is over. The workers tab is what
+    # fills the page now when there is little work on it.
+    #
+    # Nothing is deleted: a finished job stays on both parties' "Mine" and in
+    # the track record on their profiles, which is the whole basis of the trust
+    # display. It simply stops being browsable.
 
     if request.GET.get("partial"):
         return render(request, "accounts/_feed_items.html", context)
+
+    # Which half of the page is showing. Anything that is not the workers tab
+    # is the work tab, so a hand-typed ?show=nonsense lands on the feed rather
+    # than on a blank page.
+    showing = SHOW_WORKERS if request.GET.get("show") == SHOW_WORKERS else SHOW_WORK
+    context["showing"] = showing
+
+    # Only the visible half is queried. The tabs are links, so the other side
+    # costs a request when it is asked for and nothing at all until then.
+    #
+    # Outside the partial branch on purpose: the scroll loader appends
+    # _feed_items.html once per page, so a worker card left in there would
+    # arrive again every time somebody scrolled.
+    if showing == SHOW_WORKERS:
+        context["workers"] = (
+            WorkerProfile.objects.select_related("user", "region")
+            .prefetch_related("trades")
+            .exclude(user=request.user.pk if request.user.is_authenticated else None)
+            .order_by("-created_at")[:PREVIEW_WORKERS]
+        )
 
     return render(request, "accounts/feed.html", context)
 
@@ -248,7 +284,16 @@ def worker_detail(request, pk: int):
     return render(
         request,
         "accounts/worker_detail.html",
-        {"profile": profile, "is_own": profile.user_id == request.user.pk},
+        {
+            "profile": profile,
+            "is_own": profile.user_id == request.user.pk,
+            "reviews": reviews_of(profile),
+            # The same days as the badges above them, drawn as months. A client
+            # deciding whether to offer next Thursday reads a calendar faster
+            # than a list, and a calendar is the only shape that shows the free
+            # days between the booked ones.
+            "booked_months": month_grids(profile.booked_dates),
+        },
     )
 
 
@@ -286,9 +331,36 @@ def client_detail(request, pk: int):
         {
             "profile": profile,
             "is_own": profile.user_id == request.user.pk,
+            "reviews": reviews_of(profile),
             # What they have open right now says more about a client than any
             # of the counters do.
-            "open_jobs": profile.jobs.public().select_related("trade", "region")[:5],
+            #
+            # Collapsed, and sliced after rather than before: a booking is one
+            # thing this client is hiring for, and five days of it took the
+            # whole list while looking like five separate jobs going spare. The
+            # slice counts bookings now, which is what "five open jobs" was
+            # always meant to mean.
+            "open_jobs": collapse_groups(
+                list(profile.jobs.public().select_related("trade", "region"))
+            )[:5],
+            # And what is under way. Without this a job disappeared from its own
+            # client's profile the moment they confirmed somebody — the page
+            # listed only open posts, so accepting an applicant looked like
+            # losing the job. Work in hand is also the more useful signal: a
+            # client with three jobs running is plainly hiring.
+            "current_jobs": collapse_groups(list(
+                profile.jobs.filter(
+                    state__in=[
+                        JobState.ACCEPTED,
+                        JobState.ESCROW_HELD,
+                        JobState.IN_PROGRESS,
+                        JobState.COMPLETED,
+                        JobState.ENDED_EARLY,
+                    ]
+                )
+                .select_related("trade", "region", "assigned_worker__user")
+                .order_by("gig_date")
+            ))[:5],
         },
     )
 

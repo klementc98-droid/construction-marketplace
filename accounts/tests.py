@@ -104,17 +104,17 @@ class RateDisplayTests(TestCase):
 
     def test_flat_rate(self):
         self.profile.rate_min = Decimal("30")
-        self.assertEqual(self.profile.rate_display, "$30/hr")
+        self.assertEqual(self.profile.rate_display, "€30/hr")
 
     def test_range(self):
         self.profile.rate_min = Decimal("28")
         self.profile.rate_max = Decimal("35")
-        self.assertEqual(self.profile.rate_display, "$28-$35/hr")
+        self.assertEqual(self.profile.rate_display, "€28-€35/hr")
 
     def test_daily_rate_unit(self):
         self.profile.rate_type = "daily"
         self.profile.rate_min = Decimal("240")
-        self.assertEqual(self.profile.rate_display, "$240/day")
+        self.assertEqual(self.profile.rate_display, "€240/day")
 
     def test_unset_rate_does_not_render_as_zero(self):
         self.assertEqual(self.profile.rate_display, "Rate on request")
@@ -183,10 +183,17 @@ class WorkerProfileFormTests(TestCase):
         self.assertIn("available_dates", form.errors)
 
     def test_specific_days_saves_parsed_dates(self):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        # Relative to today, never written out. The form rejects past dates, so
+        # a date fixed in the source is a test with an expiry date on it.
+        days = [timezone.localdate() + timedelta(days=n) for n in (3, 4)]
         form = WorkerProfileForm(
             self._data(
                 availability_status=AvailabilityStatus.SPECIFIC_DAYS,
-                available_dates="2026-08-04, 2026-08-05",
+                available_dates=", ".join(d.isoformat() for d in days),
             ),
             instance=self.profile,
         )
@@ -194,15 +201,19 @@ class WorkerProfileFormTests(TestCase):
         form.save()
         self.assertEqual(
             [d.date.isoformat() for d in self.profile.availability_dates.all()],
-            ["2026-08-04", "2026-08-05"],
+            [d.isoformat() for d in days],
         )
 
     def test_switching_away_from_specific_days_clears_stale_dates(self):
         """Otherwise a worker looks bookable on days they never re-confirmed."""
+        from datetime import timedelta
+
+        from django.utils import timezone
+
         form = WorkerProfileForm(
             self._data(
                 availability_status=AvailabilityStatus.SPECIFIC_DAYS,
-                available_dates="2026-08-04",
+                available_dates=(timezone.localdate() + timedelta(days=3)).isoformat(),
             ),
             instance=self.profile,
         )
@@ -463,6 +474,155 @@ class PublicProfileTests(TestCase):
             client_page, reverse("accounts:worker_detail", args=[self.worker.pk])
         )
 
+    def _accepted_job(self, *, days_ahead=2, state=None):
+        from datetime import timedelta
+        from decimal import Decimal
+
+        from django.utils import timezone
+
+        from core.models import Trade
+        from core.state_machine import JobState
+        from jobs.models import Job, JobType
+
+        # Unique per call: a test that books two days calls this twice, and a
+        # fixed address collides on the second.
+        hirer = make_user(f"books-them-{days_ahead}@example.com")
+        return Job.objects.create(
+            client=ClientProfile.objects.create(user=hirer, region=self.region),
+            job_type=JobType.GIG,
+            trade=Trade.objects.first(),
+            region=self.region,
+            title="Framing",
+            description="A day of it.",
+            gig_date=timezone.localdate() + timedelta(days=days_ahead),
+            gig_hours=Decimal("8"),
+            fixed_pay=Decimal("120"),
+            state=state or JobState.ACCEPTED,
+            assigned_worker=self.worker,
+        )
+
+    def test_a_booked_day_shows_on_the_profile(self):
+        """A client about to offer Tuesday needs to know Tuesday is gone."""
+        from django.utils import formats
+
+        job = self._accepted_job()
+        self.assertEqual(self.worker.booked_dates, [job.gig_date])
+
+        page = self.client.get(
+            reverse("accounts:worker_detail", args=[self.worker.pk])
+        )
+        self.assertContains(page, formats.date_format(job.gig_date, "D j M"))
+
+    def test_a_day_already_gone_is_not_still_shown_as_booked(self):
+        """A gig can sit active past its date while a sign-off is waited on."""
+        self._accepted_job(days_ahead=-3)
+        self.assertEqual(self.worker.booked_dates, [])
+
+    def test_a_finished_day_frees_the_diary(self):
+        from core.state_machine import JobState
+
+        self._accepted_job(state=JobState.CLOSED)
+        self.assertEqual(self.worker.booked_dates, [])
+
+    def test_a_profile_with_nothing_booked_shows_no_such_section(self):
+        page = self.client.get(
+            reverse("accounts:worker_detail", args=[self.worker.pk])
+        )
+        self.assertNotContains(page, "Already booked")
+
+    def test_a_free_day_inside_a_run_of_booked_ones_stays_free(self):
+        """Booked the 25th and the 30th does not make the 26th taken.
+
+        The 26th is exactly the day somebody is about to try to hire them for,
+        and a horizon test — everything up to the last booked day — answered
+        "no" to it.
+        """
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        booked = self._accepted_job(days_ahead=2)
+        far = self._accepted_job(days_ahead=6)
+        gap = timezone.localdate() + timedelta(days=4)
+
+        self.assertEqual(self.worker.booked_dates, [booked.gig_date, far.gig_date])
+        self.assertFalse(self.worker.is_free_on(booked.gig_date))
+        self.assertFalse(self.worker.is_free_on(far.gig_date))
+        self.assertTrue(self.worker.is_free_on(gap))
+
+    def test_the_headline_counts_the_days_rather_than_claiming_a_block(self):
+        self._accepted_job(days_ahead=2)
+        self._accepted_job(days_ahead=6)
+        self.assertIn("Booked 2 days", str(self.worker.availability_headline))
+
+    def test_a_solid_run_still_reads_as_busy_until(self):
+        """The old wording is right when the diary really is solid."""
+        self._accepted_job(days_ahead=1)
+        self._accepted_job(days_ahead=2)
+        self.assertIn("Busy until", str(self.worker.availability_headline))
+
+    def _finished_job_with_reviews(self):
+        """One closed job, rated by both sides, and everyone involved."""
+        from datetime import timedelta
+        from decimal import Decimal
+
+        from django.utils import timezone
+
+        from core.models import Trade
+        from core.state_machine import JobState
+        from jobs.models import Job, JobType, Review, ReviewDirection
+
+        hirer = make_user("hirer-with-views@example.com")
+        hirer.full_name = "Maria Georgiou"
+        hirer.save()
+        client_profile = ClientProfile.objects.create(user=hirer, region=self.region)
+        job = Job.objects.create(
+            client=client_profile,
+            job_type=JobType.GIG,
+            trade=Trade.objects.first(),
+            region=self.region,
+            title="Loft conversion",
+            description="Two days of framing.",
+            gig_date=timezone.localdate() - timedelta(days=2),
+            gig_hours=Decimal("8"),
+            fixed_pay=Decimal("120"),
+            state=JobState.CLOSED,
+            assigned_worker=self.worker,
+        )
+        Review.objects.create(
+            job=job, author=hirer, direction=ReviewDirection.CLIENT_ON_WORKER,
+            rating=5, comment="Turned up early and cleared up after.",
+        )
+        Review.objects.create(
+            job=job, author=self.person, direction=ReviewDirection.WORKER_ON_CLIENT,
+            rating=4, comment="Paid the day it was done.",
+        )
+        return client_profile
+
+    def test_a_worker_profile_shows_the_words_clients_wrote(self):
+        """An average is a number nobody learns anything from on its own."""
+        self._finished_job_with_reviews()
+        page = self.client.get(
+            reverse("accounts:worker_detail", args=[self.worker.pk])
+        )
+        self.assertContains(page, "Turned up early and cleared up after.")
+        # Not the review pointing the other way — that belongs on the client.
+        self.assertNotContains(page, "Paid the day it was done.")
+
+    def test_a_client_profile_shows_the_words_workers_wrote(self):
+        client_profile = self._finished_job_with_reviews()
+        page = self.client.get(
+            reverse("accounts:client_detail", args=[client_profile.pk])
+        )
+        self.assertContains(page, "Paid the day it was done.")
+        self.assertNotContains(page, "Turned up early and cleared up after.")
+
+    def test_a_profile_with_no_reviews_says_so_rather_than_showing_nothing(self):
+        page = self.client.get(
+            reverse("accounts:worker_detail", args=[self.worker.pk])
+        )
+        self.assertContains(page, "No reviews yet")
+
     def test_a_client_profile_shows_what_they_have_open(self):
         from jobs.models import Job, JobType
 
@@ -486,8 +646,8 @@ class PublicProfileTests(TestCase):
         self.assertContains(response, "Carpenter wanted, ongoing")
 
 
-class FeedTests(TestCase):
-    """The front page: open work, newest first, endlessly scrollable."""
+class FeedFixture(TestCase):
+    """Shared fixture: a client with a region and a way to make jobs."""
 
     def setUp(self):
         self.region = Region.objects.filter(is_active=True).first()
@@ -513,6 +673,11 @@ class FeedTests(TestCase):
             )
             for n in range(count)
         ]
+
+
+
+class FeedTests(FeedFixture):
+    """The front page: open work, newest first, endlessly scrollable."""
 
     def test_a_signed_out_visitor_sees_the_work_not_just_a_sign_in_wall(self):
         self.make_jobs(2)
@@ -564,37 +729,44 @@ class FeedTests(TestCase):
             response, reverse("jobs:apply", args=[job.pk])
         )
 
-    def test_the_feed_falls_back_to_filler_rather_than_going_blank(self):
+    def test_finished_work_is_not_listed(self):
+        """It used to pad the end of the feed as "Recently filled".
+
+        A board carrying jobs nobody can apply to makes the reader check each
+        card to find out it is over. The record itself is untouched — it still
+        counts on both parties' profiles — it just stops being browsable.
+        """
         from core.state_machine import JobState
 
         job = self.make_jobs(1)[0]
         job.state = JobState.ACCEPTED
         job.save(update_fields=["state"])
-        WorkerProfile.objects.create(
-            user=make_user("chippy@example.com"), region=self.region
-        )
 
         response = self.client.get(reverse("accounts:home"))
         self.assertEqual(len(response.context["page"].object_list), 0)
-        # Something to scroll, both kinds.
-        self.assertIn(job, list(response.context["filler_jobs"]))
-        self.assertEqual(len(response.context["filler_workers"]), 1)
-        self.assertContains(response, "Recently filled")
-        self.assertContains(response, "People on Construction's Finest")
+        self.assertNotContains(response, "Recently filled")
+        self.assertNotContains(response, job.title)
+        self.assertNotIn("filler_jobs", response.context)
 
-    def test_filler_only_appears_once_the_open_work_runs_out(self):
-        from accounts.views import FEED_PAGE_SIZE
+    def test_the_finished_job_still_exists(self):
+        """Hidden from the board, not deleted. The trust display needs it."""
+        from core.state_machine import JobState
+        from jobs.models import Job
 
-        self.make_jobs(FEED_PAGE_SIZE + 2)
-        first = self.client.get(reverse("accounts:home"))
-        self.assertNotIn("filler_jobs", first.context)
-
-        last = self.client.get(reverse("accounts:home"), {"page": 2})
-        self.assertIn("filler_jobs", last.context)
+        job = self.make_jobs(1)[0]
+        job.state = JobState.ACCEPTED
+        job.save(update_fields=["state"])
+        self.client.get(reverse("accounts:home"))
+        self.assertTrue(Job.objects.filter(pk=job.pk).exists())
 
     def test_a_truly_empty_platform_says_so_rather_than_rendering_nothing(self):
+        """One message now, not two.
+
+        The second branch covered "nothing open, but there is filler below".
+        With finished work no longer listed, both branches said the same thing.
+        """
         response = self.client.get(reverse("accounts:home"))
-        self.assertContains(response, "Nothing on the board yet")
+        self.assertContains(response, "No open work at the moment")
 
     def test_a_nonsense_page_number_does_not_500(self):
         self.make_jobs(2)
@@ -615,7 +787,8 @@ class FeedTests(TestCase):
         )
 
 
-class SeekingStatusTests(TestCase):
+
+class SeekingFixture(TestCase):
     """"What are they after right now" must never contradict the facts."""
 
     def setUp(self):
@@ -659,6 +832,11 @@ class SeekingStatusTests(TestCase):
                 position_type="ongoing",
             )
         return Job.objects.create(**kwargs)
+
+
+class SeekingStatusTests(SeekingFixture):
+    """What a worker says they are after, and what the record says."""
+
 
     def test_available_now_reads_as_available(self):
         self.assertEqual(self.worker.availability_headline, "Available now")
@@ -878,3 +1056,139 @@ class TemplateHygieneTests(TestCase):
             body = self.client.get(url).content.decode()
             self.assertNotIn("{#", body, f"{url} leaked a comment")
             self.assertNotIn("{%", body, f"{url} leaked a tag")
+
+
+class HomeTabsTests(FeedFixture):
+    """The home page is one of two lists, chosen by a switch at the top."""
+
+    def test_the_switch_offers_both_sides(self):
+        response = self.client.get(reverse("accounts:home"))
+        self.assertContains(response, "home-tabs")
+        self.assertContains(response, "?show=workers")
+
+    def test_work_is_the_default(self):
+        response = self.client.get(reverse("accounts:home"))
+        self.assertEqual(response.context["showing"], "work")
+        self.assertContains(response, "<h2>Find work</h2>")
+        self.assertNotContains(response, "<h2>Find workers</h2>")
+
+    def test_asking_for_workers_shows_workers_instead(self):
+        WorkerProfile.objects.create(
+            user=make_user("sparks@example.com"), region=self.region
+        )
+        response = self.client.get(reverse("accounts:home"), {"show": "workers"})
+        self.assertEqual(response.context["showing"], "workers")
+        self.assertContains(response, "<h2>Find workers</h2>")
+        self.assertNotContains(response, "<h2>Find work</h2>")
+        self.assertEqual(len(response.context["workers"]), 1)
+
+    def test_the_hidden_side_is_not_queried(self):
+        """The tabs are links, so the other list costs nothing until asked for."""
+        response = self.client.get(reverse("accounts:home"))
+        self.assertNotIn("workers", response.context)
+
+    def test_nonsense_lands_on_the_feed_rather_than_a_blank_page(self):
+        response = self.client.get(reverse("accounts:home"), {"show": "banana"})
+        self.assertEqual(response.context["showing"], "work")
+        self.assertContains(response, "<h2>Find work</h2>")
+
+    def test_the_workers_list_is_capped(self):
+        from accounts.views import PREVIEW_WORKERS
+
+        for n in range(PREVIEW_WORKERS + 3):
+            WorkerProfile.objects.create(
+                user=make_user(f"w{n}@example.com"), region=self.region
+            )
+        response = self.client.get(reverse("accounts:home"), {"show": "workers"})
+        self.assertEqual(len(response.context["workers"]), PREVIEW_WORKERS)
+
+    def test_an_empty_workers_tab_says_so(self):
+        response = self.client.get(reverse("accounts:home"), {"show": "workers"})
+        self.assertContains(response, "Nobody's listed here yet.")
+
+    def test_the_workers_tab_carries_no_scroll_sentinel(self):
+        """Nothing to page through here, so the loader must find no target."""
+        from accounts.views import FEED_PAGE_SIZE
+
+        self.make_jobs(FEED_PAGE_SIZE + 2)
+        response = self.client.get(reverse("accounts:home"), {"show": "workers"})
+        self.assertNotContains(response, "feed-sentinel")
+
+    def test_the_scroll_partial_carries_no_workers(self):
+        """Appended once per page, so a worker card here would repeat forever."""
+        from accounts.views import FEED_PAGE_SIZE
+
+        self.make_jobs(FEED_PAGE_SIZE + 2)
+        WorkerProfile.objects.create(
+            user=make_user("sparks@example.com"), region=self.region
+        )
+        response = self.client.get(
+            reverse("accounts:home"), {"partial": "1", "page": 2}
+        )
+        self.assertNotIn("workers", response.context)
+        self.assertNotContains(response, "<h2>Find workers</h2>")
+
+
+class StaleCommitmentTests(SeekingFixture):
+    """A booking whose last day has gone by is not a booking.
+
+    A gig can sit in an active state well past its date — waiting on a
+    sign-off, or on an approval window that has not run out. The worker is
+    plainly not busy on a day that has been and gone, and every page that
+    quotes a date has to agree about that.
+    """
+
+    def past_job(self):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from core.state_machine import JobState
+
+        job = self.make_job(state=JobState.ACCEPTED)
+        job.assigned_worker = self.worker
+        job.gig_date = timezone.localdate() - timedelta(days=5)
+        job.save(update_fields=["assigned_worker", "gig_date"])
+        return job
+
+    def test_a_finished_day_no_longer_makes_them_busy(self):
+        self.past_job()
+        self.assertIsNone(self.worker.busy_until)
+        self.assertIsNone(self.worker.available_from)
+
+    def test_they_read_as_available_again(self):
+        """The bug as reported: "free from 1 Aug" still showing in mid-August."""
+        self.past_job()
+        self.assertEqual(self.worker.availability_headline, "Available now")
+        self.assertEqual(self.worker.availability_tone, "ok")
+
+    def test_the_profile_page_stops_quoting_the_old_date(self):
+        from django.urls import reverse
+
+        self.past_job()
+        response = self.client.get(
+            reverse("accounts:worker_detail", args=[self.worker.pk])
+        )
+        self.assertNotContains(response, "Booked through")
+
+    def test_a_future_booking_still_reads_as_busy(self):
+        """The guard must not swallow the case it exists to report."""
+        from core.state_machine import JobState
+
+        job = self.make_job(state=JobState.ACCEPTED)
+        job.assigned_worker = self.worker
+        job.save(update_fields=["assigned_worker"])
+
+        self.assertEqual(self.worker.busy_until, job.gig_date)
+        self.assertEqual(self.worker.availability_tone, "soon")
+
+    def test_a_past_day_no_longer_blocks_being_booked_again(self):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        self.past_job()
+        self.worker.availability_status = AvailabilityStatus.AVAILABLE_NOW
+        self.worker.save(update_fields=["availability_status"])
+        tomorrow = timezone.localdate() + timedelta(days=1)
+        self.assertTrue(self.worker.is_free_on(tomorrow))

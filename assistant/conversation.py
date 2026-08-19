@@ -1,19 +1,23 @@
 """Conversation state, held by the server and never by the model.
 
-The model is asked to follow a protocol — one field at a time, confirm each
-one individually, only finish when everything is in. Prompts get you most of
-the way there and then fail on the day someone types something unusual. So the
-protocol is *also* a small state machine here, and this side is the authority:
+There is one store, :attr:`Conversation.collected`, holding what the model has
+heard. The server remains the authority on what is in it and on when the form
+is finished — :meth:`missing` is computed from the form's own required fields,
+so :func:`ready_for_review` cannot succeed early no matter what the model
+claims.
 
-* ``proposed`` is what the model says it heard. It is not data yet.
-* ``confirmed`` is what the user has since agreed to, field by field.
-* Only ``confirmed`` is ever handed to a form.
-* :meth:`missing` is computed from the form's own required fields, so
-  :func:`ready_for_review` cannot succeed early no matter what the model claims.
+This used to be two stores. Values landed in ``proposed``, and only moved to
+``confirmed`` once the model had read each one back and got a "yes" — so every
+field cost two exchanges. The review it was buying already exists, and in a
+better place: the handoff opens the real form with the values filled in, where
+they can be seen together, corrected by typing, and saved deliberately. Reading
+a rate back in chat asked people to proofread by ear something they were about
+to be shown on screen, and the round trips made a six-field form feel like an
+interrogation.
 
-A model that confirms four fields off one "yes" is therefore wrong about the
-conversation but harmless to the data — the user still sees every value on the
-real form before anything is written.
+Nothing about safety rests on the removed step. Only the user submitting the
+real form writes anything, through ordinary Django validation — a wrong value
+here costs one correction on a form they are already looking at.
 
 Everything lives in the Django session. There is no model and no migration; see
 ``assistant/models.py`` for why that is deliberate.
@@ -22,7 +26,7 @@ Everything lives in the Django session. There is no model and no migration; see
 from __future__ import annotations
 
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from typing import Any
 
 from django.conf import settings
@@ -53,14 +57,12 @@ class Conversation:
 
     branch: str | None = None
     form_key: str | None = None
-    proposed: dict[str, Any] | None = None
-    confirmed: dict[str, Any] | None = None
+    collected: dict[str, Any] | None = None
     transcript: list[dict[str, str]] | None = None
     calls: list[float] | None = None
 
     def __post_init__(self) -> None:
-        self.proposed = self.proposed or {}
-        self.confirmed = self.confirmed or {}
+        self.collected = self.collected or {}
         self.transcript = self.transcript or []
         self.calls = self.calls or []
 
@@ -68,14 +70,22 @@ class Conversation:
 
     @classmethod
     def load(cls, request) -> "Conversation":
-        return cls(**request.session.get(SESSION_KEY, {}))
+        """Rebuild from the session, ignoring keys this class no longer has.
+
+        Sessions outlive deploys. A conversation stored before ``proposed`` and
+        ``confirmed`` became one ``collected`` would otherwise raise TypeError
+        on the next message — a crash for anyone mid-form when the change ships,
+        in the one code path least able to afford one.
+        """
+        stored = request.session.get(SESSION_KEY, {})
+        known = {f.name for f in fields(cls)}
+        return cls(**{k: v for k, v in stored.items() if k in known})
 
     def save(self, request) -> None:
         request.session[SESSION_KEY] = {
             "branch": self.branch,
             "form_key": self.form_key,
-            "proposed": self.proposed,
-            "confirmed": self.confirmed,
+            "collected": self.collected,
             "transcript": self.transcript[-MAX_TURNS:],
             "calls": self.calls,
         }
@@ -97,8 +107,7 @@ class Conversation:
         """
         self.branch = branch
         self.form_key = form_key
-        self.proposed = {}
-        self.confirmed = {}
+        self.collected = {}
         self.transcript = []
 
     @property
@@ -137,83 +146,64 @@ class Conversation:
         return messages
 
     def _status(self, spec: FormSpec) -> str:
-        confirmed = ", ".join(
-            f"{k}={v!r}" for k, v in self.confirmed.items()
+        collected = ", ".join(
+            f"{k}={v!r}" for k, v in self.collected.items()
         ) or "nothing yet"
-        awaiting = ", ".join(self.awaiting_confirmation()) or "nothing"
         missing = ", ".join(self.missing()) or "nothing"
         return (
             "FORM STATE (authoritative — this is the server's record, trust it "
             "over your own memory).\n"
-            f"Confirmed: {confirmed}\n"
-            f"Proposed but NOT yet confirmed by the user: {awaiting}\n"
+            f"Collected so far: {collected}\n"
             f"Required and still missing: {missing}\n"
-            "Ask about the first still-missing field, unless something above is "
-            "awaiting confirmation — in that case confirm that first, one field "
-            "per question."
+            "Do this in order. FIRST: if the user's last message contains any "
+            "value for a field, call record_fields with it now — a value you do "
+            "not record is lost, and this list is the proof of what got through. "
+            "THEN: ask about the first still-missing field. Never re-ask or read "
+            "back anything already collected; the user reviews all of it on the "
+            "real form at the end."
         )
 
     # -- field collection --------------------------------------------------
 
-    def propose(self, values: dict[str, Any]) -> None:
-        """Record what the model heard. Deliberately does not confirm it."""
+    def collect(self, values: dict[str, Any]) -> None:
+        """Record what the model heard.
+
+        A field arriving twice is a correction — the user changed their mind, or
+        the model misheard the first time — so the newer value simply replaces
+        the older one. Empty values are ignored rather than stored: a model that
+        emits ``{"rate_min": ""}`` while asking about the rate would otherwise
+        overwrite a real answer with a blank.
+        """
         spec = self.spec
         if spec is None:
             return
         for name, value in values.items():
-            if name in spec.chat_fields and value not in (None, ""):
-                self.proposed[name] = value
-                # A re-proposal is a correction: the user changed their mind,
-                # so the old agreement no longer covers the new value.
-                self.confirmed.pop(name, None)
-
-    def confirm(self, names: list[str]) -> list[str]:
-        """Promote proposed values the user has agreed to.
-
-        Only fields that were actually proposed can be confirmed. A model that
-        confirms something it never heard gets nothing — the value would be
-        invented, and an invented rate on a profile is worse than a repeated
-        question.
-        """
-        accepted = []
-        for name in names:
-            if name in self.proposed:
-                self.confirmed[name] = self.proposed[name]
-                accepted.append(name)
-        return accepted
-
-    def awaiting_confirmation(self) -> list[str]:
-        return [n for n in self.proposed if n not in self.confirmed]
+            if name in spec.chat_fields and value not in (None, "", []):
+                self.collected[name] = value
 
     def missing(self) -> list[str]:
-        """Required chat fields with no confirmed value."""
+        """Required chat fields with no value yet."""
         spec = self.spec
         if spec is None:
             return []
-        return [n for n in required_fields(spec) if n not in self.confirmed]
+        return [n for n in required_fields(spec) if n not in self.collected]
 
     def can_review(self) -> bool:
-        return bool(self.spec) and not self.missing() and not self.awaiting_confirmation()
+        return bool(self.spec) and not self.missing()
 
     def blocking_reason(self) -> str:
         """Why ``ready_for_review`` was refused, phrased for the model."""
         if missing := self.missing():
             return (
-                f"Not ready: these required fields have no confirmed value yet: "
+                f"Not ready: these required fields have no value yet: "
                 f"{', '.join(missing)}. Ask about the first one."
-            )
-        if awaiting := self.awaiting_confirmation():
-            return (
-                f"Not ready: these were proposed but the user has not confirmed "
-                f"them individually yet: {', '.join(awaiting)}. Read the first one "
-                f"back and ask if it is right."
             )
         return "Not ready."
 
     # -- handoff -----------------------------------------------------------
 
     def handoff(self, request) -> str | None:
-        """Stash confirmed values for the real form view and return its URL.
+        """Stash collected values for the real form view and return its URL.
 
         Returns ``None`` if a value cannot be mapped onto the form — a trade
         name the model altered, say. Better to keep asking than to hand the
@@ -226,7 +216,7 @@ class Conversation:
             return None
 
         try:
-            data = to_form_data(spec, self.confirmed)
+            data = to_form_data(spec, self.collected)
         except UnknownChoice:
             return None
 

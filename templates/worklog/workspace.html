@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load i18n money_extras %}
 {% block title %}{{ job.title }} — on site{% endblock %}
 
 {% block content %}
@@ -20,39 +21,63 @@
       {% if job.assigned_worker %}
         {% include "_person.html" with person=job.assigned_worker.user size="md" sub="Worker" %}
       {% endif %}
+
+  {% if not job.is_escrowed %}
+    <div class="card">
+      <ul class="timeline">
+        <li class="{% if job.state != 'accepted' %}done{% else %}current{% endif %}">
+          <span class="dot"></span>
+          <div class="step-title">{% translate "The worker marks it finished" %}</div>
+        </li>
+        <li class="{% if job.state == 'closed' %}done{% elif job.awaiting_client_confirmation %}current{% endif %}">
+          <span class="dot"></span>
+          <div class="step-title">{% translate "The client confirms and it closes" %}</div>
+          <p class="step-note">
+            {% translate "Payment is between the two of you. We record that the job happened — nothing is held and nothing is released." %}
+          </p>
+        </li>
+      </ul>
+    </div>
+  {% endif %}
     </div>
     <p style="margin:14px 0 0">
-      <a href="{% url 'messaging:inbox' %}">Messages</a> ·
-      <a href="{% url 'jobs:detail' job.pk %}">Job post</a>
+      <a href="{% url 'messaging:inbox' %}">{% translate "Messages" %}</a> ·
+      <a href="{% url 'jobs:detail' job.pk %}">{% translate "Job post" %}</a>
     </p>
   </div>
 
-  {# ---- the record so far ------------------------------------------------ #}
+  {% comment %} The record so far. Escrow only: every step below is about money we
+     are holding — funded, checked in, signed off, released — and none of it
+     happens on a job the two sides are settling themselves. Shown anyway it
+     told a client who chose cash-in-hand that they were waiting to fund an
+     escrow, which is the wrong instruction as well as the wrong fact.
+  {% endcomment %}
+  {% if job.is_escrowed %}
   <div class="card">
     <ul class="timeline">
       <li class="{% if escrow.is_held or escrow.status == 'released' %}done{% elif job.state == 'accepted' %}current{% endif %}">
         <span class="dot"></span>
-        <div class="step-title">Money held</div>
+        <div class="step-title">{% translate "Money held" %}</div>
         <div class="step-meta">
           {% if escrow.authorized_at %}
-            ${{ escrow.amount }} secured {{ escrow.authorized_at|date:"j M, H:i" }}
+            {{ escrow.amount|money }} secured {{ escrow.authorized_at|date:"j M, H:i" }}
           {% else %}
-            Waiting on the client to fund the gig
+            {% translate "Waiting on the client to fund the gig" %}
           {% endif %}
         </div>
       </li>
 
       <li class="{% if check_in %}done{% elif job.state == 'escrow_held' %}current{% endif %}">
         <span class="dot"></span>
-        <div class="step-title">Worker on site</div>
+        <div class="step-title">{% translate "Worker on site" %}</div>
         <div class="step-meta">
           {% if check_in %}
             Checked in {{ check_in.arrived_at|date:"j M, H:i" }}
-            {% if check_in.looks_on_site %}· location matched the site
+            {% if check_in.looks_on_site %}{% translate "· location matched the site" %}
             {% elif check_in.looks_on_site is False %}· {{ check_in.distance_m }} m from the site
             {% endif %}
           {% else %}
-            Not checked in yet
+            {% translate "Not checked in yet" %}
           {% endif %}
         </div>
       </li>
@@ -60,7 +85,7 @@
       <li class="{% if completion %}done{% elif job.state == 'in_progress' %}current{% endif %}">
         <span class="dot"></span>
         <div class="step-title">
-          {% if completion.ended_early %}Ended early{% else %}Day finished{% endif %}
+          {% if completion.ended_early %}{% translate "Ended early" %}{% else %}{% translate "Day finished" %}{% endif %}
         </div>
         <div class="step-meta">
           {% if completion %}
@@ -72,7 +97,7 @@
               {% if completion.early_end_note %}— “{{ completion.early_end_note }}”{% endif %}
             {% endif %}
           {% else %}
-            The worker marks this when the day is done
+            {% translate "The worker marks this when the day is done" %}
           {% endif %}
         </div>
       </li>
@@ -80,45 +105,46 @@
       <li class="{% if job.state == 'paid_out' %}done{% elif dispute %}blocked{% elif completion %}current{% endif %}">
         <span class="dot"></span>
         <div class="step-title">
-          {% if dispute %}Under review{% else %}Paid out{% endif %}
+          {% if dispute %}{% translate "Under review" %}{% else %}{% translate "Paid out" %}{% endif %}
         </div>
         <div class="step-meta">
           {% if job.state == 'paid_out' %}
-            ${{ completion.payable_amount }} released
+            {{ completion.payable_amount|money }} released
             {{ completion.settled_at|date:"j M, H:i"|default:"" }}
           {% elif dispute %}
-            Frozen until someone reviews it. Nothing releases automatically from here.
+            {% translate "Frozen until someone reviews it. Nothing releases automatically from here." %}
           {% elif completion %}
-            ${{ completion.payable_amount }} releases {{ completion.settles_at|date:"j M, H:i" }}
+            {{ completion.payable_amount|money }} releases {{ completion.settles_at|date:"j M, H:i" }}
           {% else %}
-            Releases after the job is signed off
+            {% translate "Releases after the job is signed off" %}
           {% endif %}
         </div>
       </li>
     </ul>
   </div>
+  {% endif %}
 
   {# ---- the money -------------------------------------------------------- #}
   {% if completion %}
-    <h2>What gets paid</h2>
+    <h2>{% translate "What gets paid" %}</h2>
     <div class="card">
       <div class="stat-row">
         <div class="stat">
-          <div class="k">Hours worked</div>
+          <div class="k">{% translate "Hours worked" %}</div>
           <div class="v">{{ completion.hours_worked|floatformat:"-1" }}</div>
         </div>
         <div class="stat">
-          <div class="k">Booked</div>
+          <div class="k">{% translate "Booked" %}</div>
           <div class="v">{{ job.gig_hours|floatformat:"-1" }}</div>
         </div>
         <div class="stat">
-          <div class="k">Worker is owed</div>
-          <div class="v">${{ completion.payable_amount }}</div>
+          <div class="k">{% translate "Worker is owed" %}</div>
+          <div class="v">{{ completion.payable_amount|money }}</div>
         </div>
         {% if completion.payable_amount < escrow.amount %}
           <div class="stat">
-            <div class="k">Back to client</div>
-            <div class="v">${{ escrow.amount|floatformat:2 }}</div>
+            <div class="k">{% translate "Back to client" %}</div>
+            <div class="v">{{ escrow.amount|floatformat:2|money }}</div>
           </div>
         {% endif %}
       </div>
@@ -136,7 +162,7 @@
   {# ---- what to do now --------------------------------------------------- #}
 
   {% if dispute %}
-    <h2>Dispute</h2>
+    <h2>{% translate "Dispute" %}</h2>
     <div class="card">
       <p style="margin:0 0 8px"><span class="badge state-alert">{{ dispute.get_status_display }}</span></p>
       <p style="white-space:pre-wrap;margin:0">{{ dispute.reason }}</p>
@@ -146,13 +172,69 @@
       </p>
     </div>
 
-  {% elif is_worker and 'in_progress' in moves %}
-    <h2>Next</h2>
+  {% comment %} The no-escrow route, first because it must win over the escrow
+     branches below: on this job there is no check-in to offer and no release to
+     approve, and offering either would be a button that raises. Two moves and
+     both sides have to make one — there is no hold and so no timer, which is
+     why nothing here happens on its own.
+  {% endcomment %}
+  {% elif is_worker and not job.is_escrowed and 'completed' in moves %}
+    <h2>{% translate "Next" %}</h2>
     <div class="card action-panel">
-      <h2>You're due on site</h2>
+      {% comment %} Not offered before the day arrives. The service refuses it anyway —
+         nobody can say next Thursday's work happened — but a button that is
+         there to be pressed and then answers "no" is a worse way to learn a
+         rule than a button that waits its turn and says when it is coming.
+      {% endcomment %}
+      {% if day_has_come %}
+        <p class="flush"><strong>{% translate "Is the work done?" %}</strong></p>
+        <p class="note">
+          {% translate "Mark it finished and the client confirms. Payment is between the two of you — we record that the job happened, nothing more." %}
+        </p>
+        <form method="post" action="{% url 'worklog:finish' job.pk %}">
+          {% csrf_token %}
+          <button class="btn" type="submit" data-busy-label="{% translate "Saving…" %}">
+            {% translate "The work is done" %}
+          </button>
+        </form>
+      {% else %}
+        <p class="flush"><strong>{% translate "Not yet — this day is still ahead." %}</strong></p>
+        <p class="note">
+          {% blocktranslate with day=job.gig_date|date:"D j M" %}You can mark it done on {{ day }}, once the day has actually been worked. Days already worked can be signed off now from their own page.{% endblocktranslate %}
+        </p>
+      {% endif %}
+    </div>
+
+  {% elif is_client and job.awaiting_client_confirmation %}
+    <h2>{% translate "Next" %}</h2>
+    <div class="card action-panel">
+      <p class="flush"><strong>{% translate "They've marked the work finished." %}</strong></p>
+      <p class="note">
+        {% translate "Confirm and the job closes. Nothing is released — there is no money held on this one — but it goes on both track records and you can each leave a rating." %}
+      </p>
+      <form method="post" action="{% url 'worklog:confirm' job.pk %}">
+        {% csrf_token %}
+        <button class="btn" type="submit" data-busy-label="{% translate "Saving…" %}">
+          {% translate "Confirm and close" %}
+        </button>
+      </form>
+    </div>
+
+  {% elif is_worker and job.awaiting_client_confirmation %}
+    <h2>{% translate "Next" %}</h2>
+    <div class="card">
+      <p class="flush"><strong>{% translate "Waiting on the client to confirm." %}</strong></p>
+      <p class="note">
+        {% translate "No timer on this one: with no money held there is nothing to release, so it stays here until they agree." %}
+      </p>
+    </div>
+
+  {% elif is_worker and 'in_progress' in moves %}
+    <h2>{% translate "Next" %}</h2>
+    <div class="card action-panel">
+      <h2>{% translate "You're due on site" %}</h2>
       <p class="muted" style="margin:0 0 14px">
-        Tap this when you arrive. It starts the clock and tells the client
-        you're there.
+        {% translate "Tap this when you arrive. It starts the clock and tells the client you're there." %}
       </p>
       {% comment %} data-geo asks the browser for a fix and fills the hidden fields before
          submitting. data-no-guard because the handler re-submits the form itself,
@@ -165,32 +247,30 @@
         <input type="hidden" name="longitude" id="lng">
         <input type="hidden" name="accuracy" id="acc">
         <button class="btn" type="submit"
-                data-confirm="Check in now? This starts the clock and locks in your guaranteed minimum pay for the day.">I've arrived</button>
+                data-confirm="Check in now? This starts the clock and locks in your guaranteed minimum pay for the day.">{% translate "I've arrived" %}</button>
       </form>
       <p class="note">
-        Your phone may ask to share location. It's only used as a rough check
-        and is never a condition of checking in — say no and nothing changes.
+        {% translate "Your phone may ask to share location. It's only used as a rough check and is never a condition of checking in — say no and nothing changes." %}
       </p>
     </div>
 
   {% elif is_worker and 'completed' in moves %}
-    <h2>Next</h2>
+    <h2>{% translate "Next" %}</h2>
     <div class="card action-panel">
       <h2>On the clock since {{ check_in.arrived_at|date:"H:i" }}</h2>
       <p class="muted" style="margin:0 0 14px">
-        Finished a normal day? Mark it done and the client has
-        {{ approval_hours }} hours to approve before it releases on its own.
+        {% blocktranslate %}Finished a normal day? Mark it done and the client has {{ approval_hours }} hours to approve before it releases on its own.{% endblocktranslate %}
       </p>
       <form method="post" action="{% url 'worklog:complete' job.pk %}">
         {% csrf_token %}
         <button class="btn" type="submit" data-busy-label="Marking done…"
                 data-confirm="Mark this job complete? That starts the client's {{ approval_hours }}-hour approval window and can't be undone.">
-          Job complete
+          {% translate "Job complete" %}
         </button>
       </form>
 
       <details class="fold">
-        <summary>The day ended early</summary>
+        <summary>{% translate "The day ended early" %}</summary>
         <div>
           <form method="post" action="{% url 'worklog:end_early' job.pk %}">
             {% csrf_token %}
@@ -204,7 +284,7 @@
             {{ early_form.note }}
             <button class="btn secondary" type="submit" data-busy-label="Flagging…"
                     data-confirm="Flag this day as ended early? The pay is recalculated on the hours entered and the other side gets {{ dispute_hours }} hours to disagree.">
-              Flag as ended early
+              {% translate "Flag as ended early" %}
             </button>
           </form>
         </div>
@@ -212,40 +292,39 @@
     </div>
 
   {% elif is_client and completion and not completion.settled_at %}
-    <h2>Next</h2>
+    <h2>{% translate "Next" %}</h2>
     <div class="card action-panel">
       <h2>{{ completion.window_label }}</h2>
       <p style="margin:0 0 6px">
         <span class="countdown">{{ completion.settles_at|timeuntil }}</span>
-        <span class="muted">left</span>
+        <span class="muted">{% translate "left" %}</span>
       </p>
       <p class="muted" style="margin:0 0 14px">
-        ${{ completion.payable_amount }} releases to
+        {{ completion.payable_amount|money }} releases to
         {{ job.assigned_worker.user }} automatically when this runs out.
         Approving now just does it sooner.
       </p>
       <form method="post" action="{% url 'worklog:approve' job.pk %}">
         {% csrf_token %}
         <button class="btn" type="submit" data-busy-label="Releasing…"
-                data-confirm="Release ${{ completion.payable_amount }} to {{ job.assigned_worker.user }} now? Money that has been released can't be pulled back.">
-          Approve and release ${{ completion.payable_amount }}
+                data-confirm="Release {{ completion.payable_amount|money }} to {{ job.assigned_worker.user }} now? Money that has been released can't be pulled back.">
+          Approve and release {{ completion.payable_amount|money }}
         </button>
       </form>
 
       <details class="fold">
-        <summary>Something's wrong with this</summary>
+        <summary>{% translate "Something's wrong with this" %}</summary>
         <div>
           <form method="post" action="{% url 'worklog:dispute' job.pk %}">
             {% csrf_token %}
             <label for="{{ dispute_form.reason.id_for_label }}">{{ dispute_form.reason.label }}</label>
             {{ dispute_form.reason }}
             <span class="helptext">
-              This freezes the payment and hands it to a person. Use it when the
-              hours or the work are actually wrong — not to negotiate.
+              {% translate "This freezes the payment and hands it to a person. Use it when the hours or the work are actually wrong — not to negotiate." %}
             </span>
             <button class="btn danger" type="submit"
                     data-confirm="Raise a dispute? That freezes the payment until a person reviews it — it is not a way to negotiate.">
-              Dispute instead
+              {% translate "Dispute instead" %}
             </button>
           </form>
         </div>
@@ -253,7 +332,7 @@
     </div>
 
   {% elif is_client and job.state == 'in_progress' %}
-    <h2>Next</h2>
+    <h2>{% translate "Next" %}</h2>
     <div class="card">
       <p style="margin:0">
         {{ job.assigned_worker.user }} checked in at
@@ -261,7 +340,7 @@
         finish.
       </p>
       <details class="fold">
-        <summary>They left early</summary>
+        <summary>{% translate "They left early" %}</summary>
         <div>
           <form method="post" action="{% url 'worklog:end_early' job.pk %}">
             {% csrf_token %}
@@ -276,7 +355,7 @@
             {{ early_form.note }}
             <button class="btn secondary" type="submit" data-busy-label="Flagging…"
                     data-confirm="Flag this day as ended early? The pay is recalculated on the hours entered and the other side gets {{ dispute_hours }} hours to disagree.">
-              Flag as ended early
+              {% translate "Flag as ended early" %}
             </button>
           </form>
         </div>
@@ -284,29 +363,29 @@
     </div>
 
   {% elif is_worker and completion and not completion.settled_at %}
-    <h2>Next</h2>
+    <h2>{% translate "Next" %}</h2>
     <div class="card">
       <p style="margin:0 0 6px">
         <span class="countdown">{{ completion.settles_at|timeuntil }}</span>
-        <span class="muted">until ${{ completion.payable_amount }} lands</span>
+        <span class="muted">until {{ completion.payable_amount|money }} lands</span>
       </p>
       <p class="muted" style="margin:0">
         {% if completion.ended_early %}
-          Releases on its own unless someone disputes the hours.
+          {% translate "Releases on its own unless someone disputes the hours." %}
         {% else %}
-          The client can approve sooner. If they do nothing, it releases anyway.
+          {% translate "The client can approve sooner. If they do nothing, it releases anyway." %}
         {% endif %}
       </p>
       {% if completion.ended_early %}
         <details class="fold">
-          <summary>Those hours aren't right</summary>
+          <summary>{% translate "Those hours aren't right" %}</summary>
           <div>
             <form method="post" action="{% url 'worklog:dispute' job.pk %}">
               {% csrf_token %}
               <label for="{{ dispute_form.reason.id_for_label }}">{{ dispute_form.reason.label }}</label>
               {{ dispute_form.reason }}
               <button class="btn danger" type="submit"
-                      data-confirm="Raise a dispute? That freezes the payment until a person reviews it.">Dispute</button>
+                      data-confirm="Raise a dispute? That freezes the payment until a person reviews it.">{% translate "Dispute" %}</button>
             </form>
           </div>
         </details>
@@ -316,15 +395,15 @@
   {% elif job.state == 'paid_out' %}
     <div class="card">
       <p style="margin:0">
-        Settled. ${{ completion.payable_amount }} went to
+        Settled. {{ completion.payable_amount|money }} went to
         {{ job.assigned_worker.user }}.
       </p>
-      <p class="note">Ratings arrive in phase 6.</p>
+      <p class="note">{% translate "Once the job is finished you can each leave a rating." %}</p>
     </div>
   {% endif %}
 
   <p style="margin-top:20px">
-    <a href="{% url 'jobs:detail' job.pk %}">Back to the job</a> ·
-    <a href="{% url 'payments:escrow' job.pk %}">Payment detail</a>
+    <a href="{% url 'jobs:detail' job.pk %}">{% translate "Back to the job" %}</a> ·
+    <a href="{% url 'payments:escrow' job.pk %}">{% translate "Payment detail" %}</a>
   </p>
 {% endblock %}

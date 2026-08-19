@@ -1,14 +1,15 @@
 {% extends "base.html" %}
-{% block title %}Counter — Construction's Finest{% endblock %}
+{% load i18n money_extras %}
+{% block title %}{% translate "Counter — Construction's Finest" %}{% endblock %}
 
 {% block content %}
-  <h1>{% if opening %}Name your price{% else %}Put different terms up{% endif %}</h1>
+  <h1>{% if opening %}{% translate "Name your price" %}{% else %}{% translate "Put different terms up" %}{% endif %}</h1>
   <p class="lede">
     {% if party == 'worker' %}
       {{ job.client.company_name|default:job.client.user }} gets to accept, come
       back to you, or leave it.
       {% if opening and not job.is_private %}
-        This also puts you forward for the job.
+        {% translate "This also puts you forward for the job." %}
       {% endif %}
     {% else %}
       {{ worker.user }} gets to accept or come back to you again.
@@ -20,18 +21,18 @@
      blank form.
   {% endcomment %}
   <div class="card terms-now">
-    <h2>{% if opening %}What's posted{% else %}On the table now{% endif %}</h2>
+    <h2>{% if opening %}{% translate "What's posted" %}{% else %}{% translate "On the table now" %}{% endif %}</h2>
     <div class="stat-row compact">
       <div class="stat stat--rate">
-        <div class="k">Pay</div>
-        <div class="v">${{ terms.fixed_pay|floatformat:0 }}</div>
+        <div class="k">{% translate "Pay" %}</div>
+        <div class="v">{{ terms.fixed_pay|money }}</div>
       </div>
       <div class="stat stat--exp">
-        <div class="k">Hours</div>
+        <div class="k">{% translate "Hours" %}</div>
         <div class="v">{{ terms.gig_hours|floatformat:"-1" }}</div>
       </div>
       <div class="stat stat--jobs">
-        <div class="k">Date</div>
+        <div class="k">{% translate "Date" %}</div>
         <div class="v">{{ terms.gig_date|date:"D j M" }}</div>
       </div>
     </div>
@@ -43,12 +44,11 @@
     {{ form.non_field_errors }}
     {% for field in form %}{% include "_field.html" %}{% endfor %}
     <p class="note">
-      Nothing is booked by sending this. It goes back to the other side, who can
-      say yes, say no, or come back with something else again.
+      {% translate "Nothing is booked by sending this. It goes back to the other side, who can say yes, say no, or come back with something else again." %}
     </p>
     <div class="btn-row" style="margin-top:14px">
-      <button class="btn" type="submit" data-busy-label="Sending…">Send these terms</button>
-      <a class="btn secondary" href="{% url 'jobs:detail' job.pk %}">Cancel</a>
+      <button class="btn" type="submit" data-busy-label="Sending…">{% translate "Send these terms" %}</button>
+      <a class="btn secondary" href="{% url 'jobs:detail' job.pk %}">{% translate "Cancel" %}</a>
     </div>
   </form>
 {% endblock %}

@@ -173,8 +173,14 @@ class StartFundingTests(EscrowTestCase):
             self.assertEqual(escrow.platform_fee, Decimal("10.80"))
             self.assertEqual(escrow.worker_payout, Decimal("79.20"))
 
+    @patch("payments.gateway.retrieve_session")
     @patch("payments.gateway.create_checkout_session")
-    def test_abandoning_checkout_and_retrying_reuses_one_escrow_row(self, mock):
+    def test_abandoning_checkout_and_retrying_reuses_one_escrow_row(
+        self, mock, live
+    ):
+        """The old session has expired, so a new one opens onto the same row."""
+        live.return_value = {"status": "expired", "payment_status": "unpaid",
+                             "payment_intent": None}
         mock.return_value = ("cs_1", "https://checkout/1")
         services.start_funding(self.job, success_url="a", cancel_url="b")
         mock.return_value = ("cs_2", "https://checkout/2")
@@ -184,6 +190,118 @@ class StartFundingTests(EscrowTestCase):
         self.assertEqual(
             EscrowPayment.objects.get(job=self.job).checkout_session_id, "cs_2"
         )
+
+
+class FundingAttemptTests(EscrowTestCase):
+    """Starting to fund is a claim, not a read.
+
+    Two requests a double-click apart both found a row that was not yet
+    AUTHORIZED and both opened a Checkout Session. Each carries its own
+    PaymentIntent, so a client who completed both put two holds on one card
+    while this database recorded one — and nothing here would ever release the
+    other. It would sit there until it expired.
+    """
+
+    def setUp(self):
+        self.account = self.ready_account()
+        self.job = self.make_gig()
+
+    @patch("payments.gateway.retrieve_session")
+    @patch("payments.gateway.create_checkout_session")
+    def test_a_second_press_returns_the_checkout_already_open(self, mock, live):
+        mock.return_value = ("cs_1", "https://checkout/1")
+        first = services.start_funding(self.job, success_url="a", cancel_url="b")
+
+        live.return_value = {"status": "open", "payment_status": "unpaid",
+                             "payment_intent": None}
+        second = services.start_funding(self.job, success_url="a", cancel_url="b")
+
+        self.assertEqual(first, second)
+        # The point of the whole exercise: one session, so one PaymentIntent,
+        # so one hold on the card.
+        self.assertEqual(mock.call_count, 1)
+
+    @patch("payments.gateway.retrieve_session")
+    @patch("payments.gateway.create_checkout_session")
+    def test_a_session_already_paid_does_not_open_another(self, mock, live):
+        """The webhook has not landed yet, and the client has already paid."""
+        mock.return_value = ("cs_1", "https://checkout/1")
+        services.start_funding(self.job, success_url="a", cancel_url="b")
+
+        live.return_value = {"status": "complete", "payment_status": "paid",
+                             "payment_intent": "pi_live_1"}
+        with self.assertRaises(services.EscrowError):
+            services.start_funding(self.job, success_url="a", cancel_url="b")
+
+        self.assertEqual(mock.call_count, 1)
+        escrow = EscrowPayment.objects.get(job=self.job)
+        # And the browser getting here first recorded it, rather than the page
+        # sitting on a hold nobody had written down.
+        self.assertEqual(escrow.status, EscrowStatus.AUTHORIZED)
+        self.assertEqual(escrow.payment_intent_id, "pi_live_1")
+
+    @patch("payments.gateway.create_checkout_session")
+    def test_two_simultaneous_presses_send_stripe_the_same_key(self, mock):
+        """The deterministic half of the race, without threads.
+
+        Both requests read the same row before either has written, which is
+        exactly what a double-click produces. They must compute the same
+        idempotency key — that is what makes Stripe hand them one session
+        instead of opening two.
+        """
+        mock.return_value = ("cs_1", "https://checkout/1")
+        stale = EscrowPayment.objects.get_or_create(
+            job=self.job,
+            defaults={
+                "worker": self.worker_profile,
+                "amount": self.job.fixed_pay,
+                "platform_fee": rules.platform_fee_for(self.job.fixed_pay),
+                "worker_payout": rules.worker_payout_for(self.job.fixed_pay),
+            },
+        )[0]
+
+        services.start_funding(self.job, success_url="a", cancel_url="b")
+        first_key = mock.call_args.kwargs["idempotency_key"]
+
+        # The second request is holding the row as it was before the first
+        # wrote — the same read, a moment later.
+        stale.refresh_from_db()
+        self.assertEqual(stale.funding_attempts, 1)
+        self.assertEqual(
+            first_key, f"escrow:{stale.pk}:attempt:1"
+        )
+
+    @patch("payments.gateway.retrieve_session")
+    @patch("payments.gateway.create_checkout_session")
+    def test_a_genuinely_new_attempt_gets_a_new_key(self, mock, live):
+        """Otherwise a client who abandoned yesterday could never start again."""
+        mock.return_value = ("cs_1", "https://checkout/1")
+        services.start_funding(self.job, success_url="a", cancel_url="b")
+
+        live.return_value = {"status": "expired", "payment_status": "unpaid",
+                             "payment_intent": None}
+        mock.return_value = ("cs_2", "https://checkout/2")
+        services.start_funding(self.job, success_url="a", cancel_url="b")
+
+        escrow = EscrowPayment.objects.get(job=self.job)
+        self.assertEqual(escrow.funding_attempts, 2)
+        self.assertEqual(
+            mock.call_args.kwargs["idempotency_key"],
+            f"escrow:{escrow.pk}:attempt:2",
+        )
+
+    @patch("payments.gateway.retrieve_session")
+    @patch("payments.gateway.create_checkout_session")
+    def test_a_session_stripe_cannot_find_is_treated_as_gone(self, mock, live):
+        """A stale id must not make a job permanently unfundable."""
+        mock.return_value = ("cs_1", "https://checkout/1")
+        services.start_funding(self.job, success_url="a", cancel_url="b")
+
+        live.side_effect = RuntimeError("No such session")
+        mock.return_value = ("cs_2", "https://checkout/2")
+        url = services.start_funding(self.job, success_url="a", cancel_url="b")
+
+        self.assertEqual(url, "https://checkout/2")
 
     @patch("payments.gateway.create_checkout_session")
     def test_funding_an_already_held_job_is_refused(self, mock):
@@ -258,6 +376,34 @@ class ReleaseTests(EscrowTestCase):
         self.assertEqual(self.escrow.status, EscrowStatus.RELEASED)
         self.assertEqual(self.escrow.captured_amount, Decimal("90.00"))
         mock.assert_called_once_with("pi_test_1", amount=None)
+
+    @patch("payments.gateway.capture_payment_intent")
+    def test_a_lost_race_never_reaches_stripe(self, mock):
+        """A client approving as the settlement cron fires.
+
+        Both read an AUTHORIZED hold from their own instance and both would
+        capture the same intent. Stripe refuses the second, so the money is
+        safe either way — but the loser must not get that far, or the app takes
+        a gateway exception on a job that was in fact paid correctly.
+        """
+        from payments.models import EscrowPayment
+
+        # The window: assert_transition runs after release() has read the
+        # escrow and before it claims it, which is where the other caller lands.
+        real = services.assert_transition
+
+        def settle_it_first(*args, **kwargs):
+            result = real(*args, **kwargs)
+            EscrowPayment.objects.filter(
+                pk=self.escrow.pk, status=EscrowStatus.AUTHORIZED
+            ).update(status=EscrowStatus.RELEASED)
+            return result
+
+        with patch.object(services, "assert_transition", settle_it_first):
+            returned = services.release(self.escrow, actor=Actor.SYSTEM)
+
+        mock.assert_not_called()
+        self.assertEqual(returned.status, EscrowStatus.RELEASED)
 
     @patch("payments.gateway.capture_payment_intent")
     def test_a_partial_capture_recomputes_what_the_worker_nets(self, mock):
@@ -340,6 +486,332 @@ class RefundTests(EscrowTestCase):
 
 
 @override_settings(STRIPE_SECRET_KEY="sk_test_x", STRIPE_WEBHOOK_SECRET="whsec_x")
+class TwoRowsMustAgreeTests(EscrowTestCase):
+    """The escrow and the job are two rows, and both claims decide something.
+
+    Only one of them was being decided. The escrow was claimed with a
+    conditional UPDATE and checked; the job was moved with one whose answer was
+    discarded — so when the job moved underneath, the code carried on as if it
+    had not. The states that produced are individually plausible and jointly
+    impossible, which is why nothing else would ever notice.
+
+    Each race here is staged the same way: the function is handed an instance
+    that says one thing while the database says another. That is precisely what
+    a concurrent write leaves behind, and unlike threads it happens the same
+    way every run.
+    """
+
+    def setUp(self):
+        self.ready_account()
+        self.job = self.make_gig(state=JobState.COMPLETED)
+        self.escrow = EscrowPayment.objects.create(
+            job=self.job,
+            worker=self.worker_profile,
+            amount=Decimal("90"),
+            platform_fee=Decimal("10.80"),
+            worker_payout=Decimal("79.20"),
+            status=EscrowStatus.AUTHORIZED,
+            payment_intent_id="pi_held",
+            authorized_at=timezone.now(),
+        )
+
+    def stale(self, job, *, reads_as, actually):
+        """A read taken before somebody else moved the row."""
+        Job.objects.filter(pk=job.pk).update(state=actually)
+        held = Job.objects.get(pk=job.pk)
+        held.state = reads_as
+        return held
+
+    def held_job(self, state=JobState.ACCEPTED):
+        """An escrow on a fresh job, for the authorising cases."""
+        return EscrowPayment.objects.create(
+            job=self.make_gig(state=state, days_ahead=1),
+            worker=self.worker_profile,
+            amount=Decimal("90"),
+            platform_fee=Decimal("10.80"),
+            worker_payout=Decimal("79.20"),
+        )
+
+    # -- releasing -------------------------------------------------------
+
+    @patch("payments.gateway.capture_payment_intent")
+    def test_a_dispute_landing_first_stops_the_release(self, capture):
+        """The case that used to capture money into a disputed job."""
+        held = self.stale(
+            self.job, reads_as=JobState.COMPLETED, actually=JobState.DISPUTED
+        )
+
+        with patch.object(Job.objects, "get", return_value=held):
+            with self.assertRaises(services.EscrowError):
+                services.release(self.escrow, actor=Actor.CLIENT)
+
+        capture.assert_not_called()
+        self.escrow.refresh_from_db()
+        self.job.refresh_from_db()
+        self.assertEqual(self.escrow.status, EscrowStatus.AUTHORIZED)
+        self.assertEqual(self.job.state, JobState.DISPUTED)
+
+    @patch("payments.gateway.capture_payment_intent")
+    def test_nothing_is_half_done_when_the_release_is_refused(self, capture):
+        """Both rows are as they were: the whole thing rolls back."""
+        held = self.stale(
+            self.job, reads_as=JobState.COMPLETED, actually=JobState.DISPUTED
+        )
+        with patch.object(Job.objects, "get", return_value=held):
+            with self.assertRaises(services.EscrowError):
+                services.release(self.escrow, actor=Actor.CLIENT)
+
+        self.escrow.refresh_from_db()
+        self.assertIsNone(self.escrow.released_at)
+        self.assertIsNone(self.escrow.captured_amount)
+
+    @patch("payments.gateway.capture_payment_intent")
+    def test_the_ordinary_release_still_moves_both_rows(self, capture):
+        capture.return_value = {"amount_received": Decimal("90.00")}
+
+        services.release(self.escrow, actor=Actor.CLIENT)
+
+        self.escrow.refresh_from_db()
+        self.job.refresh_from_db()
+        self.assertEqual(self.escrow.status, EscrowStatus.RELEASED)
+        self.assertEqual(self.job.state, JobState.PAID_OUT)
+
+    # -- refunding -------------------------------------------------------
+
+    @patch("payments.gateway.cancel_payment_intent")
+    def test_a_job_that_moved_stops_the_refund(self, cancel):
+        """Losing here costs nothing, because the hold is still untouched."""
+        held = self.stale(
+            self.job, reads_as=JobState.DISPUTED, actually=JobState.PAID_OUT
+        )
+
+        with patch.object(Job.objects, "get", return_value=held):
+            with self.assertRaises(services.EscrowError):
+                services.refund(self.escrow, actor=Actor.ADMIN)
+
+        cancel.assert_not_called()
+        self.escrow.refresh_from_db()
+        self.assertEqual(self.escrow.status, EscrowStatus.AUTHORIZED)
+
+    # -- authorising -----------------------------------------------------
+
+    def test_a_hold_is_recorded_even_when_the_job_moved_under_it(self):
+        """The money exists whatever the job says, so the record must too.
+
+        An authorisation on a real card with nothing in this database pointing
+        at it is the one outcome nobody can clean up afterwards.
+        """
+        escrow = self.held_job()
+        held = self.stale(
+            escrow.job, reads_as=JobState.ACCEPTED, actually=JobState.EXPIRED
+        )
+
+        with patch.object(Job.objects, "get", return_value=held):
+            services.mark_authorized(escrow, "pi_live")
+
+        escrow.refresh_from_db()
+        self.assertEqual(escrow.status, EscrowStatus.AUTHORIZED)
+        self.assertEqual(escrow.payment_intent_id, "pi_live")
+
+    def test_but_the_job_is_not_claimed_to_be_funded(self):
+        escrow = self.held_job()
+        held = self.stale(
+            escrow.job, reads_as=JobState.ACCEPTED, actually=JobState.EXPIRED
+        )
+
+        with patch.object(Job.objects, "get", return_value=held):
+            services.mark_authorized(escrow, "pi_live")
+
+        self.assertEqual(
+            Job.objects.get(pk=escrow.job_id).state, JobState.EXPIRED
+        )
+
+    def test_and_the_divergence_is_written_down(self):
+        """Nothing else will notice: both rows are individually plausible."""
+        escrow = self.held_job()
+        held = self.stale(
+            escrow.job, reads_as=JobState.ACCEPTED, actually=JobState.EXPIRED
+        )
+
+        with patch.object(Job.objects, "get", return_value=held):
+            with self.assertLogs("payments.services", level="ERROR"):
+                services.mark_authorized(escrow, "pi_live")
+
+        escrow.refresh_from_db()
+        self.assertIn("expired", escrow.last_error)
+
+    def test_no_money_is_held_email_on_a_job_that_moved(self):
+        """That sentence on an expired job is an invitation to turn up."""
+        from notifications.models import Notification
+
+        escrow = self.held_job()
+        held = self.stale(
+            escrow.job, reads_as=JobState.ACCEPTED, actually=JobState.EXPIRED
+        )
+
+        before = Notification.objects.count()
+        with patch.object(Job.objects, "get", return_value=held):
+            services.mark_authorized(escrow, "pi_live")
+
+        self.assertEqual(Notification.objects.count(), before)
+
+
+class ConnectAccountTests(EscrowTestCase):
+    """Creating the worker's Stripe account, without leaving one behind.
+
+    Read-then-create with a network call in the middle is not one operation.
+    Two requests both find no local account and both ask Stripe for one; the
+    OneToOne rejects the second insert *after* Stripe has already opened the
+    account, and nothing in this database will ever point at it again.
+    """
+
+    @patch("payments.gateway.create_express_account")
+    def test_the_account_is_opened_in_the_regions_country(self, mock):
+        """Not "US" for everybody, which is what the default argument said."""
+        mock.return_value = "acct_new"
+        self.region.country = "GR"
+        self.region.save(update_fields=["country"])
+
+        services.ensure_stripe_account(self.worker_profile)
+
+        self.assertEqual(mock.call_args.kwargs["country"], "GR")
+
+    @patch("payments.gateway.create_express_account")
+    def test_the_request_carries_an_idempotency_key(self, mock):
+        """So two concurrent creations get the same account from Stripe."""
+        mock.return_value = "acct_new"
+        services.ensure_stripe_account(self.worker_profile)
+
+        self.assertEqual(
+            mock.call_args.kwargs["idempotency_key"],
+            f"connect-account:{self.worker_profile.pk}",
+        )
+
+    @patch("payments.gateway.create_express_account")
+    def test_losing_the_insert_returns_the_row_that_won(self, mock):
+        """The race itself, made deterministic.
+
+        The row appears *while we are talking to Stripe* — which is the only
+        window there is, and the one a read-then-create cannot see. Our insert
+        then loses to the OneToOne, and the caller must come away with the
+        winner's account rather than with an IntegrityError.
+        """
+
+        def stripe_answers_slowly(**kwargs):
+            StripeAccount.objects.create(
+                worker=self.worker_profile, account_id="acct_winner"
+            )
+            return "acct_ours"
+
+        mock.side_effect = stripe_answers_slowly
+
+        account = services.ensure_stripe_account(self.worker_profile)
+
+        self.assertEqual(account.account_id, "acct_winner")
+        self.assertEqual(StripeAccount.objects.count(), 1)
+
+    @patch("payments.gateway.create_express_account")
+    def test_an_existing_account_is_never_recreated(self, mock):
+        StripeAccount.objects.create(
+            worker=self.worker_profile, account_id="acct_existing"
+        )
+        account = services.ensure_stripe_account(self.worker_profile)
+
+        self.assertEqual(account.account_id, "acct_existing")
+        mock.assert_not_called()
+
+
+class WebhookClaimTests(EscrowTestCase):
+    """The event id is claimed before the work, not recorded after it.
+
+    "Does this exist?" followed by "do the work" is two steps with a gap, and
+    two deliveries of the same event — a retry arriving while the first is
+    still running — both find nothing and both proceed. The insert is one
+    atomic claim, so exactly one of them wins.
+    """
+
+    def setUp(self):
+        self.ready_account()
+        self.job = self.make_gig()
+        self.escrow = EscrowPayment.objects.create(
+            job=self.job,
+            worker=self.worker_profile,
+            amount=Decimal("90"),
+            platform_fee=Decimal("10.80"),
+            worker_payout=Decimal("79.20"),
+        )
+
+    def event(self, event_id="evt_claim"):
+        return {
+            "id": event_id,
+            "type": "checkout.session.completed",
+            "data": {
+                "object": {
+                    "metadata": {"escrow_id": str(self.escrow.pk)},
+                    "payment_intent": "pi_claimed",
+                }
+            },
+        }
+
+    def post(self, event):
+        with patch("payments.gateway.construct_event", return_value=event):
+            return self.client.post(
+                reverse("payments:webhook"),
+                data=b"{}",
+                content_type="application/json",
+                HTTP_STRIPE_SIGNATURE="t=1,v1=fake",
+            )
+
+    def test_the_claim_exists_before_the_work_is_done(self):
+        """Proved from inside the work: by then the row is already there.
+
+        Which is the whole difference. A duplicate arriving at this moment
+        finds the claim taken and stops, where before it found nothing.
+        """
+        seen = {}
+
+        def spy(escrow, intent):
+            seen["claimed"] = WebhookEvent.objects.filter(pk="evt_claim").exists()
+            return escrow
+
+        with patch("payments.services.mark_authorized", side_effect=spy):
+            self.post(self.event())
+
+        self.assertTrue(seen["claimed"])
+
+    def test_a_replay_does_no_work_at_all(self):
+        with patch("payments.services.mark_authorized") as work:
+            self.post(self.event())
+            self.post(self.event())
+
+        self.assertEqual(work.call_count, 1)
+        self.assertEqual(WebhookEvent.objects.filter(pk="evt_claim").count(), 1)
+
+    def test_a_failed_run_gives_the_claim_back(self):
+        """Otherwise the event is on record as handled and nothing happened —
+        worse than doing it twice, because the retry that would have fixed it
+        never comes."""
+        with patch(
+            "payments.services.mark_authorized", side_effect=RuntimeError("boom")
+        ):
+            response = self.post(self.event())
+
+        self.assertEqual(response.status_code, 500)
+        self.assertFalse(WebhookEvent.objects.filter(pk="evt_claim").exists())
+
+    def test_and_stripes_retry_then_does_the_work_for_real(self):
+        with patch(
+            "payments.services.mark_authorized", side_effect=RuntimeError("boom")
+        ):
+            self.post(self.event())
+
+        response = self.post(self.event())
+
+        self.assertEqual(response.status_code, 200)
+        self.escrow.refresh_from_db()
+        self.assertEqual(self.escrow.status, EscrowStatus.AUTHORIZED)
+
+
 class WebhookTests(EscrowTestCase):
     def setUp(self):
         self.ready_account()
@@ -472,7 +944,9 @@ class PayoutViewTests(EscrowTestCase):
         self.client.force_login(outsider)
 
         response = self.client.get(reverse("payments:escrow", args=[job.pk]))
-        self.assertRedirects(response, reverse("jobs:detail", args=[job.pk]))
+        # The board: the job itself is no longer readable by an outsider
+        # either, so redirecting there would be a second refusal.
+        self.assertRedirects(response, reverse("jobs:list"))
 
     def test_the_worker_on_the_job_can_see_its_money_view(self):
         self.ready_account()

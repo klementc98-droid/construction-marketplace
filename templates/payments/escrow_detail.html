@@ -1,10 +1,11 @@
 {% extends "base.html" %}
+{% load i18n money_extras %}
 {% block title %}Payment — {{ job.title }}{% endblock %}
 
 {% block content %}
   {% include "_back.html" with href=job.get_absolute_url label="Back to the job" %}
 
-  <h1>Payment</h1>
+  <h1>{% translate "Payment" %}</h1>
   <p class="lede"><a href="{% url 'jobs:detail' job.pk %}">{{ job.title }}</a> · {{ job.pay_display }}</p>
 
   {% comment %} Above everything, and not inside a branch. This page is reached at every
@@ -14,23 +15,20 @@
   {% endcomment %}
   <p class="trust">
     <svg class="trust-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-shield"/></svg>
-    Construction's Finest holds the money — neither side does. It goes to the
-    worker once the day is signed off, or back to the client if the gig is
-    called off before it starts.
+    {% translate "Construction's Finest holds the money — neither side does. It goes to the worker once the day is signed off, or back to the client if the gig is called off before it starts." %}
   </p>
 
   {% if escrow %}
     <div class="card">
       <div class="stat-row">
-        <div class="stat"><div class="k">Status</div><div class="v">{{ escrow.get_status_display }}</div></div>
-        <div class="stat"><div class="k">Client pays</div><div class="v">${{ escrow.amount }}</div></div>
-        <div class="stat"><div class="k">Platform fee</div><div class="v">${{ escrow.platform_fee }}</div></div>
-        <div class="stat"><div class="k">Worker gets</div><div class="v">${{ escrow.worker_payout }}</div></div>
+        <div class="stat"><div class="k">{% translate "Status" %}</div><div class="v">{{ escrow.get_status_display }}</div></div>
+        <div class="stat"><div class="k">{% translate "Client pays" %}</div><div class="v">{{ escrow.amount|money }}</div></div>
+        <div class="stat"><div class="k">{% translate "Platform fee" %}</div><div class="v">{{ escrow.platform_fee|money }}</div></div>
+        <div class="stat"><div class="k">{% translate "Worker gets" %}</div><div class="v">{{ escrow.worker_payout|money }}</div></div>
       </div>
       {% if escrow.is_held %}
         <p class="note">
-          The money is committed but not taken. It's released to the worker after
-          the job — or back to the client if it's called off.
+          {% translate "The money is committed but not taken. It's released to the worker after the job — or back to the client if it's called off." %}
         </p>
       {% endif %}
       {% if escrow.last_error %}
@@ -45,23 +43,22 @@
         <p style="margin:0">{{ blocker }}</p>
       </div>
     {% elif not stripe_configured %}
-      <div class="card"><p style="margin:0">Payments aren't switched on in this install.</p></div>
+      <div class="card"><p style="margin:0">{% translate "Payments aren't switched on in this install." %}</p></div>
     {% else %}
       <div class="card">
         <p style="margin:0 0 12px">
-          You'll pay ${{ job.fixed_pay }} now. It's held — not taken — until the
+          You'll pay {{ job.fixed_pay|money }} now. It's held — not taken — until the
           work is done.
         </p>
         <p class="trust">
           <svg class="trust-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-shield"/></svg>
-          Nothing reaches the worker until you sign the day off, or the approval
-          window runs out. Call it off before they start and the hold is released.
+          {% translate "Nothing reaches the worker until you sign the day off, or the approval window runs out. Call it off before they start and the hold is released." %}
         </p>
         <form method="post" action="{% url 'payments:fund' job.pk %}">
           {% csrf_token %}
           <button class="btn" type="submit" data-busy-label="Charging…"
-                  data-confirm="Charge ${{ job.fixed_pay }} to your card now? It's held, not taken — it only goes to the worker once the day is signed off.">
-            Fund this gig
+                  data-confirm="Charge {{ job.fixed_pay|money }} to your card now? It's held, not taken — it only goes to the worker once the day is signed off.">
+            {% translate "Fund this gig" %}
           </button>
         </form>
       </div>
@@ -72,7 +69,7 @@
         {% csrf_token %}
         <button class="btn danger" type="submit"
                 data-confirm="Call this gig off? The hold is released back to you and the worker loses the booking.">
-          Call it off and release the hold
+          {% translate "Call it off and release the hold" %}
         </button>
       </form>
     {% endif %}
@@ -80,16 +77,16 @@
     <div class="card">
       {% if escrow and escrow.is_held %}
         <p style="margin:0">The client has funded this gig. You'll be paid
-          ${{ escrow.worker_payout }} after the work is signed off.</p>
+          {{ escrow.worker_payout|money }} after the work is signed off.</p>
       {% else %}
-        <p style="margin:0" class="muted">The client hasn't funded this gig yet.</p>
+        <p style="margin:0" class="muted">{% translate "The client hasn't funded this gig yet." %}</p>
       {% endif %}
     </div>
   {% endif %}
 
   {% if escrow and escrow.is_held %}
     <p style="margin-top:18px">
-      <a href="{% url 'worklog:workspace' job.pk %}">Go to the job</a> — check-in,
+      <a href="{% url 'worklog:workspace' job.pk %}">{% translate "Go to the job" %}</a> — check-in,
       finishing up and approval all happen there.
     </p>
   {% endif %}

@@ -74,6 +74,58 @@
     return row;
   }
 
+  /* The clickable answers under a question.
+
+     Only ever one set on screen: pressing one, or typing instead, clears them.
+     Leaving a stale row of buttons above the newest question is how someone
+     ends up answering the question before last.
+
+     The button's text and the text it sends are allowed to differ — a date
+     button reads "Tomorrow · 18 Aug" and sends "2026-08-18", because the model
+     needs the precise value and the user needs the readable one. */
+  function clearOptions() {
+    var old = els.log.querySelector(".asst-opts");
+    if (old) old.remove();
+  }
+
+  function renderOptions(list) {
+    clearOptions();
+    if (!list || !list.length) return;
+
+    var wrap = doc.createElement("div");
+    wrap.className = "asst-opts";
+
+    list.forEach(function (option) {
+      var chip = doc.createElement("button");
+      chip.type = "button";
+      chip.className = "asst-opt";
+      chip.textContent = option.label || option.value;
+      chip.addEventListener("click", function () {
+        if (busy) return;
+        clearOptions();
+        say(option.value, option.label || option.value);
+      });
+      wrap.appendChild(chip);
+    });
+
+    els.log.appendChild(wrap);
+    els.log.scrollTop = els.log.scrollHeight;
+  }
+
+  /* The end of a form conversation: a real anchor into the prefilled form.
+     An <a> rather than a button so it behaves like every other link on the
+     site — long-press, open in a new tab, and a status bar showing where it
+     goes. */
+  function handoff(url) {
+    var link = doc.createElement("a");
+    link.className = "btn asst-handoff";
+    link.href = url;
+    link.textContent = "Open the filled-in form";
+    els.log.appendChild(link);
+    els.log.scrollTop = els.log.scrollHeight;
+    link.focus();
+  }
+
   function setBusy(state) {
     busy = state;
     els.input.disabled = state;
@@ -144,13 +196,18 @@
         els.sub.textContent =
           branch === "qa" ? "Questions about the app" : "Filling in a form";
         if (data.reply) bubble("bot", data.reply);
+        renderOptions(data.options);
         els.input.focus();
       })
       .finally(function () { setBusy(false); });
   }
 
-  function say(text) {
-    bubble("user", text);
+  /* `shown` is what the user's own bubble says; `text` is what the model gets.
+     They are the same for anything typed, and differ only for a pressed button
+     whose value is not what the button read. */
+  function say(text, shown) {
+    clearOptions();
+    bubble("user", shown || text);
     var wait = thinking();
     setBusy(true);
 
@@ -158,12 +215,19 @@
       .then(function (data) {
         wait.remove();
         bubble("bot", data.reply || "Sorry — something went wrong.");
+        renderOptions(data.options);
 
         /* The handoff. The conversation is over; the real form takes it from
-           here, and corrections happen there by typing into the fields. */
+           here, and corrections happen there by typing into the fields.
+
+           A link the user presses, not an automatic jump. The page moving on
+           its own gives no moment to finish reading, and no way back if it
+           moves at the wrong time — on a phone, mid-sentence, it just looks
+           like the app lost their place. */
         if (data.redirect) {
           els.form.hidden = true;
-          setTimeout(function () { window.location.href = data.redirect; }, 1200);
+          clearOptions();
+          handoff(data.redirect);
         }
       })
       .catch(function () {

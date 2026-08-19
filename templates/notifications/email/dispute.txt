@@ -1,0 +1,7 @@
+{% load i18n %}{% blocktranslate %}A dispute was raised on {{ title }}.{% endblocktranslate %}
+
+{% translate "The reason given:" %}
+
+  {{ reason }}
+
+{% translate "Nothing moves on its own from here — somebody reads it and decides." %}

@@ -13,10 +13,22 @@ happen before work is recorded. Two machines would allow the pair to disagree,
 and reconciling "job says completed, payment says unfunded" is exactly the bug
 class this design exists to prevent.
 
+    with escrow (the client funds before anyone travels):
+
     posted ─→ accepted ─→ escrow_held ─→ in_progress ─┬─→ completed ─→ paid_out
                                                       └─→ ended_early ─┘
               (any of the above) ─→ disputed ─→ admin resolves ─→ paid_out
                                                                └→ refunded
+
+    without escrow (Job.use_escrow is False — the two settle it themselves):
+
+    posted ─→ accepted ─┬─→ in_progress ─→ completed ─→ closed
+                        └────────────────→ completed ─→ closed
+
+    The short path has no funding step, no check-in and no timer, because none
+    of those mean anything when we are not holding the money. What it keeps is
+    the part that is still true either way: both sides agreeing the work
+    happened, which is what a review later hangs off.
 """
 
 from __future__ import annotations
@@ -24,16 +36,18 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from django.db import models
+from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 
 
 class JobState(models.TextChoices):
     """Every state a gig can occupy. Stored directly on the job row."""
 
     # -- before work -------------------------------------------------------
-    POSTED = "posted", "Posted"
+    POSTED = "posted", _("Posted")
     """Open. Workers can see and apply. No worker committed, no money moved."""
 
-    ACCEPTED = "accepted", "Accepted"
+    ACCEPTED = "accepted", _("Accepted")
     """A worker is confirmed, but the client has not funded escrow yet.
 
     Deliberately distinct from ESCROW_HELD. A worker must be able to tell the
@@ -41,37 +55,51 @@ class JobState(models.TextChoices):
     because only the second one is worth travelling across town for.
     """
 
-    ESCROW_HELD = "escrow_held", "Escrow held"
+    ESCROW_HELD = "escrow_held", _("Escrow held")
     """Client's funds are captured and held by the platform. Work may begin."""
 
     # -- during work -------------------------------------------------------
-    IN_PROGRESS = "in_progress", "In progress"
+    IN_PROGRESS = "in_progress", _("In progress")
     """Worker has checked in on site."""
 
-    ENDED_EARLY = "ended_early", "Ended early"
+    ENDED_EARLY = "ended_early", _("Ended early")
     """Either party flagged an early finish; the short dispute window is open.
 
     Resolves to PAID_OUT with a prorated amount (floored at the guaranteed
     minimum hours) unless someone disputes first.
     """
 
-    COMPLETED = "completed", "Completed — awaiting approval"
+    COMPLETED = "completed", _("Completed — awaiting approval")
     """Worker marked the job done. The client's approval window is running."""
 
     # -- resolution --------------------------------------------------------
-    DISPUTED = "disputed", "Disputed — under review"
+    DISPUTED = "disputed", _("Disputed — under review")
     """Escrow is frozen and a human has to look at it. Never auto-resolves."""
 
-    PAID_OUT = "paid_out", "Paid out"
+    PAID_OUT = "paid_out", _("Paid out")
     """Funds released to the worker, less the platform fee. Terminal."""
 
-    REFUNDED = "refunded", "Refunded"
+    REFUNDED = "refunded", _("Refunded")
     """Funds returned to the client. Terminal."""
 
-    CANCELLED = "cancelled", "Cancelled"
+    CLOSED = "closed", _("Closed — settled directly")
+    """Both sides agreed the work is done, with no money through the platform.
+
+    The terminal state for a gig posted without escrow. Deliberately not
+    PAID_OUT: nothing was paid out *by us*, and a state that claims otherwise
+    would put a payment in the record that never existed — and every report
+    counting money moved would be wrong.
+
+    Reached only when both sides say so. The worker marks the work finished and
+    the client confirms; neither alone closes it, because with no escrow there
+    is no timer and no hold, so mutual agreement is the only thing the record
+    can rest on.
+    """
+
+    CANCELLED = "cancelled", _("Cancelled")
     """Called off before any work happened. Terminal."""
 
-    EXPIRED = "expired", "Expired"
+    EXPIRED = "expired", _("Expired")
     """A gig whose date passed without a worker being confirmed. Terminal."""
 
 
@@ -94,6 +122,7 @@ STATE_TONES: dict[str, str] = {
     JobState.DISPUTED: "alert",      # needs a human
     JobState.PAID_OUT: "done",
     JobState.REFUNDED: "over",       # finished, but nothing was earned
+    JobState.CLOSED: "done",       # finished, settled between them
     JobState.CANCELLED: "over",
     JobState.EXPIRED: "over",
 }
@@ -113,10 +142,10 @@ class Actor(models.TextChoices):
     accident — the transition table simply will not allow it.
     """
 
-    WORKER = "worker", "Worker"
-    CLIENT = "client", "Client"
-    SYSTEM = "system", "System"
-    ADMIN = "admin", "Admin"
+    WORKER = "worker", _("Worker")
+    CLIENT = "client", _("Client")
+    SYSTEM = "system", _("System")
+    ADMIN = "admin", _("Admin")
 
 
 @dataclass(frozen=True)
@@ -153,6 +182,22 @@ TRANSITIONS: dict[str, tuple[Transition, ...]] = {
     ),
     JobState.ACCEPTED: (
         _t(JobState.ESCROW_HELD, "Client funds escrow", Actor.CLIENT, Actor.SYSTEM),
+        # The no-escrow path. Whether a given job may take it is not a question
+        # about the state — it is a question about the row, so the service
+        # checks use_escrow exactly as the check-in service checks who is
+        # assigned. The table has never encoded which row a move applies to,
+        # only who may make it; see the note on direct offers above.
+        #
+        # Checking in without a hold is the same act as checking in with one:
+        # the worker is on site and the day has started. Only the reason for
+        # ESCROW_HELD sitting in between differs, and on a deal settled
+        # directly there is no hold to wait for.
+        _t(JobState.IN_PROGRESS, "Worker checks in — nothing held", Actor.WORKER),
+        # And straight to done for anyone who never bothers checking in. A
+        # check-in is useful, not compulsory; refusing to let somebody say the
+        # work is finished because they did not press "arrived" first would
+        # invent an obligation the deal never had.
+        _t(JobState.COMPLETED, "Worker marks the work finished", Actor.WORKER),
         # Either side can still walk away before money is committed. This is a
         # feature: an unfunded acceptance is not yet a promise worth enforcing.
         _t(JobState.CANCELLED, "Cancel before funding", Actor.CLIENT, Actor.WORKER, Actor.ADMIN),
@@ -179,6 +224,9 @@ TRANSITIONS: dict[str, tuple[Transition, ...]] = {
     ),
     JobState.COMPLETED: (
         _t(JobState.PAID_OUT, "Client approves release", Actor.CLIENT),
+        # Same move, different meaning, on a job with no escrow: the client is
+        # agreeing the work happened, not releasing anything.
+        _t(JobState.CLOSED, "Client confirms — nothing to release", Actor.CLIENT),
         # Silence is approval. A client who never logs in again must not be
         # able to hold a worker's pay hostage indefinitely.
         _t(JobState.PAID_OUT, "Approval window lapsed — auto-release", Actor.SYSTEM),
@@ -191,6 +239,7 @@ TRANSITIONS: dict[str, tuple[Transition, ...]] = {
         _t(JobState.REFUNDED, "Admin resolves for client", Actor.ADMIN),
     ),
     # Terminal states have no exits.
+    JobState.CLOSED: (),
     JobState.PAID_OUT: (),
     JobState.REFUNDED: (),
     JobState.CANCELLED: (),
@@ -212,6 +261,35 @@ ESCROW_FUNDED_STATES: frozenset[str] = frozenset(
         JobState.DISPUTED,
     }
 )
+
+
+def claim(model, pk, *, expect, to, field: str = "state", **extra) -> bool:
+    """Move one row from ``expect`` to ``to``, and say whether it was you.
+
+    The writing half of a transition. :func:`assert_transition` judges a state
+    that was read a moment ago; between that read and the write another
+    request — or the settlement cron — can move the same row. This makes the
+    write itself the decision. The database matches ``expect`` and updates, or
+    it matches nothing and updates nothing, and there is no gap in between for
+    a second actor to fit through.
+
+    Used instead of ``select_for_update``, which reads like a lock and is not
+    one everywhere. SQLite has no ``FOR UPDATE``, and Django drops the clause
+    silently rather than raising, so on the development database a locked read
+    is an ordinary read with a window after it. A conditional UPDATE needs no
+    lock and behaves the same on both databases.
+
+    Returns False when somebody else got there first. What that means is the
+    caller's to decide: a refusal the user should see, or — where two paths
+    doing the same work is expected, as with a Stripe webhook racing the
+    browser — a no-op.
+
+    ``updated_at`` is written by hand because ``auto_now`` does not fire on
+    ``update()``.
+    """
+    values = {field: to, "updated_at": timezone.now()}
+    values.update(extra)
+    return model.objects.filter(pk=pk, **{field: expect}).update(**values) == 1
 
 
 class IllegalTransition(Exception):

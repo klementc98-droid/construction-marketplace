@@ -1,14 +1,15 @@
 {% extends "base.html" %}
+{% load i18n %}
 {% block title %}Contact {{ worker.user }} — Construction's Finest{% endblock %}
 
 {% block content %}
   <h1>Contact {{ worker.user }}</h1>
-  <p class="lede">Pick which gig you're contacting them about.</p>
+  <p class="lede">{% translate "Pick which gig you're contacting them about." %}</p>
 
   {% if gigs %}
     <form method="post" class="card">
       {% csrf_token %}
-      <label for="job">Gig</label>
+      <label for="job">{% translate "Gig" %}</label>
       <select name="job" id="job" required>
         {% for gig in gigs %}
           <option value="{{ gig.pk }}">
@@ -17,22 +18,20 @@
         {% endfor %}
       </select>
       <p class="note">
-        They'll see the gig alongside your first message, so they know what
-        they're being asked about.
+        {% translate "They'll see the gig alongside your first message, so they know what they're being asked about." %}
       </p>
       <div class="btn-row" style="margin-top:22px">
-        <button class="btn" type="submit">Open a thread</button>
-        <a class="btn secondary" href="{% url 'accounts:worker_detail' worker.pk %}">Back</a>
+        <button class="btn" type="submit">{% translate "Open a thread" %}</button>
+        <a class="btn secondary" href="{% url 'accounts:worker_detail' worker.pk %}">{% translate "Back" %}</a>
       </div>
     </form>
   {% else %}
     <div class="card empty">
-      <p>You have no open gigs to contact them about.</p>
+      <p>{% translate "You have no open gigs to contact them about." %}</p>
       <p class="muted">
-        Direct contact is attached to a gig so the worker knows what the message
-        is about — post one first.
+        {% translate "Direct contact is attached to a gig so the worker knows what the message is about — post one first." %}
       </p>
-      <a class="btn" href="{% url 'jobs:post' 'gig' %}">Post a gig</a>
+      <a class="btn" href="{% url 'jobs:post' 'gig' %}">{% translate "Post a gig" %}</a>
     </div>
   {% endif %}
 {% endblock %}

@@ -43,7 +43,15 @@ PLATFORM_FEE_PCT: Decimal = _decimal("PLATFORM_FEE_PCT", "0.12")
 
 #: Currency for all amounts. Single-currency in v1; kept here so the
 #: assumption is visible rather than scattered through Stripe calls.
-CURRENCY: str = os.getenv("CURRENCY", "usd")
+CURRENCY: str = os.getenv("CURRENCY", "eur")
+
+#: What the reader sees in front of a number. Derived from CURRENCY rather than
+#: written out again, so the symbol on a page and the code sent to Stripe cannot
+#: disagree — which is the one mistake here nobody would notice until a
+#: statement arrived. An unknown code falls back to the code itself, which is
+#: ugly and correct; a wrong symbol is neither.
+_SYMBOLS = {"eur": "€", "usd": "$", "gbp": "£"}
+CURRENCY_SYMBOL: str = _SYMBOLS.get(CURRENCY.lower(), CURRENCY.upper() + " ")
 
 
 # ---------------------------------------------------------------------------
@@ -115,6 +123,12 @@ MIN_JOBS_FOR_PUBLIC_STATS: int = _int("MIN_JOBS_FOR_PUBLIC_STATS", 3)
 DEFAULT_REGION_SLUG: str = os.getenv("DEFAULT_REGION_SLUG", "default-region")
 DEFAULT_REGION_NAME: str = os.getenv("DEFAULT_REGION_NAME", "Launch City")
 DEFAULT_REGION_TIMEZONE: str = os.getenv("DEFAULT_REGION_TIMEZONE", "America/New_York")
+#: ISO 3166-1 alpha-2, and it reaches Stripe: a worker's Connect account is
+#: opened in the country of the region they work in. Country decides which
+#: capabilities exist, what onboarding asks for and whether payouts are
+#: possible at all, so it is not a field anyone can default their way through
+#: — ``create_express_account`` used to assume "US" for everybody.
+DEFAULT_REGION_COUNTRY: str = os.getenv("DEFAULT_REGION_COUNTRY", "US")
 
 
 # ---------------------------------------------------------------------------

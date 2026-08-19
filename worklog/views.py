@@ -71,7 +71,10 @@ def workspace(request, pk: int):
     worker, is_worker, is_client = _roles(request, job)
     if not (is_worker or is_client):
         flash.error(request, "That job isn't yours.")
-        return redirect("jobs:detail", pk=job.pk)
+        # The board, not the job: a taken job is only readable by the two
+        # people it is between, so sending a stranger to it answers one
+        # refusal with a second.
+        return redirect("jobs:list")
 
     actor = Actor.WORKER if is_worker else Actor.CLIENT
     completion = getattr(job, "completion", None)
@@ -89,6 +92,12 @@ def workspace(request, pk: int):
             "is_worker": is_worker,
             "is_client": is_client,
             "moves": [m.to_state for m in available_transitions(job.state, actor)],
+            # Whether today has caught up with this day. The state machine
+            # cannot answer it — a transition is about states, and this is
+            # about the calendar — so the button asks separately rather than
+            # being offered and then refused. See _claim_booking: nobody can
+            # say next Thursday's work happened.
+            "day_has_come": job.gig_date is None or job.gig_date <= timezone.localdate(),
             "early_form": EarlyEndForm(),
             "dispute_form": DisputeForm(),
             "minimum_hours": rules.MINIMUM_GUARANTEED_HOURS,
@@ -159,6 +168,40 @@ def complete(request, pk: int):
         flash.error(request, str(exc))
         return redirect("worklog:workspace", pk=job.pk)
     flash.success(request, "Marked complete. The client has been notified.")
+    return redirect("worklog:workspace", pk=job.pk)
+
+
+@login_required
+@require_POST
+def finish(request, pk: int):
+    """Worker: "the work is done" — on a gig with no escrow."""
+    job = get_object_or_404(Job.objects.select_related("client__user"), pk=pk)
+    worker, is_worker, _ = _roles(request, job)
+    if not is_worker:
+        flash.error(request, "Only the worker on this job can mark it done.")
+        return redirect("worklog:workspace", pk=job.pk)
+    try:
+        services.mark_work_finished(job, worker)
+    except services.WorkflowError as exc:
+        flash.error(request, str(exc))
+        return redirect("worklog:workspace", pk=job.pk)
+    flash.success(
+        request, "Marked as finished. Waiting for the client to confirm."
+    )
+    return redirect("worklog:workspace", pk=job.pk)
+
+
+@login_required
+@require_POST
+def confirm(request, pk: int):
+    """Client: "yes, it happened" — closes a gig with no escrow."""
+    job = get_object_or_404(Job.objects.select_related("client__user"), pk=pk)
+    try:
+        services.confirm_closed(job, request.user)
+    except services.WorkflowError as exc:
+        flash.error(request, str(exc))
+        return redirect("worklog:workspace", pk=job.pk)
+    flash.success(request, "Closed. You can both leave a rating now.")
     return redirect("worklog:workspace", pk=job.pk)
 
 

@@ -1,0 +1,40 @@
+{% comment %} The worker's committed days, as months.
+
+  The chips above say which days; this says what the month looks like — and the
+  gaps are the half a client actually needs. Booked on the 25th and the 30th
+  reads as "gone until December" in a list of chips, and as "free on the 26th,
+  27th, 28th" here, which is the offer that was never going to be written
+  otherwise.
+
+  A table, not a grid of divs: it is a table of days, and a screen reader
+  should be able to say so.
+{% endcomment %}
+{% load i18n %}
+
+{% for month in booked_months %}
+  <table class="mini-cal">
+    <caption>{{ month.label|date:"F Y" }}</caption>
+    <thead>
+      <tr>
+        {% for day in "MTWTFSS"|make_list %}<th scope="col"><span aria-hidden="true">{{ day }}</span></th>{% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for week in month.weeks %}
+        <tr>
+          {% for cell in week %}
+            {% if cell %}
+              <td class="{% if cell.booked %}booked{% endif %}{% if cell.today %} today{% endif %}">
+                {% if cell.booked %}
+                  <span title="{% translate "Already booked" %}">{{ cell.date.day }}</span>
+                {% else %}{{ cell.date.day }}{% endif %}
+              </td>
+            {% else %}
+              <td class="pad"></td>
+            {% endif %}
+          {% endfor %}
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endfor %}

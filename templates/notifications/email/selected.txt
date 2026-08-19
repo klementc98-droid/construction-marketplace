@@ -1,0 +1,3 @@
+{% load i18n money_extras %}{% blocktranslate %}{{ client }} picked you for {{ title }}.{% endblocktranslate %}
+
+{% blocktranslate with amount=pay|money h=hours|floatformat:"-2" %}{{ amount }} for {{ h }} hours{% endblocktranslate %}

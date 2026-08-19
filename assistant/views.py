@@ -17,9 +17,10 @@ import json
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseBadRequest, JsonResponse
+from django.utils.translation import gettext as _
 from django.views.decorators.http import require_GET, require_POST
 
-from . import llm, prompts, registry
+from . import llm, options, prompts, registry
 from .conversation import BRANCH_FORM, BRANCH_QA, Conversation
 
 #: Cap on one user message. The assistant asks for a rate, not an essay, and an
@@ -40,12 +41,25 @@ def _state(conversation: Conversation) -> dict:
     return {
         "branch": conversation.branch,
         "form_key": conversation.form_key,
-        "confirmed": conversation.confirmed,
-        "awaiting": conversation.awaiting_confirmation(),
+        "collected": conversation.collected,
         "missing": conversation.missing(),
         "can_review": conversation.can_review(),
         "total_fields": len(spec.chat_fields) if spec else 0,
     }
+
+
+def _options(conversation: Conversation) -> list[dict[str, str]]:
+    """Buttons to offer under the reply, if the next question has fixed answers.
+
+    Computed from the server's own record of what is collected rather than from
+    anything the model says, so the buttons cannot offer a question the server
+    thinks is already answered. Q&A gets its openers only while the transcript
+    is short — a starter list still sitting there on the fifth exchange is
+    clutter, and by then the user plainly knows what to ask.
+    """
+    if conversation.branch == BRANCH_QA:
+        return options.qa_options() if len(conversation.transcript) <= 1 else []
+    return options.options_for(conversation)
 
 
 @login_required
@@ -85,7 +99,7 @@ def start(request):
 
     if branch == BRANCH_QA:
         conversation.start(BRANCH_QA)
-        opening = (
+        opening = _(
             "Ask me anything about how this app works — how you get paid, when "
             "money is released, check-ins, ratings, or where to find something."
         )
@@ -94,17 +108,23 @@ def start(request):
         if spec is None:
             return HttpResponseBadRequest("Unknown form.")
         conversation.start(BRANCH_FORM, spec.key)
-        opening = (
-            f"Right — let's do {spec.noun} together. I'll ask one thing at a "
+        opening = _(
+            "Right — let's do %(noun)s together. I'll ask one thing at a "
             "time, and you can answer however you like. Nothing gets saved "
             "until you've seen the finished form and pressed save."
-        )
+        ) % {"noun": spec.noun}
     else:
         return HttpResponseBadRequest("Unknown branch.")
 
     conversation.add("assistant", opening)
     conversation.save(request)
-    return JsonResponse({"reply": opening, "state": _state(conversation)})
+    return JsonResponse(
+        {
+            "reply": opening,
+            "options": _options(conversation),
+            "state": _state(conversation),
+        }
+    )
 
 
 @login_required
@@ -122,7 +142,7 @@ def say(request):
     if conversation.rate_limited():
         return JsonResponse(
             {
-                "reply": (
+                "reply": _(
                     "That's a lot of messages in one go — give it a few minutes "
                     "and try again."
                 ),
@@ -143,7 +163,7 @@ def say(request):
         conversation.save(request)
         return JsonResponse(
             {
-                "reply": (
+                "reply": _(
                     "Sorry — I can't reach the assistant right now. You can "
                     "still fill the form in yourself, everything works as normal."
                 ),
@@ -154,7 +174,11 @@ def say(request):
 
     conversation.add("assistant", result["reply"])
     conversation.save(request)
-    return JsonResponse({**result, "state": _state(conversation)})
+
+    # No buttons alongside a handoff: the conversation is over and the only
+    # thing left to press is the link to the filled-in form.
+    offered = [] if result.get("redirect") else _options(conversation)
+    return JsonResponse({**result, "options": offered, "state": _state(conversation)})
 
 
 def _answer_question(conversation: Conversation) -> dict:
@@ -186,18 +210,16 @@ def _fill_form(request, conversation: Conversation) -> dict:
         tools=tool_definitions(spec),
     )
 
-    for call in reply.calls_named("propose_fields"):
-        conversation.propose(call.arguments)
-    for call in reply.calls_named("confirm_fields"):
-        conversation.confirm(call.arguments.get("names") or [])
+    for call in reply.calls_named("record_fields"):
+        conversation.collect(call.arguments)
 
     if reply.calls_named("ready_for_review"):
         if url := conversation.handoff(request):
             return {
-                "reply": (
-                    "That's everything. Here's the finished form — have a read "
-                    "through, change anything that isn't right by clicking "
-                    "straight into it, then press save."
+                "reply": _(
+                    "That's everything I need. Open the form below — it's filled "
+                    "in with your answers. Change anything that isn't right by "
+                    "clicking straight into it, then press save."
                 ),
                 "redirect": url,
             }
@@ -222,7 +244,7 @@ def _speak(conversation: Conversation, system: str, instruction: str) -> str:
     return reply.text or _FALLBACK
 
 
-_FALLBACK = "Sorry, I didn't catch that — could you say it another way?"
+_FALLBACK = _("Sorry, I didn't catch that — could you say it another way?")
 
 
 @login_required

@@ -1,0 +1,7 @@
+{% load i18n %}{% blocktranslate %}{{ worker }} applied for {{ title }}.{% endblocktranslate %}
+{% if note %}
+{% translate "They wrote:" %}
+
+  {{ note }}
+{% endif %}
+{% translate "Open the applicants list to see who else is in, and to pick somebody." %}

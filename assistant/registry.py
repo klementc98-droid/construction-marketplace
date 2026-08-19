@@ -59,7 +59,7 @@ def specs() -> dict[str, FormSpec]:
                     "title",
                     "trade",
                     "description",
-                    "gig_date",
+                    "gig_dates",
                     "gig_hours",
                     "fixed_pay",
                     "location",

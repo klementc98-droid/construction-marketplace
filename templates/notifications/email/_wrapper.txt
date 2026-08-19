@@ -1,0 +1,8 @@
+{% load i18n %}{{ body }}
+
+{{ link }}
+
+--
+{% translate "Construction's Finest" %}
+{% blocktranslate %}You're getting this because something on the site needs your answer. Turn these off any time from your profile:{% endblocktranslate %}
+{{ site_url }}{% url 'accounts:details' %}

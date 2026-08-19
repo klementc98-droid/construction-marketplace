@@ -6,6 +6,7 @@ import logging
 
 from django.contrib import messages as flash
 from django.contrib.auth.decorators import login_required
+from django.db import IntegrityError, transaction
 from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -124,7 +125,10 @@ def escrow_detail(request, pk: int):
     is_worker = worker is not None and job.assigned_worker_id == worker.pk
     if not (is_client or is_worker):
         flash.error(request, "That job isn't yours.")
-        return redirect("jobs:detail", pk=job.pk)
+        # The board, not the job. A job with somebody on it is readable only by
+        # the two people it is between, so sending an outsider to it would
+        # answer one refusal with a 404.
+        return redirect("jobs:list")
 
     escrow = EscrowPayment.objects.filter(job=job).first()
     return render(
@@ -235,7 +239,22 @@ def webhook(request):
 
     # Stripe retries, and does not promise exactly-once delivery. Releasing a
     # payout twice is not recoverable, so a replayed id stops here.
-    if WebhookEvent.objects.filter(pk=event["id"]).exists():
+    #
+    # The row is written *before* the work, not after, and that ordering is the
+    # whole point. Asking "does this exist?" and then doing the work is two
+    # steps with a gap: two deliveries of the same event — a retry arriving
+    # while the first is still running — both find nothing and both proceed.
+    # The insert is a single atomic claim, so exactly one of them wins it.
+    #
+    # What saves this from the opposite failure, a claim held by a run that
+    # then crashed, is the delete in the except below: the claim is released
+    # and Stripe's next retry does the work for real.
+    try:
+        with transaction.atomic():
+            claim = WebhookEvent.objects.create(
+                event_id=event["id"], event_type=event["type"]
+            )
+    except IntegrityError:
         return HttpResponse(status=200)
 
     obj = event["data"]["object"]
@@ -279,14 +298,16 @@ def webhook(request):
                 )
                 handled = f"account {account.account_id} refreshed"
     except Exception:  # pragma: no cover - defensive
-        # Record nothing and return 500 so Stripe retries: swallowing the
-        # error would mean the event is marked handled but nothing happened.
+        # Give the claim back and return 500 so Stripe retries. Keeping it
+        # would mean the event is on record as handled while nothing happened,
+        # which is the one outcome worse than doing the work twice — the retry
+        # that would have fixed it never comes.
         logger.exception("Webhook %s failed", event["id"])
+        WebhookEvent.objects.filter(pk=claim.pk).delete()
         return HttpResponse(status=500)
 
-    WebhookEvent.objects.create(
-        event_id=event["id"], event_type=event["type"], payload_summary=handled
-    )
+    # Only the summary is written here now; the claim itself already exists.
+    WebhookEvent.objects.filter(pk=claim.pk).update(payload_summary=handled)
     return HttpResponse(status=200)
 
 

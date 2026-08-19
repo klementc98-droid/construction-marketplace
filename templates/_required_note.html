@@ -1,6 +1,6 @@
-{% comment %}
+{% load i18n %}{% comment %}
 The key for the asterisks, at the top of any form that has required fields.
 One line, stated once — repeating "(required)" against every label is louder
 than the form itself.
 {% endcomment %}
-<p class="req-note">Fields marked <span class="req">*</span> are required.</p>
+<p class="req-note">{% translate "Fields marked" %} <span class="req">*</span> {% translate "are required." %}</p>

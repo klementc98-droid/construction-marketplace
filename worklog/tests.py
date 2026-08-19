@@ -55,6 +55,14 @@ class WorkTestCase(TestCase):
         )
 
     def make_job(self, *, state=JobState.ESCROW_HELD, hours="8", pay="90", **extra):
+        # gig_date is overridable, because a booking needs a day per row —
+        # see the double-booking index. It was hard-coded below, so any caller
+        # asking for one got "multiple values for gig_date".
+        extra.setdefault("gig_date", timezone.localdate())
+        # Escrow on by default in this fixture: these tests are about the
+        # escrow path. The model default is off — most deals are settled
+        # directly — so the ones exercising that path say so explicitly.
+        extra.setdefault("use_escrow", True)
         job = Job.objects.create(
             client=self.client_profile,
             job_type=JobType.GIG,
@@ -62,7 +70,6 @@ class WorkTestCase(TestCase):
             region=self.region,
             title="Framing help",
             description="Second storey.",
-            gig_date=timezone.localdate(),
             gig_hours=Decimal(hours),
             fixed_pay=Decimal(pay),
             state=state,
@@ -180,9 +187,24 @@ class CheckInTests(WorkTestCase):
             services.check_in(job, intruder)
 
     def test_cannot_check_in_before_the_money_is_held(self):
-        job = self.make_job(state=JobState.ACCEPTED)
-        with self.assertRaises(IllegalTransition):
+        """Still refused — by the service now, not the transition table.
+
+        The table had to start allowing ACCEPTED -> IN_PROGRESS, or a job
+        settled directly could never start. Only the service knows whether
+        this particular job has escrow on it.
+        """
+        job = self.make_job(state=JobState.ACCEPTED)          # use_escrow=True
+        with self.assertRaises(services.WorkflowError):
             services.check_in(job, self.worker_profile)
+        job.refresh_from_db()
+        self.assertEqual(job.state, JobState.ACCEPTED)
+
+    def test_a_job_without_escrow_can_start_straight_away(self):
+        """Nothing to wait for when nobody is holding the money."""
+        job = self.make_job(state=JobState.ACCEPTED, use_escrow=False)
+        services.check_in(job, self.worker_profile)
+        job.refresh_from_db()
+        self.assertEqual(job.state, JobState.IN_PROGRESS)
 
     def test_distance_maths_is_sane(self):
         # Rough NYC-to-Philadelphia, ~130 km.
@@ -401,7 +423,10 @@ class WorkspaceViewTests(WorkTestCase):
         ClientProfile.objects.create(user=outsider, region=self.region)
         self.client.force_login(outsider)
         response = self.client.get(reverse("worklog:workspace", args=[job.pk]))
-        self.assertRedirects(response, reverse("jobs:detail", args=[job.pk]))
+        # The board, not the job. A booked job is only readable by the two
+        # people it is between, so sending an outsider there would answer one
+        # refusal with a second.
+        self.assertRedirects(response, reverse("jobs:list"))
 
     def test_the_worker_sees_the_check_in_action(self):
         job = self.make_job()
@@ -436,3 +461,305 @@ class WorkspaceViewTests(WorkTestCase):
         record = CheckIn.objects.get(job=job)
         self.assertIsNone(record.latitude)
         self.assertIsNone(record.accuracy_m)
+
+
+class NoEscrowJobTests(WorkTestCase):
+    """A gig the two sides settle themselves.
+
+    The short route: accepted → worker says done → client agrees → closed.
+    No funding step, no check-in, no timer, because none of those mean
+    anything when the platform is not holding the money.
+    """
+
+    def setUp(self):
+        self.worker = self.worker_profile
+        self.job = self.make_job(state=JobState.ACCEPTED)
+        self.job.use_escrow = False
+        self.job.assigned_worker = self.worker
+        self.job.save(update_fields=["use_escrow", "assigned_worker"])
+
+    def test_the_job_reports_itself_as_unescrowed(self):
+        self.assertFalse(self.job.is_escrowed)
+
+    def test_a_standing_position_is_never_escrowed_whatever_the_flag_says(self):
+        """There is no single day to sign off, so the flag is not the question."""
+        from jobs.models import JobType
+
+        self.job.job_type = JobType.STANDING
+        self.job.use_escrow = True
+        self.assertFalse(self.job.is_escrowed)
+
+    def test_the_worker_marks_the_work_finished_without_checking_in(self):
+        services.mark_work_finished(self.job, self.worker)
+        self.job.refresh_from_db()
+        self.assertEqual(self.job.state, JobState.COMPLETED)
+        self.assertTrue(self.job.awaiting_client_confirmation)
+
+    def test_no_completion_record_is_written(self):
+        """That row is a payout calculation, and there is no payout."""
+        services.mark_work_finished(self.job, self.worker)
+        self.job.refresh_from_db()
+        self.assertFalse(hasattr(self.job, "completion"))
+
+    def test_confirming_twice_at_once_counts_the_job_once(self):
+        """jobs_completed is reputation, and an F() + 1 that ran twice for one
+        job leaves both track records overstated with nothing to show for it.
+
+        The window is forced open rather than raced for: assert_transition runs
+        after confirm_closed has read the job and before it writes, which is
+        exactly where a second request would land.
+        """
+        from unittest import mock
+
+        from jobs.models import Job
+
+        services.mark_work_finished(self.job, self.worker)
+        before_worker = type(self.worker).objects.get(pk=self.worker.pk).jobs_completed
+        before_client = type(self.client_profile).objects.get(
+            pk=self.client_profile.pk
+        ).jobs_completed
+
+        real = services.assert_transition
+
+        def close_it_first(*args, **kwargs):
+            result = real(*args, **kwargs)
+            Job.objects.filter(pk=self.job.pk, state=JobState.COMPLETED).update(
+                state=JobState.CLOSED
+            )
+            return result
+
+        with mock.patch.object(services, "assert_transition", close_it_first):
+            with self.assertRaises(services.WorkflowError):
+                services.confirm_closed(self.job, self.client_user)
+
+        self.assertEqual(
+            type(self.worker).objects.get(pk=self.worker.pk).jobs_completed,
+            before_worker,
+        )
+        self.assertEqual(
+            type(self.client_profile).objects.get(
+                pk=self.client_profile.pk
+            ).jobs_completed,
+            before_client,
+        )
+
+    def test_the_refusal_says_where_the_job_actually_ended_up(self):
+        """Who moved it is not knowable from here; where it went is, and it is
+        the half that tells somebody what to do next."""
+        from unittest import mock
+
+        from jobs.models import Job
+
+        services.mark_work_finished(self.job, self.worker)
+        real = services.assert_transition
+
+        def close_it_first(*args, **kwargs):
+            result = real(*args, **kwargs)
+            Job.objects.filter(pk=self.job.pk).update(state=JobState.CLOSED)
+            return result
+
+        with mock.patch.object(services, "assert_transition", close_it_first):
+            with self.assertRaises(services.WorkflowError) as caught:
+                services.confirm_closed(self.job, self.client_user)
+
+        self.assertIn(str(JobState.CLOSED.label), str(caught.exception))
+
+    def test_the_client_confirming_closes_it(self):
+        services.mark_work_finished(self.job, self.worker)
+        services.confirm_closed(self.job, self.client_user)
+        self.job.refresh_from_db()
+        self.assertEqual(self.job.state, JobState.CLOSED)
+        self.assertTrue(self.job.is_finished)
+
+    def test_closing_counts_on_both_track_records(self):
+        """Settled directly still happened. Not counting it would make the
+        pair who trust each other look like the pair who never worked."""
+        before_worker = self.worker.jobs_completed
+        before_client = self.job.client.jobs_completed
+
+        services.mark_work_finished(self.job, self.worker)
+        services.confirm_closed(self.job, self.client_user)
+
+        self.worker.refresh_from_db()
+        self.job.client.refresh_from_db()
+        self.assertEqual(self.worker.jobs_completed, before_worker + 1)
+        self.assertEqual(self.job.client.jobs_completed, before_client + 1)
+
+    def test_the_worker_cannot_close_it_alone(self):
+        """Both sides or nothing — there is no hold to fall back on."""
+        services.mark_work_finished(self.job, self.worker)
+        with self.assertRaises(services.WorkflowError):
+            services.confirm_closed(self.job, self.worker.user)
+        self.job.refresh_from_db()
+        self.assertEqual(self.job.state, JobState.COMPLETED)
+
+    def test_nothing_closes_on_a_timer(self):
+        """No money held means no window, so the sweep must leave it alone."""
+        services.mark_work_finished(self.job, self.worker)
+        services.settle_due()
+        self.job.refresh_from_db()
+        self.assertEqual(self.job.state, JobState.COMPLETED)
+
+    def test_an_escrowed_job_refuses_the_short_route(self):
+        # Tomorrow, not today: this worker already has today's job from setUp,
+        # and one worker has one of each day — see the double-booking index.
+        escrowed = self.make_job(
+            state=JobState.ACCEPTED,
+            gig_date=timezone.localdate() + timedelta(days=1),
+        )
+        escrowed.assigned_worker = self.worker
+        escrowed.save(update_fields=["assigned_worker"])
+        with self.assertRaises(services.WorkflowError):
+            services.mark_work_finished(escrowed, self.worker)
+
+    def test_an_unescrowed_job_refuses_the_escrow_release(self):
+        services.mark_work_finished(self.job, self.worker)
+        with self.assertRaises(services.WorkflowError):
+            services.approve(self.job, self.client_user)
+
+
+class BookingLifecycleTests(WorkTestCase):
+    """A booking finishes, closes and counts as one job.
+
+    The days are separate rows so each can carry its own escrow and its own
+    sign-off. Nothing about that is meant to reach the two people involved:
+    they agreed one week, they finish one week, and it goes on both records
+    once.
+    """
+
+    def booking(self, count=4, **overrides):
+        from uuid import uuid4
+
+        from datetime import timedelta
+
+        group = uuid4()
+        days = []
+        for n in range(count):
+            # A day of its own each, which is what a booking is. They all
+            # shared today's date until the double-booking index refused it —
+            # correctly: four live gigs on one date for one worker is the very
+            # thing that index exists to make impossible.
+            overrides.setdefault("gig_date", timezone.localdate())
+            job = self.make_job(
+                state=JobState.ACCEPTED,
+                offer_group=group,
+                **{**overrides, "gig_date": overrides["gig_date"] + timedelta(days=n)},
+            )
+            job.use_escrow = False
+            job.assigned_worker = self.worker_profile
+            job.save(update_fields=["use_escrow", "assigned_worker"])
+            days.append(job)
+        return days
+
+    def test_marking_it_finished_reaches_every_day_that_has_happened(self):
+        """A booking is signed off in one press — but only as far as today.
+
+        It used to reach the whole week on its first morning, which recorded
+        six days of work as done before they existed and handed the worker's
+        diary back to her while she was still committed to it.
+        """
+        days = self.booking(4, gig_date=timezone.localdate() - timedelta(days=1))
+        # Yesterday and today have happened; the two after have not.
+        services.mark_work_finished(days[0], self.worker_profile)
+
+        for day in days[:2]:
+            day.refresh_from_db()
+            self.assertEqual(day.state, JobState.COMPLETED)
+        for day in days[2:]:
+            day.refresh_from_db()
+            self.assertEqual(day.state, JobState.ACCEPTED)
+
+    def test_a_day_still_ahead_cannot_be_signed_off_at_all(self):
+        """And the refusal says so, rather than reading as a lost race."""
+        days = self.booking(3, gig_date=timezone.localdate() + timedelta(days=2))
+
+        with self.assertRaises(services.WorkflowError) as caught:
+            services.mark_work_finished(days[0], self.worker_profile)
+        self.assertIn("hasn't come yet", str(caught.exception))
+
+        for day in days:
+            day.refresh_from_db()
+            self.assertEqual(day.state, JobState.ACCEPTED)
+
+    def test_the_worker_stays_booked_for_the_days_still_to_come(self):
+        """The point of the rule, from the diary's side."""
+        days = self.booking(4, gig_date=timezone.localdate() - timedelta(days=1))
+        services.mark_work_finished(days[0], self.worker_profile)
+        services.confirm_closed(days[0], self.client_user)
+
+        self.worker_profile.refresh_from_db()
+        self.assertEqual(
+            self.worker_profile.booked_dates,
+            [days[2].gig_date, days[3].gig_date],
+        )
+
+    def test_confirming_closes_every_day_that_has_happened(self):
+        days = self.booking(4, gig_date=timezone.localdate() - timedelta(days=1))
+        services.mark_work_finished(days[0], self.worker_profile)
+        services.confirm_closed(days[0], self.client_user)
+
+        for day in days[:2]:
+            day.refresh_from_db()
+            self.assertEqual(day.state, JobState.CLOSED)
+        for day in days[2:]:
+            day.refresh_from_db()
+            self.assertEqual(day.state, JobState.ACCEPTED)
+
+    def test_a_week_counts_as_one_job_on_both_records(self):
+        """The number a profile shows is "how much has this person seen
+        through". Five days of one booking is one."""
+        days = self.booking(5, gig_date=timezone.localdate() - timedelta(days=4))
+        worker_before = type(self.worker_profile).objects.get(
+            pk=self.worker_profile.pk
+        ).jobs_completed
+        client_before = type(self.client_profile).objects.get(
+            pk=self.client_profile.pk
+        ).jobs_completed
+
+        services.mark_work_finished(days[0], self.worker_profile)
+        services.confirm_closed(days[0], self.client_user)
+
+        self.assertEqual(
+            type(self.worker_profile).objects.get(
+                pk=self.worker_profile.pk
+            ).jobs_completed,
+            worker_before + 1,
+        )
+        self.assertEqual(
+            type(self.client_profile).objects.get(
+                pk=self.client_profile.pk
+            ).jobs_completed,
+            client_before + 1,
+        )
+
+    def test_a_single_day_job_is_untouched_by_any_of_this(self):
+        job = self.make_job(state=JobState.ACCEPTED)
+        job.use_escrow = False
+        job.assigned_worker = self.worker_profile
+        job.save(update_fields=["use_escrow", "assigned_worker"])
+
+        services.mark_work_finished(job, self.worker_profile)
+        job.refresh_from_db()
+        self.assertEqual(job.state, JobState.COMPLETED)
+
+        services.confirm_closed(job, self.client_user)
+        job.refresh_from_db()
+        self.assertEqual(job.state, JobState.CLOSED)
+
+    def test_a_day_that_cannot_move_does_not_block_the_rest(self):
+        """One stuck day must not stop a client closing the other four."""
+        # All four behind us, so the only thing being tested is the stuck day
+        # rather than the calendar.
+        days = self.booking(4, gig_date=timezone.localdate() - timedelta(days=4))
+        services.mark_work_finished(days[0], self.worker_profile)
+        # Something happened to Wednesday on its own.
+        days[2].state = JobState.DISPUTED
+        days[2].save(update_fields=["state"])
+
+        services.confirm_closed(days[0], self.client_user)
+
+        for day in (days[0], days[1], days[3]):
+            day.refresh_from_db()
+            self.assertEqual(day.state, JobState.CLOSED)
+        days[2].refresh_from_db()
+        self.assertEqual(days[2].state, JobState.DISPUTED)

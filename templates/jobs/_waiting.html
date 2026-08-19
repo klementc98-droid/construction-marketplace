@@ -1,0 +1,41 @@
+{% load i18n %}{% comment %}
+What is waiting on the reader, at the top of the page they land on.
+
+Rendered on both the home page and "Mine" — the same panel, from the same
+counts, because the answer to "is anything waiting on me?" must not depend on
+which page you happened to open.
+
+Nothing at all when there is nothing: an empty "0 things waiting" is a line
+that trains people to stop reading the place notices appear.
+{% endcomment %}
+{% if waiting %}
+  <div class="card waiting">
+    <p class="waiting-head">
+      <strong>{% translate "Waiting on you" %}</strong>
+      <span class="waiting-count">{{ waiting.total }}</span>
+    </p>
+    <ul class="waiting-list">
+      {% if waiting.offers %}
+        <li>
+          <a href="{% url 'jobs:mine' %}">
+            {% blocktranslate count n=waiting.offers %}{{ n }} job offered to you{% plural %}{{ n }} jobs offered to you{% endblocktranslate %}
+          </a>
+        </li>
+      {% endif %}
+      {% if waiting.confirmations %}
+        <li>
+          <a href="{% url 'jobs:mine' %}">
+            {% blocktranslate count n=waiting.confirmations %}{{ n }} job marked done, waiting for you to agree{% plural %}{{ n }} jobs marked done, waiting for you to agree{% endblocktranslate %}
+          </a>
+        </li>
+      {% endif %}
+      {% if waiting.ratings %}
+        <li>
+          <a href="{% url 'jobs:mine' %}">
+            {% blocktranslate count n=waiting.ratings %}{{ n }} finished job to rate{% plural %}{{ n }} finished jobs to rate{% endblocktranslate %}
+          </a>
+        </li>
+      {% endif %}
+    </ul>
+  </div>
+{% endif %}

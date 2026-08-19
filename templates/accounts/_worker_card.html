@@ -1,4 +1,4 @@
-{% comment %}
+{% load i18n %}{% comment %}
 One worker, as a row. Shared by "People on Construction's Finest" on the feed and the workers
 board, so a person looks the same wherever you meet them.
 
@@ -29,7 +29,7 @@ ranking, not information.
 
         <p class="avail avail-{{ worker.availability_tone }}">
           <span class="avail-dot" aria-hidden="true"></span>{{ worker.availability_headline }}
-          {% if worker.open_to_full_time %}<span class="badge gig">Full-time</span>{% endif %}
+          {% if worker.open_to_full_time %}<span class="badge gig">{% translate "Full-time" %}</span>{% endif %}
         </p>
 
         {% if worker.service_area or worker.user.age %}
@@ -42,7 +42,10 @@ ranking, not information.
         {% if worker.trades.all %}
           <p class="worker-trades">
             {% for t in worker.trades.all %}
-              <span class="pill {% if t.requires_license %}regulated{% endif %}">{{ t.name }}</span>
+              {% comment %} The trade object, not its name field: __str__ is what
+                 translates it, and reaching past it to .name renders the English
+                 value stored in the row. {% endcomment %}
+              <span class="pill {% if t.requires_license %}regulated{% endif %}">{{ t }}</span>
             {% endfor %}
           </p>
         {% endif %}
@@ -58,34 +61,34 @@ ranking, not information.
     <div class="stat-row compact">
       <div class="stat stat--rate">
         <div class="k">
-          <svg class="stat-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-rate"/></svg>Charges</div>
+          <svg class="stat-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-rate"/></svg>{% translate "Charges" %}</div>
         <div class="v">{{ worker.rate_display }}</div>
       </div>
       <div class="stat stat--exp">
         <div class="k">
-          <svg class="stat-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-clock"/></svg>Experience</div>
+          <svg class="stat-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-clock"/></svg>{% translate "Experience" %}</div>
         <div class="v {% if not worker.years_experience %}new{% endif %}">
           {% if worker.years_experience %}
-            {{ worker.years_experience }} yr{{ worker.years_experience|pluralize }}
-          {% else %}Not stated{% endif %}
+            {% blocktranslate count years=worker.years_experience %}{{ years }} yr{% plural %}{{ years }} yrs{% endblocktranslate %}
+          {% else %}{% translate "Not stated" %}{% endif %}
         </div>
       </div>
       <div class="stat stat--jobs">
         <div class="k">
-          <svg class="stat-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check"/></svg>Jobs done</div>
+          <svg class="stat-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check"/></svg>{% translate "Jobs done" %}</div>
         {% comment %} "None yet", not a bold 0. Same reasoning as the ratings below and stated
            at the top of this file: a first-timer set in the same weight as someone
            on 40 completed jobs reads as a bad score rather than an absent one.
         {% endcomment %}
         <div class="v {% if not worker.jobs_completed %}new{% endif %}">
-          {% if worker.jobs_completed %}{{ worker.jobs_completed }}{% else %}None yet{% endif %}
+          {% if worker.jobs_completed %}{{ worker.jobs_completed }}{% else %}{% translate "None yet" %}{% endif %}
         </div>
       </div>
       <div class="stat stat--rating">
         <div class="k">
-          <svg class="stat-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-star"/></svg>Rating</div>
+          <svg class="stat-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-star"/></svg>{% translate "Rating" %}</div>
         <div class="v {% if not worker.average_rating %}new{% endif %}">
-          {% if worker.average_rating %}{{ worker.average_rating }}★{% else %}New{% endif %}
+          {% if worker.average_rating %}{{ worker.average_rating }}★{% else %}{% translate "New" %}{% endif %}
         </div>
       </div>
     </div>

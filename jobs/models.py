@@ -20,20 +20,24 @@ from __future__ import annotations
 
 from decimal import Decimal
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.core.validators import MinValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _, ngettext
 
 from accounts.models import ClientProfile, RateType, WorkerProfile
+from config import business_rules as rules
 from core.models import Region, TimestampedModel, Trade
+from core.money import money
 from core.state_machine import JobState, state_tone
 
 
 class JobType(models.TextChoices):
-    STANDING = "standing", "Standing position"
-    GIG = "gig", "One-day gig"
+    STANDING = "standing", _("Standing position")
+    GIG = "gig", _("One-day gig")
 
 
 class PositionType(models.TextChoices):
@@ -43,10 +47,10 @@ class PositionType(models.TextChoices):
     is the second question every worker asks after the rate.
     """
 
-    TEMPORARY = "temporary", "Temporary / short term"
-    ONGOING = "ongoing", "Ongoing"
-    FULL_TIME = "full_time", "Full time"
-    CONTRACT = "contract", "Contract / project-based"
+    TEMPORARY = "temporary", _("Temporary / short term")
+    ONGOING = "ongoing", _("Ongoing")
+    FULL_TIME = "full_time", _("Full time")
+    CONTRACT = "contract", _("Contract / project-based")
 
 
 class JobQuerySet(models.QuerySet):
@@ -104,6 +108,134 @@ class JobQuerySet(models.QuerySet):
         )
 
 
+def booking_of(job, *, states=None):
+    """Every job in this booking, oldest day first — or just this one.
+
+    The counterpart to :func:`collapse_groups`. That one makes a booking read
+    as one entry; this one makes it *behave* as one. Both exist because the
+    split into a row per day is storage — each day carries its own escrow and
+    its own sign-off — and nothing a person does to "the job" should have to
+    know that. They agreed one booking, they finish one booking, they rate one
+    booking.
+
+    ``states`` narrows to the days a particular step may touch. Left off, every
+    day of the booking comes back, whatever state it is in.
+    """
+    if not job.offer_group:
+        return [job]
+    jobs = Job.objects.filter(offer_group=job.offer_group)
+    if states is not None:
+        jobs = jobs.filter(state__in=states)
+    return list(jobs.order_by("gig_date", "pk"))
+
+
+def collapse_groups(jobs):
+    """One entry per multi-day booking, rather than one per day.
+
+    A three-day booking is three gigs in the database, and has to be: each day
+    carries its own escrow, its own sign-off and its own expiry, and two days
+    cannot share a row when either can be finished or called off while the
+    other runs. That is a storage fact, not something a reader should have to
+    look at — three near-identical cards differing only by date read as the
+    same job posted three times by mistake.
+
+    So the list shows the booking. The first day carries the entry and gains
+    two attributes for the template: ``group_days``, the count, and
+    ``group_dates``, every date in it. Everything else about the row — the
+    title, the trade, the per-day pay — is the same on all of them by
+    construction, so the first is a fair representative.
+
+    Ungrouped jobs pass through untouched with ``group_days`` of 1.
+    """
+    seen: dict = {}
+    out = []
+    for job in jobs:
+        if not job.offer_group:
+            out.append(_group_start(job))
+            continue
+        first = seen.get(job.offer_group)
+        if first is None:
+            seen[job.offer_group] = _group_start(job)
+            out.append(job)
+        else:
+            _group_absorb(first, job)
+    return out
+
+
+def _group_start(job):
+    """Make this day the representative of its booking."""
+    job.group_days = 1
+    job.group_dates = [job.gig_date] if job.gig_date else []
+    # Summed rather than multiplied out from the first day: the days of a
+    # booking can end up on different numbers, because a counter is agreed
+    # per day. Multiplying the representative would quietly under- or
+    # over-state a total the reader is about to rely on.
+    job.group_pay = job.fixed_pay or Decimal("0")
+    job.group_hours = job.gig_hours or Decimal("0")
+    return job
+
+
+def _group_absorb(first, job):
+    """Fold another day into the representative already standing for it."""
+    first.group_days += 1
+    first.group_pay += job.fixed_pay or Decimal("0")
+    first.group_hours += job.gig_hours or Decimal("0")
+    if job.gig_date:
+        first.group_dates.append(job.gig_date)
+        first.group_dates.sort()
+
+
+def collapse_rows(rows, job_of):
+    """The same collapse, for lists whose rows *wrap* a job rather than are one.
+
+    An application and an offer are written per day, because the day is what
+    carries the escrow and the sign-off. But nobody applied five times and
+    nobody was offered five things: applying once applies to the booking, and a
+    client who offered somebody a week offered them one week. So "You applied
+    to" and "Offered to you" have to collapse for the same reason the board
+    does — five rows differing only by date read as five jobs.
+
+    The surviving row keeps everything of its own — status, who sent it, when —
+    and the job it points at gains the ``group_*`` attributes the templates
+    already read, so a collapsed row can say "5 days" instead of naming one.
+
+    ``job_of`` pulls the job out of a row; the caller knows the shape.
+    """
+    seen: dict = {}
+    out = []
+    for row in rows:
+        job = job_of(row)
+        if not job.offer_group:
+            _group_start(job)
+            out.append(row)
+            continue
+        first = seen.get(job.offer_group)
+        if first is None:
+            seen[job.offer_group] = _group_start(job)
+            out.append(row)
+        else:
+            _group_absorb(first, job)
+    return out
+
+
+def count_bookings(group_ids) -> int:
+    """How many bookings these per-day rows amount to.
+
+    A count shown beside a collapsed list has to be counted the same way the
+    list is, or the badge promises four things and the page holds one. Rows
+    without a group are their own booking and each count once.
+    """
+    seen = set()
+    total = 0
+    for group in group_ids:
+        if group is None:
+            total += 1
+        elif group not in seen:
+            seen.add(group)
+            total += 1
+    return total
+
+
 class Job(TimestampedModel):
     """One post, of either kind."""
 
@@ -146,7 +278,7 @@ class Job(TimestampedModel):
         max_length=16,
         choices=RateType.choices,
         blank=True,
-        help_text="Per hour or per day.",
+        help_text=_("Per hour or per day."),
     )
     rate_min = models.DecimalField(
         max_digits=8,
@@ -161,7 +293,7 @@ class Job(TimestampedModel):
         null=True,
         blank=True,
         validators=[MinValueValidator(Decimal("0"))],
-        help_text="Leave blank for a single flat rate.",
+        help_text=_("Leave blank for a single flat rate."),
     )
     position_type = models.CharField(
         max_length=16, choices=PositionType.choices, blank=True
@@ -175,7 +307,7 @@ class Job(TimestampedModel):
         null=True,
         blank=True,
         validators=[MinValueValidator(Decimal("0.5"))],
-        help_text="Expected length of the day.",
+        help_text=_("Expected length of the day."),
     )
     #: What the client pays, total, for the whole gig. A fixed price rather
     #: than rate x hours: it is the number both sides agree on up front, and
@@ -186,6 +318,32 @@ class Job(TimestampedModel):
         null=True,
         blank=True,
         validators=[MinValueValidator(Decimal("0"))],
+    )
+
+    #: Which multi-day offer wrote this row, if one did.
+    #:
+    #: A three-day offer is three gigs — each day has its own escrow and its own
+    #: sign-off, and cannot share a row with another. But some answers are about
+    #: the arrangement rather than the day: a worker asked for cash who wants
+    #: escrow instead means all three days, not Tuesday only. This is what lets
+    #: such an answer find its siblings.
+    #:
+    #: NULL for anything posted on its own, which is most jobs.
+    offer_group = models.UUIDField(null=True, blank=True, db_index=True)
+
+    #: Whether the platform holds the money for this gig.
+    #:
+    #: Off by default. Most work here is arranged between two people who settle
+    #: it themselves — cash on the day, an invoice, a regular they have worked
+    #: with for years — and a deal does not need us in the middle of the money
+    #: to be a deal. Escrow is offered to the pair who want it and is otherwise
+    #: not in the way: nothing in the ordinary lifecycle of a job consults it.
+    #:
+    #: Only meaningful on a gig. A standing position never had escrow: it is
+    #: paid at a rate over an open period with no single day to sign off.
+    use_escrow = models.BooleanField(
+        default=False,
+        help_text=_("Hold the client's payment until the day is signed off."),
     )
 
     #: Set when the client picks someone. On a gig this is the worker escrow
@@ -207,7 +365,7 @@ class Job(TimestampedModel):
     is_private = models.BooleanField(
         default=False,
         db_index=True,
-        help_text="Direct offers are not listed on the public board.",
+        help_text=_("Direct offers are not listed on the public board."),
     )
 
     objects = JobQuerySet.as_manager()
@@ -246,6 +404,37 @@ class Job(TimestampedModel):
                 condition=models.Q(rate_max__isnull=True)
                 | models.Q(rate_max__gte=models.F("rate_min")),
                 name="job_rate_max_not_below_min",
+            ),
+            # One worker, one of each day. A gig is a dated shift, so two live
+            # gigs on the same date for the same person is two clients each
+            # believing they have them — and the first either of them learns of
+            # it is a morning nobody turns up to.
+            #
+            # Partial, over the committed states only, and both halves of that
+            # matter. A day that has been paid out or closed is history, and
+            # history is allowed to contain the overlaps this prevents from
+            # here on. A day that is merely *offered* is not a commitment
+            # either — being sent two offers for Tuesday is ordinary, and the
+            # answer to one of them is what makes the other impossible.
+            #
+            # In the database and not only in the view, because two clients can
+            # confirm the same worker in the same second and neither view sees
+            # the other. See ``clashing_dates`` in services for the half of
+            # this that produces a sentence rather than an error.
+            models.UniqueConstraint(
+                fields=["assigned_worker", "gig_date"],
+                condition=models.Q(
+                    assigned_worker__isnull=False,
+                    gig_date__isnull=False,
+                    state__in=[
+                        "accepted",
+                        "escrow_held",
+                        "in_progress",
+                        "ended_early",
+                        "completed",
+                    ],
+                ),
+                name="one_booking_per_worker_per_day",
             ),
         ]
         indexes = [
@@ -301,6 +490,105 @@ class Job(TimestampedModel):
     def is_open(self) -> bool:
         return self.state == JobState.POSTED
 
+    # -- escrow, or not ----------------------------------------------------
+
+    @property
+    def is_escrowed(self) -> bool:
+        """Does the platform hold the money for this job?
+
+        Asked instead of reading ``use_escrow`` directly, because the answer is
+        two conditions and one of them is easy to forget: a standing position
+        has no escrow whatever the flag says, since there is no single day to
+        sign off and nothing is captured. Left to callers, that check gets made
+        in some templates and not others.
+        """
+        return self.is_gig and self.use_escrow
+
+    @property
+    def awaiting_client_confirmation(self) -> bool:
+        """The worker has said the work is done and it is the client's turn.
+
+        The non-escrow equivalent of the approval window, minus the window:
+        there is no hold to release and so no timer, which is why nothing here
+        happens on its own. Mutual agreement or nothing.
+        """
+        return self.state == JobState.COMPLETED and not self.is_escrowed
+
+    def review_direction_for(self, user):
+        """Which way a review by ``user`` would point, or None if they cannot.
+
+        The subject is never stored on a Review — a job has one client and one
+        assigned worker, so the direction plus the job says who is being rated.
+        This is the other half of that: turning a viewer into a direction.
+        """
+        from .models import ReviewDirection  # local: defined below this class
+
+        if self.client and self.client.user_id == user.pk:
+            return ReviewDirection.CLIENT_ON_WORKER
+        if self.assigned_worker and self.assigned_worker.user_id == user.pk:
+            return ReviewDirection.WORKER_ON_CLIENT
+        return None
+
+    def can_be_reviewed_by(self, user) -> bool:
+        """Is a review from this person due, and not already written?
+
+        Being finished is the whole test. It used to also require the gig date
+        to have passed, which sounded right and was wrong: a job only reaches
+        PAID_OUT or CLOSED because both sides said the work happened — the
+        client released the money, or both pressed "job done". Asking the
+        calendar to agree after that left people staring at a finished job with
+        no way to rate it, which is exactly what it did.
+
+        The protection that matters is still here, in is_finished: rating
+        before the money has moved would put a thumb on the scale of the
+        payment itself.
+        """
+        if not getattr(user, "is_authenticated", False) or not self.is_finished:
+            return False
+        direction = self.review_direction_for(user)
+        if direction is None:
+            return False
+        return self.booking_review(direction) is None
+
+    def review_from(self, user):
+        """Their review of this booking, if they have written one."""
+        if not getattr(user, "is_authenticated", False):
+            return None
+        direction = self.review_direction_for(user)
+        if direction is None:
+            return None
+        return self.booking_review(direction)
+
+    def booking_review(self, direction):
+        """The review of this booking in that direction, whichever day holds it.
+
+        Asked of the booking rather than of the row, because that is where the
+        answer is: ``review_create`` deliberately writes one rating for the
+        whole booking and stores it against the first day, so a nine-day job
+        rated once has one Review row and eight days with none.
+
+        Looking only at ``self.reviews`` therefore told eight of those days
+        that a rating was still owed. The reader saw it as a badge that would
+        not clear — "1 completed job to review", still there after reviewing
+        it, pointing at a page whose only button led to "You've already rated
+        this one." The write side treated the booking as one thing; this is
+        the read side agreeing.
+        """
+        reviews = Review.objects.filter(direction=direction)
+        if self.offer_group:
+            return reviews.filter(job__offer_group=self.offer_group).first()
+        return reviews.filter(job=self).first()
+
+    @property
+    def is_finished(self) -> bool:
+        """Work happened and the job is over, by either route.
+
+        What a review hangs off — see :class:`Review`. Cancelled, expired and
+        refunded are terminal too, but nothing was done on them, so there is
+        nothing for either side to rate.
+        """
+        return self.state in (JobState.PAID_OUT, JobState.CLOSED)
+
     def get_absolute_url(self) -> str:
         """Where this job lives. Django's convention, and the one thing every
         template that links back to a job can rely on without importing a URL
@@ -323,15 +611,18 @@ class Job(TimestampedModel):
         """One string for either kind of post, for list rows and cards."""
         if self.is_gig:
             if self.fixed_pay is None:
-                return "Pay not set"
+                return _("Pay not set")
             hours = (self.gig_hours or Decimal("0")).normalize()
-            return f"${self.fixed_pay:,.0f} for {hours} hours"
+            return _("%(pay)s for %(hours)s hours") % {
+                "pay": money(self.fixed_pay),
+                "hours": hours,
+            }
         if self.rate_min is None:
-            return "Rate on request"
-        unit = "hr" if self.rate_type == RateType.HOURLY else "day"
+            return _("Rate on request")
+        unit = _("hr") if self.rate_type == RateType.HOURLY else _("day")
         if self.rate_max and self.rate_max != self.rate_min:
-            return f"${self.rate_min:,.0f}-${self.rate_max:,.0f}/{unit}"
-        return f"${self.rate_min:,.0f}/{unit}"
+            return f"{money(self.rate_min)}-{money(self.rate_max)}/{unit}"
+        return f"{money(self.rate_min)}/{unit}"
 
     @property
     def implied_hourly(self) -> Decimal | None:
@@ -357,13 +648,15 @@ class Job(TimestampedModel):
             return ""
         days = (self.gig_date - timezone.localdate()).days
         if days < 0:
-            return "Date passed"
+            return _("Date passed")
         if days == 0:
-            return "Today"
+            return _("Today")
         if days == 1:
-            return "Tomorrow"
+            return _("Tomorrow")
         if days <= 6:
-            return f"In {days} days"
+            return ngettext("In %(days)s day", "In %(days)s days", days) % {
+                "days": days
+            }
         return ""
 
     @property
@@ -444,29 +737,79 @@ class Job(TimestampedModel):
     def is_visible_to(self, user) -> bool:
         """May this person see the post at all?
 
-        Only ever restrictive for direct offers. A public post is public — the
-        board is browsable signed out, and that is the point of a marketplace.
+        A public post that is still open is public — the board is browsable
+        signed out and that is the point of a marketplace. Two things narrow
+        it, and they are different questions.
+
+        **Private posts** are written for one named worker and were never on
+        the board.
+
+        **Taken posts** were, and stopped being. Once somebody has the work it
+        is no longer an advertisement, it is an arrangement between two people
+        — who is doing it, for how much, on which days, and where. It stayed
+        world-readable at that URL, so anybody holding the link could read a
+        booking they had nothing to do with, complete with the worker's name.
+        Nobody browses to it: it is off the board, off the feed and out of
+        search the moment it is taken. It leaks by being pasted, which is
+        exactly the case a state-blind check cannot catch.
+
+        The test is "has somebody got this", not "is it still open". A post
+        that expired or was called off with nobody on it is a dead
+        advertisement, not an arrangement — it was public while it stood and
+        there is nothing in it to protect, so an old link to one still opens.
+
+        People who *were* part of it keep their access. A worker who applied,
+        or who was offered it and said no, has the job in their own lists and
+        would otherwise get a 404 from their own history — see the assigned-to
+        block in the template for what they still do not get to see.
         """
-        if not self.is_private:
-            return True
+        arranged = (
+            self.is_private
+            or self.assigned_worker_id is not None
+            or self.is_finished
+        )
+        if arranged:
+            if not getattr(user, "is_authenticated", False):
+                return False
+            if self.client.user_id == user.pk:
+                return True
+            worker = getattr(user, "worker_profile", None)
+            if worker is None:
+                return False
+            if self.assigned_worker_id == worker.pk:
+                return True
+            # Any offer or application, not just a live one: somebody who
+            # declined should still be able to open the thing they declined,
+            # and somebody passed over should still reach what they applied to.
+            return (
+                self.offers.filter(worker=worker).exists()
+                or self.applications.filter(worker=worker).exists()
+            )
+        return True
+
+    def parties_only(self, user) -> bool:
+        """Is this one of the two people the job is actually between?
+
+        Narrower than :meth:`is_visible_to`, which lets everyone who was ever
+        involved read the page. Who ended up with the work is between the pair
+        who agreed it — a rival applicant reading "assigned to X" off a job
+        they lost is a different disclosure from being able to find the post
+        they applied to.
+        """
         if not getattr(user, "is_authenticated", False):
             return False
         if self.client.user_id == user.pk:
             return True
         worker = getattr(user, "worker_profile", None)
-        if worker is None:
-            return False
-        # Any offer, not just the pending one: a worker who declined should
-        # still be able to open the thing they declined.
-        return self.offers.filter(worker=worker).exists()
+        return worker is not None and self.assigned_worker_id == worker.pk
 
 
 class OfferStatus(models.TextChoices):
-    PENDING = "pending", "Waiting on the worker"
-    ACCEPTED = "accepted", "Accepted"
-    DECLINED = "declined", "Declined"
+    PENDING = "pending", _("Waiting on the worker")
+    ACCEPTED = "accepted", _("Accepted")
+    DECLINED = "declined", _("Declined")
     #: The client pulled it before the worker answered.
-    WITHDRAWN = "withdrawn", "Withdrawn"
+    WITHDRAWN = "withdrawn", _("Withdrawn")
 
 
 class Offer(TimestampedModel):
@@ -494,7 +837,7 @@ class Offer(TimestampedModel):
     note = models.TextField(
         max_length=1500,
         blank=True,
-        help_text="Anything they should know before saying yes.",
+        help_text=_("Anything they should know before saying yes."),
     )
     #: The worker's answer in their own words. Optional: "no" is a complete
     #: answer and nobody should have to justify it to get out of the form.
@@ -613,18 +956,18 @@ class Party(models.TextChoices):
     that cannot express "the system countered" is the cheapest way to say so.
     """
 
-    WORKER = "worker", "Worker"
-    CLIENT = "client", "Client"
+    WORKER = "worker", _("Worker")
+    CLIENT = "client", _("Client")
 
 
 class CounterStatus(models.TextChoices):
-    PENDING = "pending", "On the table"
-    ACCEPTED = "accepted", "Agreed"
-    DECLINED = "declined", "Turned down"
+    PENDING = "pending", _("On the table")
+    ACCEPTED = "accepted", _("Agreed")
+    DECLINED = "declined", _("Turned down")
     #: Replaced by a newer counter from the other side. Kept, not deleted —
     #: the sequence of numbers is the negotiation, and either party should be
     #: able to see how they got to the figure they are being asked to accept.
-    SUPERSEDED = "superseded", "Replaced by a later offer"
+    SUPERSEDED = "superseded", _("Replaced by a later offer")
 
 
 class Counter(TimestampedModel):
@@ -667,7 +1010,7 @@ class Counter(TimestampedModel):
         null=True,
         blank=True,
         validators=[MinValueValidator(Decimal("1"))],
-        help_text="Total for the day.",
+        help_text=_("Total for the day."),
     )
     gig_date = models.DateField(null=True, blank=True)
     gig_hours = models.DecimalField(
@@ -677,11 +1020,18 @@ class Counter(TimestampedModel):
         blank=True,
         validators=[MinValueValidator(Decimal("0.5"))],
     )
+    #: The third thing worth haggling over, alongside the money and the day.
+    #: A worker offered cash-in-hand can come back asking for escrow without
+    #: touching the price — which is the answer "yes, but not on trust", and
+    #: the one a board built around held money should make easy to give.
+    #:
+    #: NULL means "not part of this counter", exactly like the others.
+    use_escrow = models.BooleanField(null=True, blank=True)
 
     note = models.CharField(
         max_length=300,
         blank=True,
-        help_text="Why — one line is plenty.",
+        help_text=_("Why — one line is plenty."),
     )
 
     status = models.CharField(
@@ -741,12 +1091,16 @@ class Counter(TimestampedModel):
         job = self.job
         rows = []
         if self.fixed_pay is not None and self.fixed_pay != job.fixed_pay:
-            rows.append(("Pay", f"${job.fixed_pay:,.0f}", f"${self.fixed_pay:,.0f}"))
+            # money(), not a literal sign. core.money exists because the symbol
+            # was written out by hand in a dozen places, and this was one of
+            # the ones the sweep missed: the whole app said € and the single
+            # screen asking somebody to agree to a number said $.
+            rows.append((_("Pay"), money(job.fixed_pay), money(self.fixed_pay)))
         if self.gig_date is not None and self.gig_date != job.gig_date:
-            rows.append(("Date", _day(job.gig_date), _day(self.gig_date)))
+            rows.append((_("Date"), _day(job.gig_date), _day(self.gig_date)))
         if self.gig_hours is not None and self.gig_hours != job.gig_hours:
             hours = (job.gig_hours or Decimal("0")).normalize()
-            rows.append(("Hours", f"{hours}", f"{self.gig_hours.normalize()}"))
+            rows.append((_("Hours"), f"{hours}", f"{self.gig_hours.normalize()}"))
         return rows
 
     def apply_to(self, job: "Job") -> list[str]:
@@ -756,7 +1110,7 @@ class Counter(TimestampedModel):
         assigns the worker — the price and the person are one decision.
         """
         changed = []
-        for field in ("fixed_pay", "gig_date", "gig_hours"):
+        for field in ("fixed_pay", "gig_date", "gig_hours", "use_escrow"):
             value = getattr(self, field)
             if value is not None and value != getattr(job, field):
                 setattr(job, field, value)
@@ -765,12 +1119,12 @@ class Counter(TimestampedModel):
 
 
 class ApplicationStatus(models.TextChoices):
-    APPLIED = "applied", "Applied"
-    SELECTED = "selected", "Selected"
+    APPLIED = "applied", _("Applied")
+    SELECTED = "selected", _("Selected")
     #: Set on the others when someone is chosen, so a worker gets a definite
     #: answer instead of an application that just goes quiet.
-    PASSED_OVER = "passed_over", "Not selected"
-    WITHDRAWN = "withdrawn", "Withdrawn"
+    PASSED_OVER = "passed_over", _("Not selected")
+    WITHDRAWN = "withdrawn", _("Withdrawn")
 
 
 class Application(TimestampedModel):
@@ -788,7 +1142,7 @@ class Application(TimestampedModel):
     message = models.TextField(
         max_length=1500,
         blank=True,
-        help_text="Optional. What makes you right for this one?",
+        help_text=_("Optional. What makes you right for this one?"),
     )
     status = models.CharField(
         max_length=16,
@@ -814,3 +1168,118 @@ class Application(TimestampedModel):
     @property
     def is_active(self) -> bool:
         return self.status == ApplicationStatus.APPLIED
+
+
+# ---------------------------------------------------------------------------
+# Reviews
+# ---------------------------------------------------------------------------
+
+
+class ReviewDirection(models.TextChoices):
+    """Which way a review points.
+
+    The subject is not stored. A job has exactly one client and exactly one
+    assigned worker, so the direction plus the job identifies who is being
+    rated — and a denormalised subject column is one more thing that can
+    disagree with the job it hangs off.
+    """
+
+    CLIENT_ON_WORKER = "client_on_worker", _("Client rating the worker")
+    WORKER_ON_CLIENT = "worker_on_client", _("Worker rating the client")
+
+
+class Review(TimestampedModel):
+    """One side's verdict on one finished job.
+
+    Written only once the money has moved. Rating someone before they are paid
+    would put a thumb on the scale of the payment itself — "give me five stars
+    and I'll approve" is a threat the timing makes impossible.
+
+    Both directions exist because both sides take a risk. A worker choosing
+    between two clients wants to know which one approves promptly and which
+    one argues, and that information only exists if workers can write it down.
+    """
+
+    job = models.ForeignKey(Job, on_delete=models.CASCADE, related_name="reviews")
+    direction = models.CharField(max_length=20, choices=ReviewDirection.choices)
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="reviews_written",
+    )
+    rating = models.PositiveSmallIntegerField(
+        validators=[
+            MinValueValidator(rules.RATING_MIN),
+            MaxValueValidator(rules.RATING_MAX),
+        ]
+    )
+    #: Optional. A score with no words is still a data point, and forcing
+    #: prose is how you get "good" a thousand times.
+    comment = models.TextField(max_length=1000, blank=True)
+
+    #: The booking this rates, copied down from the job at write time — the
+    #: same denormalisation, for the same reason, as ``Notification.booking``.
+    #:
+    #: It exists to be constrained. "One rating per booking" was true only
+    #: because one view happened to collapse to the first day before writing;
+    #: the service underneath checked the day, and so did the database. A
+    #: second rating on a nine-day booking was therefore always representable,
+    #: and it happened — two ratings in each direction on one week's work, both
+    #: folded into an average that is meant to say how many jobs somebody has
+    #: been rated on.
+    #:
+    #: Null for a job that is not part of a booking, where the per-job
+    #: constraint below is already the whole rule.
+    booking = models.UUIDField(null=True, blank=True, db_index=True)
+
+    class Meta:
+        ordering = ("-created_at",)
+        constraints = [
+            # One review per side per job. Re-rating the same job would let
+            # somebody stack five reviews onto one day's work.
+            models.UniqueConstraint(
+                fields=["job", "direction"], name="one_review_per_direction_per_job"
+            ),
+            # And one per side per *booking*, which is the rule that matters:
+            # a week worked for one client is one opinion, not five. Partial,
+            # because a job outside a booking has no group to be unique on and
+            # the constraint above already covers it.
+            models.UniqueConstraint(
+                fields=["booking", "direction"],
+                condition=models.Q(booking__isnull=False),
+                name="one_review_per_direction_per_booking",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    rating__gte=rules.RATING_MIN, rating__lte=rules.RATING_MAX
+                ),
+                name="rating_within_scale",
+            ),
+        ]
+        indexes = [models.Index(fields=["direction", "-created_at"])]
+
+    def save(self, *args, **kwargs):
+        """Copy the booking down before writing.
+
+        Here rather than in the service, so that the constraint cannot be
+        stepped around by the admin, a data migration, or the next piece of
+        code that writes a Review without knowing this rule exists.
+        """
+        if self.booking is None and self.job_id:
+            self.booking = self.job.offer_group
+        return super().save(*args, **kwargs)
+
+    def __str__(self) -> str:
+        return f"{self.author} rated {self.rating}/5 on {self.job}"
+
+    @property
+    def subject_profile(self):
+        """The profile being rated — a WorkerProfile or a ClientProfile."""
+        if self.direction == ReviewDirection.CLIENT_ON_WORKER:
+            return self.job.assigned_worker
+        return self.job.client
+
+    @property
+    def subject_user(self):
+        profile = self.subject_profile
+        return profile.user if profile else None

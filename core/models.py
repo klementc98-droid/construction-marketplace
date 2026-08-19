@@ -8,6 +8,9 @@ adding the second one is an INSERT, not a migration and a refactor.
 from __future__ import annotations
 
 from django.db import models
+from django.utils.translation import gettext, gettext_lazy as _
+
+from config import business_rules as rules
 
 
 class TimestampedModel(models.Model):
@@ -36,6 +39,18 @@ class Region(TimestampedModel):
     #: market's local time — "the 48 hours expired" must not depend on where
     #: the server happens to be running.
     timezone = models.CharField(max_length=64, default="America/New_York")
+
+    #: ISO 3166-1 alpha-2. Where the market *is*, which the app needs for one
+    #: reason beyond display: a worker's Stripe Connect account is opened in a
+    #: country, and country decides what onboarding asks for, which
+    #: capabilities exist and whether payouts work at all.
+    #:
+    #: It lives here rather than on the worker because it is a fact about the
+    #: market, not a preference of the person — everyone working a region is
+    #: paid under that region's rules. It was a default argument reading "US"
+    #: on the gateway function, which is a coherent answer for exactly one
+    #: launch market and silently wrong for every other.
+    country = models.CharField(max_length=2, default=rules.DEFAULT_REGION_COUNTRY)
 
     #: Lets a market be prepared before it opens, or paused, without deleting
     #: it and orphaning every job that referenced it.
@@ -66,7 +81,7 @@ class Trade(TimestampedModel):
     #: admin — not a code change in every template that touches profiles.
     requires_license = models.BooleanField(
         default=False,
-        help_text="Prompt for a licence number on worker profiles in this trade.",
+        help_text=_("Prompt for a licence number on worker profiles in this trade."),
     )
 
     display_order = models.PositiveSmallIntegerField(default=100)
@@ -75,4 +90,34 @@ class Trade(TimestampedModel):
         ordering = ("display_order", "name")
 
     def __str__(self) -> str:
-        return self.name
+        """The trade's name, translated when a catalogue has it.
+
+        Trade names are rows, not code, so gettext cannot find them by reading
+        the source — SEEDED_TRADE_NAMES below exists purely so the extractor
+        sees them. The lookup is by the English name because that is what the
+        seed migration writes and what the slug is derived from.
+
+        A trade added later through the admin simply renders as typed, which is
+        the right failure: an untranslated name is readable, and the alternative
+        is a second name column that nobody remembers to fill in.
+        """
+        return gettext(self.name)
+
+
+#: The v1 trade list, restated so ``extractpo`` can find these strings. Nothing
+#: reads this at runtime; it exists to put the names in the catalogue. Keep it
+#: in step with the seed migration.
+SEEDED_TRADE_NAMES = (
+    _("General labor"),
+    _("Electrician"),
+    _("Plumber"),
+    _("Carpenter"),
+    _("Mason/Concrete"),
+    _("Painter"),
+    _("Roofer"),
+    _("HVAC"),
+    _("Drywall/Framing"),
+    _("Landscaping/Excavation"),
+    _("Welder"),
+    _("Heavy equipment operator"),
+)

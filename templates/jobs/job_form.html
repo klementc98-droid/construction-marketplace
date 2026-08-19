@@ -1,11 +1,12 @@
 {% extends "base.html" %}
-{% block title %}{% if job %}Edit post{% else %}New post{% endif %} — Construction's Finest{% endblock %}
+{% load i18n %}
+{% block title %}{% if job %}{% translate "Edit post" %}{% else %}{% translate "New post" %}{% endif %} — Construction's Finest{% endblock %}
 
 {% block content %}
-  <h1>{% if job %}Edit this post{% else %}{% if is_gig %}Post a gig{% else %}Post a position{% endif %}{% endif %}</h1>
+  <h1>{% if job %}{% translate "Edit this post" %}{% else %}{% if is_gig %}{% translate "Post a gig" %}{% else %}{% translate "Post a position" %}{% endif %}{% endif %}</h1>
   <p class="lede">
-    {% if is_gig %}One date, one price. You fund escrow when you confirm a worker.
-    {% else %}Ongoing work at a rate. Workers apply and you pick.{% endif %}
+    {% if is_gig %}{% translate "One date, one price. You choose below how it is paid." %}
+    {% else %}{% translate "Ongoing work at a rate. Workers apply and you pick." %}{% endif %}
   </p>
 
   {% comment %} Only when posting something new. Editing an existing post is a change to
@@ -29,15 +30,14 @@
     {% if is_gig %}
       <p class="trust">
         <svg class="trust-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-shield"/></svg>
-        You're charged when you confirm a worker, not now. We hold it until the
-        day is signed off.
+        {% translate "Nothing is charged by posting. If you choose escrow, you fund it when you confirm a worker; otherwise payment stays between the two of you." %}
       </p>
     {% endif %}
 
     <div class="btn-row" style="margin-top:16px">
       <button class="btn" type="submit"
-              data-busy-label="{% if job %}Saving…{% else %}Posting…{% endif %}">{% if job %}Save changes{% else %}Post it{% endif %}</button>
-      <a class="btn secondary" href="{% if job %}{% url 'jobs:detail' job.pk %}{% else %}{% url 'jobs:post_choose' %}{% endif %}">Cancel</a>
+              data-busy-label="{% if job %}Saving…{% else %}Posting…{% endif %}">{% if job %}{% translate "Save changes" %}{% else %}{% translate "Post it" %}{% endif %}</button>
+      <a class="btn secondary" href="{% if job %}{% url 'jobs:detail' job.pk %}{% else %}{% url 'jobs:post_choose' %}{% endif %}">{% translate "Cancel" %}</a>
     </div>
   </form>
 {% endblock %}

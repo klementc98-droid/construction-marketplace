@@ -1,4 +1,4 @@
-{% comment %}
+{% load i18n %}{% comment %}
 One form field, rendered the same way everywhere.
 
 Order is label → errors → widget → help. The errors sit *above* the input on
@@ -23,7 +23,7 @@ or for one field at a time: {% include "_field.html" with field=form.company_nam
   <label for="{{ field.id_for_label }}">
     {{ field.label }}
     {% if field.field.required %}
-      <span class="req" aria-hidden="true">*</span><span class="sr-only">(required)</span>
+      <span class="req" aria-hidden="true">*</span><span class="sr-only">{% translate "(required)" %}</span>
     {% endif %}
   </label>
   {{ field.errors }}

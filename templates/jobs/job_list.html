@@ -1,9 +1,15 @@
 {% extends "base.html" %}
-{% block title %}Find work — Construction's Finest{% endblock %}
+{% load i18n %}
+{% block title %}{% translate "Find work" %} — Construction's Finest{% endblock %}
 
 {% block content %}
-  <h1>Find work</h1>
-  <p class="lede">{{ total }} open post{{ total|pluralize }}.</p>
+  <h1>{% translate "Find work" %}</h1>
+  {% comment %} blocktranslate with a plural: Greek pluralises differently from
+     English, and |pluralize appends an English "s" a catalogue cannot reach.
+  {% endcomment %}
+  <p class="lede">
+    {% blocktranslate count counter=total %}{{ counter }} open post.{% plural %}{{ counter }} open posts.{% endblocktranslate %}
+  </p>
 
   {% include "jobs/_filters.html" %}
 
@@ -17,26 +23,24 @@
     <div class="card empty">
       <svg class="empty-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-jobs"/></svg>
       {% if request.GET %}
-        <p><strong>No open work matches these filters.</strong></p>
+        <p><strong>{% translate "No open work matches these filters." %}</strong></p>
         <p class="muted">
-          Try clearing the trade, or search a wider area — gigs are posted for
-          a single day and the board turns over fast.
+          {% translate "Try clearing the trade, or search a wider area — gigs are posted for a single day and the board turns over fast." %}
         </p>
-        <a class="btn secondary" href="{% url 'jobs:list' %}">Clear filters</a>
+        <a class="btn secondary" href="{% url 'jobs:list' %}">{% translate "Clear filters" %}</a>
       {% else %}
-        <p><strong>Nothing on the board right now.</strong></p>
+        <p><strong>{% translate "Nothing on the board right now." %}</strong></p>
         <p class="muted">
           {% if user.is_authenticated and user.is_client %}
-            Yours would be the first.
+            {% translate "Yours would be the first." %}
           {% else %}
-            New gigs go up daily — and workers who've filled in a profile get
-            found by clients before a post is ever written.
+            {% translate "New gigs go up daily — and workers who've filled in a profile get found by clients before a post is ever written." %}
           {% endif %}
         </p>
         {% if user.is_authenticated and user.is_client %}
-          <a class="btn" href="{% url 'jobs:post_choose' %}">Post the first job</a>
+          <a class="btn" href="{% url 'jobs:post_choose' %}">{% translate "Post the first job" %}</a>
         {% elif user.is_authenticated and user.is_worker %}
-          <a class="btn secondary" href="{% url 'accounts:worker_edit' %}">Finish your profile</a>
+          <a class="btn secondary" href="{% url 'accounts:worker_edit' %}">{% translate "Finish your profile" %}</a>
         {% endif %}
       {% endif %}
     </div>
@@ -44,7 +48,7 @@
 
   {% if user.is_authenticated and user.is_client %}
     <div class="btn-row">
-      <a class="btn" href="{% url 'jobs:post_choose' %}">Post a job</a>
+      <a class="btn" href="{% url 'jobs:post_choose' %}">{% translate "Post a job" %}</a>
     </div>
   {% endif %}
 {% endblock %}

@@ -1,12 +1,13 @@
 {% extends "base.html" %}
-{% block title %}Welcome — Construction's Finest{% endblock %}
+{% load i18n %}
+{% block title %}{% translate "Welcome — Construction's Finest" %}{% endblock %}
 
 {% block content %}
   {% comment %} short_name, not truncatewords:1 — the filter appends an ellipsis, so a
      two-word name greeted the reader as "Welcome, Klement …".
   {% endcomment %}
-  <h1>Welcome{% if user.short_name %}, {{ user.short_name }}{% endif %}</h1>
-  <p class="lede">How will you use Construction's Finest? Pick both if you do both — plenty of people do.</p>
+  <h1>{% translate "Welcome" %}{% if user.short_name %}, {{ user.short_name }}{% endif %}</h1>
+  <p class="lede">{% translate "How will you use Construction's Finest? Pick both if you do both — plenty of people do." %}</p>
 
   <form method="post">
     {% csrf_token %}
@@ -19,6 +20,6 @@
       </ul>
       <span class="helptext">{{ form.roles.help_text }}</span>
     </div>
-    <button class="btn" type="submit">Continue</button>
+    <button class="btn" type="submit">{% translate "Continue" %}</button>
   </form>
 {% endblock %}

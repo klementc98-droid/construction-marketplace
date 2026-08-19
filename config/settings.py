@@ -30,6 +30,29 @@ SECRET_KEY = os.getenv(
 DEBUG = _env_bool("DJANGO_DEBUG", True)
 ALLOWED_HOSTS = [h for h in os.getenv("DJANGO_ALLOWED_HOSTS", "*").split(",") if h]
 
+# Tunnelling the dev server — ngrok, to open the site on a real phone — puts an
+# HTTPS origin in front of a plain-HTTP runserver, and three things break:
+#
+#   1. ALLOWED_HOSTS. The request arrives with the tunnel's Host, not localhost.
+#   2. CSRF. Django checks Origin against CSRF_TRUSTED_ORIGINS for any HTTPS
+#      request, and a permissive ALLOWED_HOSTS does not cover it — every POST
+#      fails with "does not match any trusted origins" until the scheme+host is
+#      named here.
+#   3. request.is_secure(). The tunnel terminates TLS and forwards HTTP, so
+#      Django builds http:// absolute URLs — including the Google OAuth
+#      callback, which Google then rejects for not matching the registered
+#      redirect URI. The forwarded-proto header is what tells it otherwise.
+#
+# One switch, because these are never wanted individually. Unset — the normal
+# case — none of it applies and a localhost run is untouched.
+TUNNEL_HOST = os.getenv("DJANGO_TUNNEL_HOST", "").strip()
+
+if TUNNEL_HOST:
+    ALLOWED_HOSTS = [*ALLOWED_HOSTS, TUNNEL_HOST]
+    CSRF_TRUSTED_ORIGINS = [f"https://{TUNNEL_HOST}"]
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    USE_X_FORWARDED_HOST = True
+
 
 # ---------------------------------------------------------------------------
 # Applications
@@ -56,14 +79,22 @@ INSTALLED_APPS = [
     "payments",
     "worklog",
     "assistant",
+    "notifications",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    # Between session and common, which is where Django requires it: it reads
+    # the language out of the session (set by the switcher in the header) and
+    # falls back to the browser's Accept-Language before anything renders.
+    "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    # Below both of the things it needs: the language locale resolved for this
+    # request, and the user auth attached to it.
+    "accounts.middleware.RememberLanguage",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     # Required by allauth.
@@ -80,6 +111,8 @@ TEMPLATES = [
         "OPTIONS": {
             "context_processors": [
                 "django.template.context_processors.request",
+                # LANGUAGE_CODE and LANGUAGES, for the switcher and <html lang>.
+                "django.template.context_processors.i18n",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 # Unread-message badge in the header. Cheap enough to run on
@@ -243,10 +276,58 @@ AUTH_PASSWORD_VALIDATORS = [
 
 
 # ---------------------------------------------------------------------------
+# Email
+# ---------------------------------------------------------------------------
+#
+# Nothing here is required to run the app. Unset, mail goes to the console —
+# which is the right default for a machine that has no business talking to an
+# SMTP server, and means a developer can read exactly what a user would have
+# received without configuring anything.
+#
+# Notifications are never sent from a request. They are written to a table and
+# posted by ``manage.py send_notifications`` on a timer, so an SMTP host that
+# is slow, down or wrong cannot make somebody's job application hang, and
+# nothing is lost while it is being fixed.
+
+EMAIL_HOST = os.getenv("EMAIL_HOST", "")
+EMAIL_BACKEND = (
+    "django.core.mail.backends.smtp.EmailBackend"
+    if EMAIL_HOST
+    else "django.core.mail.backends.console.EmailBackend"
+)
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = _env_bool("EMAIL_USE_TLS", True)
+#: Seconds. Without it a wedged SMTP connection hangs the sending command
+#: forever, and the next cron run stacks up behind it.
+EMAIL_TIMEOUT = int(os.getenv("EMAIL_TIMEOUT", "20"))
+
+DEFAULT_FROM_EMAIL = os.getenv(
+    "DEFAULT_FROM_EMAIL", "Construction's Finest <no-reply@localhost>"
+)
+
+#: Where links in an email point. An email is read outside the browser session
+#: that caused it, so a relative URL is useless — and this is the only place
+#: the app has to know its own public address.
+SITE_URL = os.getenv("SITE_URL", "http://127.0.0.1:8000").rstrip("/")
+
+
+# ---------------------------------------------------------------------------
 # I18n / time
 # ---------------------------------------------------------------------------
 
-LANGUAGE_CODE = "en-us"
+LANGUAGE_CODE = "en"
+
+#: The languages offered in the header switcher. Each needs a catalogue under
+#: LOCALE_PATHS; a language listed here without one silently falls back to
+#: English, which looks like a broken switcher rather than a missing file.
+LANGUAGES = [
+    ("en", "English"),
+    ("el", "Ελληνικά"),
+]
+
+LOCALE_PATHS = [BASE_DIR / "locale"]
 
 # Store everything in UTC; render in the region's local timezone. Dispute and
 # approval windows are measured in real elapsed time, so the storage timezone

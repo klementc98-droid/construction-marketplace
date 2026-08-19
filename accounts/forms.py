@@ -5,10 +5,12 @@ from __future__ import annotations
 from datetime import date, datetime
 
 from django import forms
+from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 
 from config import business_rules as rules
 from core.models import Region, Trade
+from core.dates import date_picker_attrs, parse_date_list
 
 from .models import (
     AvailabilityDate,
@@ -31,27 +33,35 @@ class AccountDetailsForm(forms.ModelForm):
 
     class Meta:
         model = User
-        fields = ["full_name", "avatar", "headline", "phone", "date_of_birth"]
+        fields = [
+            "full_name", "avatar", "headline", "phone", "date_of_birth",
+            "email_notifications",
+        ]
         labels = {
-            "full_name": "Name",
-            "avatar": "Profile photo",
-            "headline": "One-line intro",
-            "phone": "Phone",
-            "date_of_birth": "Date of birth",
+            "full_name": _("Name"),
+            "avatar": _("Profile photo"),
+            "headline": _("One-line intro"),
+            "phone": _("Phone"),
+            "date_of_birth": _("Date of birth"),
+            "email_notifications": _("Email me about my jobs"),
         }
         help_texts = {
-            "full_name": "How you appear to everyone else on the platform.",
-            "avatar": "A clear photo of your face. Square works best.",
-            "headline": "Shown under your name — e.g. “Framing and finish carpentry, own tools”.",
-            "phone": "Only shown to people you're working with on a job.",
-            "date_of_birth": "Only your age is ever shown, never the date.",
+            "full_name": _("How you appear to everyone else on the platform."),
+            "avatar": _("A clear photo of your face. Square works best."),
+            "headline": _("Shown under your name — e.g. “Framing and finish carpentry, own tools”."),
+            "phone": _("Only shown to people you're working with on a job."),
+            "date_of_birth": _("Only your age is ever shown, never the date."),
+            "email_notifications": _(
+                "Offers, applications, messages and anything waiting on your "
+                "answer. Never marketing, and one switch turns off the lot."
+            ),
         }
         widgets = {
             "date_of_birth": forms.DateInput(attrs={"type": "date"}),
             "headline": forms.TextInput(
-                attrs={"placeholder": "Framing and finish carpentry, own tools"}
+                attrs={"placeholder": _("Framing and finish carpentry, own tools")}
             ),
-            "phone": forms.TextInput(attrs={"placeholder": "+1 555 010 0199"}),
+            "phone": forms.TextInput(attrs={"placeholder": _("+1 555 010 0199")}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -117,8 +127,8 @@ class RoleSelectionForm(forms.Form):
     roles = forms.MultipleChoiceField(
         choices=ROLE_CHOICES,
         widget=forms.CheckboxSelectMultiple,
-        label="How will you use the platform?",
-        help_text="You can pick both, and you can add the other one later.",
+        label=_("How will you use the platform?"),
+        help_text=_("You can pick both, and you can add the other one later."),
     )
 
 
@@ -146,9 +156,9 @@ class WorkerProfileForm(_RegionMixin):
     #: worker appears in a whole class of client searches. Required, because a
     #: blank answer here is worse than either real one.
     open_to_full_time = forms.TypedChoiceField(
-        label="Are you looking for a full-time job?",
-        help_text="Full-time roles are posted as standing positions, not day gigs. "
-        "You can still take gigs either way.",
+        label=_("Are you looking for a full-time job?"),
+        help_text=_("Full-time roles are posted as standing positions, not day gigs. "
+        "You can still take gigs either way."),
         choices=[("True", "Yes — I'd take a permanent position"),
                  ("False", "No — day work only")],
         coerce=lambda value: value == "True",
@@ -166,11 +176,11 @@ class WorkerProfileForm(_RegionMixin):
     #: box you can type dates into — so the field never depends on the script.
     available_dates = forms.CharField(
         required=False,
-        label="Which days?",
-        help_text="Pick the days you can work. Past dates can't be chosen.",
+        label=_("Which days?"),
+        help_text=_("Pick the days you can work. Past dates can't be chosen."),
         widget=forms.TextInput(
             attrs={
-                "placeholder": "2026-08-04, 2026-08-05",
+                "placeholder": _("2026-08-04, 2026-08-05"),
                 "data-date-list": "",
             }
         ),
@@ -200,17 +210,17 @@ class WorkerProfileForm(_RegionMixin):
             "trades": forms.CheckboxSelectMultiple,
             "bio": forms.Textarea(attrs={"rows": 4}),
             "service_area": forms.TextInput(
-                attrs={"placeholder": "e.g. north side, will travel citywide"}
+                attrs={"placeholder": _("e.g. north side, will travel citywide")}
             ),
             "seeking": forms.TextInput(
-                attrs={"placeholder": "Day gigs this week — framing or second fix"}
+                attrs={"placeholder": _("Day gigs this week — framing or second fix")}
             ),
         }
         labels = {
-            "trades": "Trades",
-            "rate_min": "Rate",
-            "rate_max": "Up to (leave blank for a flat rate)",
-            "cv": "Résumé (PDF, optional)",
+            "trades": _("Trades"),
+            "rate_min": _("Rate"),
+            "rate_max": _("Up to (leave blank for a flat rate)"),
+            "cv": _("Résumé (PDF, optional)"),
         }
 
     def __init__(self, *args, **kwargs):
@@ -221,7 +231,9 @@ class WorkerProfileForm(_RegionMixin):
         # reads this as its floor, so the calendar opens on the current month
         # and yesterday is not selectable.
         today = timezone.localdate()
-        self.fields["available_dates"].widget.attrs["data-date-list"] = today.isoformat()
+        self.fields["available_dates"].widget.attrs.update(
+            date_picker_attrs(floor=today)
+        )
 
         if self.instance.pk:
             # Dates already in the past are dropped from what we show rather
@@ -242,35 +254,11 @@ class WorkerProfileForm(_RegionMixin):
                 )
 
     def clean_available_dates(self) -> list[date]:
-        raw = (self.cleaned_data.get("available_dates") or "").strip()
-        if not raw:
-            return []
-
-        today = timezone.localdate()
-        parsed: list[date] = []
-        stale: list[date] = []
-        for chunk in raw.replace("\n", ",").split(","):
-            chunk = chunk.strip()
-            if not chunk:
-                continue
-            try:
-                day = datetime.strptime(chunk, "%Y-%m-%d").date()
-            except ValueError:
-                raise forms.ValidationError(
-                    f"{chunk!r} isn't a date in YYYY-MM-DD form."
-                )
-            (stale if day < today else parsed).append(day)
-
-        # The picker's `min` already stops this, so anything caught here was
-        # typed by hand or posted directly. Rejected rather than quietly
-        # dropped: a worker who meant to offer next Tuesday and typed last
-        # Tuesday should be told, not left looking unavailable.
-        if stale:
-            listed = ", ".join(d.isoformat() for d in sorted(set(stale)))
-            raise forms.ValidationError(
-                f"{listed} — that's in the past. Pick days from today onwards."
-            )
-        return sorted(set(parsed))
+        # Shared with the offer form's date picker — see core.dates for why
+        # a past date is rejected rather than quietly dropped.
+        return parse_date_list(
+            self.cleaned_data.get("available_dates"), today=timezone.localdate()
+        )
 
     def clean_cv(self):
         cv = self.cleaned_data.get("cv")
@@ -330,8 +318,8 @@ class ClientProfileForm(_RegionMixin):
         model = ClientProfile
         fields = ["region", "company_name", "location"]
         labels = {
-            "company_name": "Company (optional)",
-            "location": "Where you're based",
+            "company_name": _("Company (optional)"),
+            "location": _("Where you're based"),
         }
 
 

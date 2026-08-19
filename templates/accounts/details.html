@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% block title %}Your details — Construction's Finest{% endblock %}
+{% load i18n %}
+{% block title %}{% translate "Your details — Construction's Finest" %}{% endblock %}
 
 {% block content %}
-  <h1>Your details</h1>
+  <h1>{% translate "Your details" %}</h1>
   <p class="lede">
-    This is you, not a role. The same name and photo show whether you're picking
-    up work or hiring someone.
+    {% translate "This is you, not a role. The same name and photo show whether you're picking up work or hiring someone." %}
   </p>
 
   <div class="card">
@@ -31,13 +31,12 @@
       {% for field in form %}{% include "_field.html" %}{% endfor %}
     </div>
     <div class="btn-row" style="margin-top:0">
-      <button class="btn" type="submit" data-busy-label="Saving…">Save details</button>
-      <a class="btn secondary" href="{% url 'accounts:home' %}">Back</a>
+      <button class="btn" type="submit" data-busy-label="Saving…">{% translate "Save details" %}</button>
+      <a class="btn secondary" href="{% url 'accounts:home' %}">{% translate "Back" %}</a>
     </div>
   </form>
 
   <p class="note">
-    Your email comes from Google and can't be changed here. Your phone is only
-    shown to people you're actively working with on a job.
+    {% translate "Your email comes from Google and can't be changed here. Your phone is only shown to people you're actively working with on a job." %}
   </p>
 {% endblock %}

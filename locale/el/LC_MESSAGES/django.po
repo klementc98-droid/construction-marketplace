@@ -1,0 +1,3293 @@
+# Translation catalogue for Construction's Finest.
+#
+# Regenerate with `python manage.py extractpo`, then compile with
+# `python manage.py compilepo`. Neither needs GNU gettext installed.
+#
+# An empty msgstr falls back to the English source, so leaving one
+# blank is safe — it is a to-do, not a broken string.
+msgid ""
+msgstr "Project-Id-Version: constructions-finest\nReport-Msgid-Bugs-To: \nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\nLanguage: el\nPlural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: templates/notifications/email/escrow_funded.txt
+#: templates/notifications/email/job_posted.txt
+#: templates/notifications/email/offer_received.txt
+#: templates/notifications/email/selected.txt
+#: templates/notifications/email/tomorrow.txt
+msgid "%(amount)s for %(h)s hours"
+msgstr "%(amount)s για %(h)s ώρες"
+
+#: templates/notifications/email/payment_released.txt
+msgid "%(amount)s has been released to you for %(title)s."
+msgstr "Σου αποδεσμεύθηκαν %(amount)s για το %(title)s."
+
+#: templates/notifications/email/rating.txt
+msgid "%(author)s rated you %(rating)s out of %(maximum)s for %(title)s."
+msgstr "Ο/Η %(author)s σε βαθμολόγησε %(rating)s στα %(maximum)s για το %(title)s."
+
+#: templates/notifications/email/offer_received.txt
+msgid "%(client)s has offered you work: %(title)s."
+msgstr "Ο/Η %(client)s σου πρόσφερε δουλειά: %(title)s."
+
+#: templates/notifications/email/selected.txt
+msgid "%(client)s picked you for %(title)s."
+msgstr "Ο/Η %(client)s σε διάλεξε για το %(title)s."
+
+#: jobs/views.py
+msgid "%(count)s days posted, one gig each. Workers can see them now."
+msgstr "%(count)s ημέρες δημοσιεύτηκαν, ένα μεροκάματο η καθεμία. Οι τεχνίτες μπορούν να τις δουν τώρα."
+
+#: jobs/views.py
+msgid "%(count)s offers sent to %(worker)s, one for each day. They can take all of them or only the days that suit."
+msgstr "%(count)s προσφορές στάλθηκαν στον/στην %(worker)s, μία για κάθε ημέρα. Μπορεί να τις δεχτεί όλες ή μόνο τις ημέρες που τον/την βολεύουν."
+
+#: templates/jobs/job_list.html
+msgid "%(counter)s open post."
+msgid_plural "%(counter)s open posts."
+msgstr[0] "%(counter)s ανοιχτή αγγελία."
+msgstr[1] "%(counter)s ανοιχτές αγγελίες."
+
+#: core/test_i18n.py
+#: templates/jobs/worker_list.html
+msgid "%(counter)s worker."
+msgid_plural "%(counter)s workers."
+msgstr[0] "%(counter)s τεχνίτης."
+msgstr[1] "%(counter)s τεχνίτες."
+
+#: core/dates.py
+msgid "%(dates)s — that's in the past. Pick days from today onwards."
+msgstr "%(dates)s — αυτό είναι στο παρελθόν. Διάλεξε ημέρες από σήμερα και μετά."
+
+#: templates/jobs/job_detail.html
+msgid "%(done)s job completed"
+msgid_plural "%(done)s jobs completed"
+msgstr[0] "%(done)s ολοκληρωμένη δουλειά"
+msgstr[1] "%(done)s ολοκληρωμένες δουλειές"
+
+#: templates/jobs/job_detail.html
+msgid "%(first)s – %(last)s"
+msgstr "%(first)s – %(last)s"
+
+#: templates/accounts/_feed_items.html
+#: templates/jobs/_job_row.html
+#: templates/jobs/mine.html
+msgid "%(h)s hrs in all"
+msgstr "%(h)s ώρες συνολικά"
+
+#: templates/jobs/_offer_worker.html
+msgid "%(jobs)s job done here"
+msgid_plural "%(jobs)s jobs done here"
+msgstr[0] "%(jobs)s δουλειά εδώ"
+msgstr[1] "%(jobs)s δουλειές εδώ"
+
+#: jobs/services.py
+msgid "%(list)s and %(last)s"
+msgstr "%(list)s και %(last)s"
+
+#: templates/accounts/_feed_items.html
+#: templates/jobs/_job_row.html
+#: templates/jobs/mine.html
+#: templates/jobs/offer_choose.html
+msgid "%(n)s day"
+msgid_plural "%(n)s days"
+msgstr[0] "%(n)s ημέρα"
+msgstr[1] "%(n)s ημέρες"
+
+#: templates/notifications/email/reminder.txt
+msgid "%(n)s finished job to confirm"
+msgid_plural "%(n)s finished jobs to confirm"
+msgstr[0] "%(n)s ολοκληρωμένη δουλειά για επιβεβαίωση"
+msgstr[1] "%(n)s ολοκληρωμένες δουλειές για επιβεβαίωση"
+
+#: templates/jobs/_waiting.html
+msgid "%(n)s finished job to rate"
+msgid_plural "%(n)s finished jobs to rate"
+msgstr[0] "%(n)s ολοκληρωμένη δουλειά προς αξιολόγηση"
+msgstr[1] "%(n)s ολοκληρωμένες δουλειές προς αξιολόγηση"
+
+#: templates/accounts/_feed_items.html
+msgid "%(n)s hrs"
+msgstr "%(n)s ώρες"
+
+#: templates/jobs/_waiting.html
+msgid "%(n)s job marked done, waiting for you to agree"
+msgid_plural "%(n)s jobs marked done, waiting for you to agree"
+msgstr[0] "%(n)s δουλειά σημάνθηκε ως ολοκληρωμένη, περιμένει τη συμφωνία σου"
+msgstr[1] "%(n)s δουλειές σημάνθηκαν ως ολοκληρωμένες, περιμένουν τη συμφωνία σου"
+
+#: templates/notifications/email/reminder.txt
+msgid "%(n)s job offer to answer"
+msgid_plural "%(n)s job offers to answer"
+msgstr[0] "%(n)s προσφορά δουλειάς για απάντηση"
+msgstr[1] "%(n)s προσφορές δουλειάς για απάντηση"
+
+#: templates/jobs/_waiting.html
+msgid "%(n)s job offered to you"
+msgid_plural "%(n)s jobs offered to you"
+msgstr[0] "%(n)s δουλειά σού προσφέρθηκε"
+msgstr[1] "%(n)s δουλειές σού προσφέρθηκαν"
+
+#: templates/notifications/email/reminder.txt
+msgid "%(n)s job to rate"
+msgid_plural "%(n)s jobs to rate"
+msgstr[0] "%(n)s δουλειά για αξιολόγηση"
+msgstr[1] "%(n)s δουλειές για αξιολόγηση"
+
+#: jobs/models.py
+msgid "%(pay)s for %(hours)s hours"
+msgstr "%(pay)s για %(hours)s ώρες"
+
+#: templates/accounts/_feed_items.html
+#: templates/jobs/_job_row.html
+#: templates/jobs/mine.html
+#: templates/jobs/offer_choose.html
+msgid "%(pay)s per day"
+msgstr "%(pay)s ανά ημέρα"
+
+#: templates/jobs/job_detail.html
+msgid "%(score)s★ from workers"
+msgstr "%(score)s★ από τεχνίτες"
+
+#: templates/notifications/email/message.txt
+msgid "%(sender)s sent you a message about %(title)s:"
+msgstr "Ο/Η %(sender)s σου έστειλε μήνυμα για το %(title)s:"
+
+#: templates/notifications/email/job_closed.txt
+msgid "%(title)s is closed — you both agreed the work was done."
+msgstr "Το %(title)s έκλεισε — συμφωνήσατε και οι δύο ότι η δουλειά έγινε."
+
+#: templates/accounts/_feed_items.html
+#: templates/jobs/_job_row.html
+#: templates/jobs/mine.html
+#: templates/jobs/offer_choose.html
+msgid "%(total)s total for %(n)s days"
+msgstr "%(total)s σύνολο για %(n)s ημέρες"
+
+#: core/dates.py
+msgid "%(value)r isn't a date in YYYY-MM-DD form."
+msgstr "Το %(value)r δεν είναι ημερομηνία σε μορφή YYYY-MM-DD."
+
+#: jobs/views.py
+msgid "%(who)s has all %(count)s days."
+msgstr "Ο/Η %(who)s πήρε και τις %(count)s ημέρες."
+
+#: jobs/views.py
+msgid "%(who)s has the job."
+msgstr "Ο/Η %(who)s πήρε τη δουλειά."
+
+#: templates/jobs/offer_choose.html
+msgid "%(who)s is already booked on %(days)s, so this one can't be sent."
+msgstr "Ο/Η %(who)s είναι ήδη κλεισμένος/η στις %(days)s, οπότε αυτή δεν μπορεί να σταλεί."
+
+#: jobs/views.py
+msgid "%(who)s is already booked on %(days)s."
+msgstr "Ο/Η %(who)s είναι ήδη κλεισμένος/η στις %(days)s."
+
+#: jobs/views.py
+msgid "%(who)s is already booked on %(days)s. Nothing has been changed."
+msgstr "Ο/Η %(who)s είναι ήδη κλεισμένος/η στις %(days)s. Δεν άλλαξε τίποτα."
+
+#: jobs/forms.py
+msgid "%(who)s is already booked on %(days)s. Pick other days."
+msgstr "Ο/Η %(who)s είναι ήδη κλεισμένος/η στις %(days)s. Διάλεξε άλλες ημέρες."
+
+#: templates/notifications/email/offer_answered.txt
+msgid "%(worker)s accepted your offer for %(title)s."
+msgstr "Ο/Η %(worker)s δέχτηκε την προσφορά σου για το %(title)s."
+
+#: templates/notifications/email/application.txt
+msgid "%(worker)s applied for %(title)s."
+msgstr "Ο/Η %(worker)s έκανε αίτηση για το %(title)s."
+
+#: templates/notifications/email/work_finished.txt
+msgid "%(worker)s marked the work finished on %(title)s."
+msgstr "Ο/Η %(worker)s δήλωσε τη δουλειά ολοκληρωμένη στο %(title)s."
+
+#: templates/notifications/email/offer_answered.txt
+msgid "%(worker)s turned down your offer for %(title)s."
+msgstr "Ο/Η %(worker)s απέρριψε την προσφορά σου για το %(title)s."
+
+#: templates/accounts/_worker_card.html
+msgid "%(years)s yr"
+msgid_plural "%(years)s yrs"
+msgstr[0] "%(years)s χρόνος"
+msgstr[1] "%(years)s χρόνια"
+
+#: templates/accounts/worker_detail.html
+#: templates/jobs/_offer_worker.html
+msgid "%(years)s yr in the trade"
+msgid_plural "%(years)s yrs in the trade"
+msgstr[0] "%(years)s χρόνος στο επάγγελμα"
+msgstr[1] "%(years)s χρόνια στο επάγγελμα"
+
+#: templates/_field.html
+#: templates/accounts/worker_edit.html
+msgid "(required)"
+msgstr "(υποχρεωτικό)"
+
+#: accounts/forms.py
+msgid "+1 555 010 0199"
+msgstr ""
+
+#: jobs/forms.py
+msgid "-74.005974"
+msgstr ""
+
+#: jobs/forms.py
+msgid "1 — would not work with them again"
+msgstr "1 — δεν θα ξαναδούλευα μαζί του"
+
+#: jobs/forms.py
+msgid "2 — problems worth knowing about"
+msgstr "2 — προβλήματα που αξίζει να ξέρεις"
+
+#: accounts/forms.py
+#: jobs/forms.py
+msgid "2026-08-04, 2026-08-05"
+msgstr ""
+
+#: jobs/forms.py
+msgid "3 — the job got done"
+msgstr "3 — η δουλειά έγινε"
+
+#: jobs/forms.py
+msgid "4 — good, no complaints"
+msgstr "4 — καλά, κανένα παράπονο"
+
+#: jobs/forms.py
+msgid "40.712776"
+msgstr ""
+
+#: jobs/forms.py
+msgid "5 — would work with them again without thinking"
+msgstr "5 — θα ξαναδούλευα μαζί του χωρίς δεύτερη σκέψη"
+
+#: accounts/forms.py
+msgid "A clear photo of your face. Square works best."
+msgstr "Μια καθαρή φωτογραφία του προσώπου σου. Το τετράγωνο δουλεύει καλύτερα."
+
+#: templates/core/about.html
+msgid "A client who has found your profile can write a gig for you by name. It never appears on the public board — it goes to you, with a note, and you accept or decline. Declining costs you nothing and needs no reason."
+msgstr "Ένας πελάτης που βρήκε το προφίλ σου μπορεί να γράψει ένα μεροκάματο ονομαστικά για σένα. Δεν εμφανίζεται ποτέ στον δημόσιο πίνακα — έρχεται σε σένα, με ένα σημείωμα, και το δέχεσαι ή το απορρίπτεις. Η απόρριψη δεν σου κοστίζει τίποτα και δεν χρειάζεται αιτιολογία."
+
+#: templates/core/about.html
+msgid "A dispute pauses the automatic release and puts a human in the loop. The timers exist so that neither side can win by going quiet."
+msgstr "Μια ένσταση παγώνει την αυτόματη αποδέσμευση και βάζει άνθρωπο στη μέση. Τα χρονόμετρα υπάρχουν ώστε καμία πλευρά να μην κερδίζει με το να σωπαίνει."
+
+#: notifications/models.py
+msgid "A dispute was raised"
+msgstr ""
+
+#: notifications/mail.py
+msgid "A dispute was raised on %(job)s"
+msgstr "Ανοίχτηκε διαφορά στο %(job)s"
+
+#: templates/notifications/email/dispute.txt
+msgid "A dispute was raised on %(title)s."
+msgstr "Ανοίχτηκε διαφορά στο %(title)s."
+
+#: templates/core/about.html
+msgid "A gig"
+msgstr "Ένα μεροκάματο"
+
+#: templates/jobs/mine.html
+msgid "A gig is one dated shift at a fixed price. A position is ongoing work at a rate. Both take about a minute."
+msgstr "Το μεροκάματο είναι μία βάρδια με ημερομηνία και σταθερή τιμή. Η θέση είναι συνεχής εργασία με αμοιβή. Και τα δύο θέλουν περίπου ένα λεπτό."
+
+#: templates/jobs/offer_form.html
+msgid "A gig written for them alone. It never goes on the public board — only they can see it, and only they can accept it."
+msgstr "Ένα μεροκάματο γραμμένο μόνο για αυτόν. Δεν μπαίνει ποτέ στον δημόσιο πίνακα — μόνο αυτός το βλέπει και μόνο αυτός μπορεί να το δεχτεί."
+
+#: notifications/models.py
+msgid "A job was closed"
+msgstr ""
+
+#: templates/jobs/job_post_choose.html
+msgid "A one-day gig"
+msgstr "Μεροκάματο μίας ημέρας"
+
+#: notifications/models.py
+msgid "A payment was released"
+msgstr ""
+
+#: templates/jobs/job_post_choose.html
+msgid "A specific date, a set number of hours, one fixed price — &quot;€90 for 8 hours on the 14th&quot;. You agree it with the worker and settle it between you."
+msgstr "Συγκεκριμένη ημερομηνία, ορισμένες ώρες, μία σταθερή τιμή — &quot;90€ για 8 ώρες στις 14&quot;. Το συμφωνείς με τον τεχνίτη και το τακτοποιείτε μεταξύ σας."
+
+#: templates/core/about.html
+#: templates/jobs/job_post_choose.html
+msgid "A standing position"
+msgstr "Μόνιμη θέση"
+
+#: templates/accounts/worker_detail.html
+msgid "About"
+msgstr "Σχετικά"
+
+#: templates/accounts/worker_edit.html
+msgid "About you"
+msgstr "Για σένα"
+
+#: core/state_machine.py
+#: jobs/models.py
+msgid "Accepted"
+msgstr "Έγινε αποδεκτό"
+
+#: jobs/views.py
+msgid "Accepted — all %(count)s days are yours."
+msgstr "Έγινε αποδεκτό — και οι %(count)s ημέρες είναι δικές σου."
+
+#: jobs/views.py
+msgid "Accepted — the job is yours."
+msgstr "Έγινε αποδεκτό — η δουλειά είναι δική σου."
+
+#: templates/jobs/_negotiation.html
+msgid "Accepting agrees these terms and books the job."
+msgstr "Η αποδοχή συμφωνεί με αυτούς τους όρους και κλείνει τη δουλειά."
+
+#: templates/base.html
+msgid "Account"
+msgstr "Λογαριασμός"
+
+#: templates/accounts/dashboard.html
+msgid "Add"
+msgstr "Προσθήκη"
+
+#: jobs/forms.py
+msgid "Add a note (optional)"
+msgstr "Πρόσθεσε σημείωση (προαιρετικό)"
+
+#: templates/accounts/worker_edit.html
+msgid "Add a photo"
+msgstr "Πρόσθεσε φωτογραφία"
+
+#: templates/accounts/dashboard.html
+msgid "Add a photo. Profiles with one get picked noticeably more often."
+msgstr "Πρόσθεσε φωτογραφία. Τα προφίλ που έχουν επιλέγονται αισθητά πιο συχνά."
+
+#: core/dates.py
+msgid "Add or remove days"
+msgstr "Πρόσθεσε ή αφαίρεσε ημέρες"
+
+#: templates/accounts/worker_edit.html
+msgid "Add photo"
+msgstr "Προσθήκη φωτογραφίας"
+
+#: templates/accounts/dashboard.html
+msgid "Add your name and a photo — clients skip profiles they can't put a face to."
+msgstr "Πρόσθεσε όνομα και φωτογραφία — οι πελάτες προσπερνούν προφίλ χωρίς πρόσωπο."
+
+#: templates/accounts/dashboard.html
+msgid "Add your name so people know who they're hiring."
+msgstr "Πρόσθεσε το όνομά σου ώστε να ξέρουν ποιον προσλαμβάνουν."
+
+#: core/state_machine.py
+msgid "Admin"
+msgstr "Διαχειριστής"
+
+#: templates/jobs/job_detail.html
+msgid "Agree and the job closes. Payment stays between the two of you — then you can both leave a rating."
+msgstr "Συμφώνησε και η δουλειά κλείνει. Η πληρωμή μένει μεταξύ σας — μετά μπορείτε να αφήσετε αξιολόγηση."
+
+#: templates/accounts/feed.html
+msgid "Agree it between you"
+msgstr "Συμφωνήστε μεταξύ σας"
+
+#: jobs/models.py
+msgid "Agreed"
+msgstr "Συμφωνήθηκε"
+
+#: templates/messaging/thread.html
+msgid "All messages"
+msgstr "Όλα τα μηνύματα"
+
+#: jobs/forms.py
+msgid "All trades"
+msgstr "Όλες οι ειδικότητες"
+
+#: core/dates.py
+#: templates/accounts/_booked_calendar.html
+#: templates/accounts/worker_detail.html
+msgid "Already booked"
+msgstr "Ήδη κλεισμένες"
+
+#: templates/jobs/offer_form.html
+msgid "Already have the work posted?"
+msgstr "Έχεις ήδη ανεβάσει τη δουλειά;"
+
+#: templates/accounts/worker_detail.html
+msgid "Also hires on Construction's Finest —"
+msgstr "Προσλαμβάνει επίσης στο Construction's Finest —"
+
+#: jobs/models.py
+msgid "Anything they should know before saying yes."
+msgstr "Οτιδήποτε πρέπει να ξέρει πριν πει ναι."
+
+#: jobs/forms.py
+msgid "Anything they should know?"
+msgstr "Κάτι που πρέπει να ξέρει;"
+
+#: jobs/forms.py
+msgid "Anything to add? (optional)"
+msgstr "Κάτι να προσθέσεις; (προαιρετικό)"
+
+#: templates/jobs/job_applicants.html
+#: templates/jobs/job_detail.html
+msgid "Applicants"
+msgstr "Υποψήφιοι"
+
+#: jobs/views.py
+msgid "Application sent."
+msgstr "Η αίτηση στάλθηκε."
+
+#: jobs/models.py
+msgid "Applied"
+msgstr "Έκανε αίτηση"
+
+#: jobs/views.py
+msgid "Applied for all %(count)s days."
+msgstr "Έγινε αίτηση και για τις %(count)s ημέρες."
+
+#: templates/accounts/_feed_items.html
+#: templates/jobs/_filters.html
+#: templates/jobs/job_apply.html
+msgid "Apply"
+msgstr "Εφαρμογή"
+
+#: templates/jobs/job_detail.html
+msgid "Apply again"
+msgstr "Κάνε ξανά αίτηση"
+
+#: templates/jobs/job_detail.html
+msgid "Apply at a different price"
+msgstr "Κάνε αίτηση σε άλλη τιμή"
+
+#: templates/jobs/job_detail.html
+msgid "Apply for this"
+msgstr "Κάνε αίτηση για αυτό"
+
+#: templates/core/about.html
+msgid "Apply."
+msgstr "Κάνε αίτηση."
+
+#: templates/jobs/mine.html
+msgid "Applying is free and the board is public — you can read every post before you decide."
+msgstr "Η αίτηση είναι δωρεάν και ο πίνακας δημόσιος — μπορείς να διαβάσεις κάθε αγγελία πριν αποφασίσεις."
+
+#: templates/accounts/client_detail.html
+msgid "Approves in"
+msgstr "Εγκρίνει σε"
+
+#: accounts/forms.py
+msgid "Are you looking for a full-time job?"
+msgstr "Ψάχνεις δουλειά πλήρους απασχόλησης;"
+
+#: templates/jobs/job_detail.html
+msgid "Ask for different terms"
+msgstr "Ζήτα διαφορετικούς όρους"
+
+#: assistant/views.py
+msgid "Ask me anything about how this app works — how you get paid, when money is released, check-ins, ratings, or where to find something."
+msgstr "Ρώτησέ με οτιδήποτε για το πώς λειτουργεί η εφαρμογή — πώς πληρώνεσαι, πότε αποδεσμεύονται τα χρήματα, τα check-in, οι αξιολογήσεις ή πού βρίσκεται κάτι."
+
+#: templates/jobs/job_detail.html
+msgid "Assigned to"
+msgstr "Ανατέθηκε σε"
+
+#: templates/assistant/_widget.html
+msgid "Assistant"
+msgstr "Βοηθός"
+
+#: templates/accounts/worker_edit.html
+msgid "Availability"
+msgstr "Διαθεσιμότητα"
+
+#: templates/jobs/job_applicants.html
+msgid "Availability not stated"
+msgstr "Δεν δηλώθηκε διαθεσιμότητα"
+
+#: accounts/models.py
+msgid "Available now"
+msgstr "Διαθέσιμος τώρα"
+
+#: jobs/forms.py
+msgid "Available now only"
+msgstr "Μόνο διαθέσιμοι τώρα"
+
+#: templates/accounts/feed.html
+msgid "Available now or free soon. Tap someone to see their full profile and offer them a job."
+msgstr "Διαθέσιμοι τώρα ή σύντομα. Πάτα κάποιον για να δεις το πλήρες προφίλ και να του προσφέρεις δουλειά."
+
+#: payments/models.py
+msgid "Awaiting payment"
+msgstr "Αναμονή πληρωμής"
+
+#: worklog/models.py
+msgid "Awaiting review"
+msgstr "Αναμονή εξέτασης"
+
+#: templates/accounts/details.html
+#: templates/jobs/job_apply.html
+#: templates/messaging/start_direct.html
+msgid "Back"
+msgstr "Πίσω"
+
+#: templates/worklog/workspace.html
+msgid "Back to client"
+msgstr "Πίσω στον πελάτη"
+
+#: templates/jobs/review_form.html
+#: templates/worklog/workspace.html
+msgid "Back to the job"
+msgstr "Πίσω στη δουλειά"
+
+#: templates/core/about.html
+msgid "Be offered it directly."
+msgstr "Να σου προσφερθεί απευθείας."
+
+#: templates/worklog/workspace.html
+msgid "Booked"
+msgstr "Κλεισμένο"
+
+#: accounts/models.py
+msgid "Booked %(count)s days, %(from_date)s to %(to_date)s"
+msgstr "Κλεισμένος/η %(count)s ημέρες, %(from_date)s έως %(to_date)s"
+
+#: templates/jobs/job_applicants.html
+msgid "Booked that day"
+msgstr "Κλεισμένος εκείνη την ημέρα"
+
+#: templates/accounts/worker_detail.html
+msgid "Booked through %(until)s. You can still line them up for %(free)s onwards — their rate is %(rate)s."
+msgstr "Κλεισμένος έως %(until)s. Μπορείς πάντως να τον κλείσεις από %(free)s και μετά — η αμοιβή του είναι %(rate)s."
+
+#: templates/jobs/_offer_worker.html
+msgid "Booked until %(until)s, free from %(from_day)s."
+msgstr "Κλεισμένος έως %(until)s, ελεύθερος από %(from_day)s."
+
+#: templates/accounts/feed.html
+msgid "Browse the whole board without an account."
+msgstr "Δες ολόκληρο τον πίνακα χωρίς λογαριασμό."
+
+#: templates/jobs/mine.html
+#: templates/messaging/inbox.html
+msgid "Browse work"
+msgstr "Δες δουλειές"
+
+#: accounts/models.py
+msgid "Busy today, free from tomorrow"
+msgstr "Απασχολημένος σήμερα, ελεύθερος από αύριο"
+
+#: accounts/models.py
+msgid "Busy until %(from_date)s — free from %(to_date)s"
+msgstr "Απασχολημένος έως %(from_date)s — ελεύθερος από %(to_date)s"
+
+#: core/test_i18n.py
+msgid "Bye"
+msgstr "Αντίο"
+
+#: templates/payments/escrow_detail.html
+msgid "Call it off and release the hold"
+msgstr "Ακύρωσέ το και αποδέσμευσε την κράτηση"
+
+#: templates/jobs/counter_form.html
+#: templates/jobs/job_form.html
+#: templates/jobs/offer_choose.html
+#: templates/jobs/offer_form.html
+#: templates/jobs/review_form.html
+msgid "Cancel"
+msgstr "Ακύρωση"
+
+#: templates/jobs/job_detail.html
+msgid "Cancel job"
+msgstr "Ακύρωση δουλειάς"
+
+#: templates/accounts/client_detail.html
+msgid "Cancellations"
+msgstr "Ακυρώσεις"
+
+#: core/state_machine.py
+msgid "Cancelled"
+msgstr "Ακυρώθηκε"
+
+#: templates/accounts/worker_edit.html
+msgid "Caption"
+msgstr "Λεζάντα"
+
+#: core/models.py
+msgid "Carpenter"
+msgstr "Ξυλουργός"
+
+#: core/dates.py
+msgid "Change the day"
+msgstr "Άλλαξε την ημέρα"
+
+#: templates/accounts/_worker_card.html
+msgid "Charges"
+msgstr "Χρεώσεις"
+
+#: templates/core/about.html
+msgid "Chasing an invoice for a day's work costs more in time than the day was worth, so most people stop chasing — and the client who never pays finds someone new next week."
+msgstr "Το να κυνηγάς ένα τιμολόγιο για μία μέρα δουλειάς κοστίζει σε χρόνο περισσότερο από όσο άξιζε η μέρα, οπότε οι περισσότεροι σταματούν να κυνηγούν — και ο πελάτης που δεν πληρώνει ποτέ βρίσκει κάποιον καινούριο την επόμενη βδομάδα."
+
+#: templates/accounts/feed.html
+msgid "Check back — new gigs go up daily."
+msgstr "Ξαναδές το — νέα μεροκάματα ανεβαίνουν καθημερινά."
+
+#: templates/jobs/job_detail.html
+msgid "Check-in, finishing up and the approval window all live on the job page."
+msgstr "Το check-in, το κλείσιμο και το παράθυρο έγκρισης βρίσκονται όλα στη σελίδα της δουλειάς."
+
+#: templates/jobs/_filters.html
+msgid "Clear"
+msgstr "Καθαρισμός"
+
+#: templates/jobs/job_list.html
+#: templates/jobs/worker_list.html
+msgid "Clear filters"
+msgstr "Καθαρισμός φίλτρων"
+
+#: core/state_machine.py
+#: jobs/models.py
+#: templates/accounts/dashboard.html
+#: worklog/models.py
+msgid "Client"
+msgstr "Πελάτης"
+
+#: templates/payments/escrow_detail.html
+msgid "Client pays"
+msgstr "Ο πελάτης πληρώνει"
+
+#: templates/accounts/client_edit.html
+#: templates/accounts/dashboard.html
+msgid "Client profile"
+msgstr "Προφίλ πελάτη"
+
+#: jobs/models.py
+msgid "Client rating the worker"
+msgstr "Ο πελάτης αξιολογεί τον τεχνίτη"
+
+#: templates/assistant/_widget.html
+msgid "Close assistant"
+msgstr "Κλείσιμο βοηθού"
+
+#: core/state_machine.py
+msgid "Closed — settled directly"
+msgstr "Έκλεισε — διακανονίστηκε απευθείας"
+
+#: accounts/forms.py
+msgid "Company (optional)"
+msgstr "Εταιρεία (προαιρετικό)"
+
+#: core/state_machine.py
+msgid "Completed — awaiting approval"
+msgstr "Ολοκληρώθηκε — αναμονή έγκρισης"
+
+#: templates/accounts/worker_detail.html
+#: templates/jobs/job_applicants.html
+msgid "Completion"
+msgstr "Ολοκλήρωση"
+
+#: templates/worklog/workspace.html
+msgid "Confirm and close"
+msgstr "Επιβεβαίωση και κλείσιμο"
+
+#: templates/worklog/workspace.html
+msgid "Confirm and the job closes. Nothing is released — there is no money held on this one — but it goes on both track records and you can each leave a rating."
+msgstr "Επιβεβαίωσε και η δουλειά κλείνει. Δεν αποδεσμεύεται τίποτα — δεν κρατούνται χρήματα σε αυτή — αλλά καταγράφεται στα ιστορικά και των δύο και μπορείτε να αφήσετε αξιολόγηση."
+
+#: templates/notifications/email/work_finished.txt
+msgid "Confirm it when you agree and the job is closed."
+msgstr "Επιβεβαίωσέ το όταν συμφωνείς και η δουλειά κλείνει."
+
+#: templates/notifications/email/_wrapper.txt
+msgid "Construction's Finest"
+msgstr ""
+
+#: templates/accounts/worker_detail.html
+msgid "Construction's Finest does not verify licence numbers. Check with your state board before hiring for regulated work."
+msgstr "Το Construction's Finest δεν επαληθεύει αριθμούς αδειών. Έλεγξε στην αρμόδια αρχή πριν προσλάβεις για ρυθμιζόμενη εργασία."
+
+#: templates/payments/escrow_detail.html
+msgid "Construction's Finest holds the money — neither side does. It goes to the worker once the day is signed off, or back to the client if the gig is called off before it starts."
+msgstr "Το Construction's Finest κρατά τα χρήματα — καμία από τις δύο πλευρές. Πηγαίνουν στον τεχνίτη μόλις εγκριθεί η ημέρα, ή πίσω στον πελάτη αν το μεροκάματο ακυρωθεί πριν ξεκινήσει."
+
+#: templates/core/about.html
+msgid "Construction's Finest is a hiring board for the building trades. Day gigs and standing positions, in one market, with the money for a gig held before anyone turns up."
+msgstr "Το Construction's Finest είναι πίνακας εργασίας για τα τεχνικά επαγγέλματα. Μεροκάματα και μόνιμες θέσεις, σε μία αγορά, με τα χρήματα του μεροκάματου να κρατούνται πριν εμφανιστεί κανείς."
+
+#: templates/accounts/feed.html
+msgid "Construction's Finest — find work, hire crew"
+msgstr "Construction's Finest — βρες δουλειά, βρες συνεργείο"
+
+#: templates/base.html
+msgid "Construction's Finest, home"
+msgstr "Construction's Finest, αρχική"
+
+#: templates/accounts/select_role.html
+msgid "Continue"
+msgstr "Συνέχεια"
+
+#: templates/accounts/feed.html
+msgid "Continue with Google"
+msgstr "Συνέχεια με Google"
+
+#: jobs/models.py
+msgid "Contract / project-based"
+msgstr "Με σύμβαση / ανά έργο"
+
+#: templates/jobs/job_applicants.html
+msgid "Counter"
+msgstr "Αντιπροσφορά"
+
+#: templates/jobs/_negotiation.html
+msgid "Counter again"
+msgstr "Νέα αντιπροσφορά"
+
+#: templates/jobs/counter_form.html
+msgid "Counter — Construction's Finest"
+msgstr "Αντιπροσφορά — Construction's Finest"
+
+#: templates/accounts/worker_edit.html
+msgid "Current résumé"
+msgstr "Τρέχον βιογραφικό"
+
+#: jobs/forms.py
+#: jobs/models.py
+#: templates/jobs/counter_form.html
+#: templates/jobs/job_detail.html
+msgid "Date"
+msgstr "Ημερομηνία"
+
+#: accounts/forms.py
+msgid "Date of birth"
+msgstr "Ημερομηνία γέννησης"
+
+#: jobs/models.py
+msgid "Date passed"
+msgstr "Η ημερομηνία πέρασε"
+
+#: templates/jobs/job_detail.html
+msgid "Dates"
+msgstr "Ημερομηνίες"
+
+#: templates/notifications/email/tomorrow.txt
+msgid "Day %(day_number)s of %(n)s on this booking."
+msgstr "Μέρα %(day_number)s από %(n)s σε αυτή την κράτηση."
+
+#: templates/worklog/workspace.html
+msgid "Day finished"
+msgstr "Η ημέρα ολοκληρώθηκε"
+
+#: templates/base.html
+msgid "Day gigs and standing positions for the building trades."
+msgstr "Μεροκάματα και μόνιμες θέσεις για τα τεχνικά επαγγέλματα."
+
+#: templates/accounts/feed.html
+msgid "Day gigs and standing positions for the building trades. Find the work, find the people, agree it between you."
+msgstr "Μεροκάματα και μόνιμες θέσεις για τα τεχνικά επαγγέλματα. Βρες τη δουλειά, βρες τους ανθρώπους, συμφωνήστε μεταξύ σας."
+
+#: templates/core/about.html
+msgid "Day gigs and standing positions for the building trades. How posting, applying, agreeing terms and getting paid work here."
+msgstr "Μεροκάματα και μόνιμες θέσεις για τα τεχνικά επαγγέλματα. Πώς λειτουργούν οι αγγελίες, οι αιτήσεις, η συμφωνία όρων και η πληρωμή εδώ."
+
+#: templates/base.html
+msgid "Day gigs and standing positions for the trades. Find work, find people, agree the terms."
+msgstr "Μεροκάματα και μόνιμες θέσεις για τα τεχνικά επαγγέλματα. Βρες δουλειά, βρες ανθρώπους, συμφωνήστε τους όρους."
+
+#: accounts/forms.py
+msgid "Day gigs this week — framing or second fix"
+msgstr "Μεροκάματα αυτή τη βδομάδα — σκελετοί ή φινίρισμα"
+
+#: templates/accounts/worker_detail.html
+msgid "Day work only"
+msgstr "Μόνο μεροκάματα"
+
+#: templates/jobs/job_detail.html
+msgid "Decline"
+msgstr "Απόρριψη"
+
+#: jobs/models.py
+msgid "Declined"
+msgstr "Απορρίφθηκε"
+
+#: jobs/views.py
+msgid "Declined. The client has been told."
+msgstr ""
+
+#: jobs/forms.py
+msgid "Describe the work"
+msgstr "Περιγραφή της δουλειάς"
+
+#: templates/payments/payouts.html
+msgid "Details submitted"
+msgstr "Τα στοιχεία υποβλήθηκαν"
+
+#: templates/jobs/job_detail.html
+msgid "Did this job"
+msgstr "Έκανε αυτή τη δουλειά"
+
+#: templates/messaging/start_direct.html
+msgid "Direct contact is attached to a gig so the worker knows what the message is about — post one first."
+msgstr "Η απευθείας επικοινωνία συνδέεται με ένα μεροκάματο ώστε ο τεχνίτης να ξέρει για τι πρόκειται — ανέβασε πρώτα ένα."
+
+#: jobs/models.py
+msgid "Direct offers are not listed on the public board."
+msgstr "Οι απευθείας προσφορές δεν εμφανίζονται στον δημόσιο πίνακα."
+
+#: templates/worklog/workspace.html
+msgid "Dispute"
+msgstr "Ένσταση"
+
+#: templates/worklog/workspace.html
+msgid "Dispute instead"
+msgstr "Υπόβαλε ένσταση"
+
+#: core/state_machine.py
+msgid "Disputed — under review"
+msgstr "Ένσταση — υπό εξέταση"
+
+#: templates/accounts/worker_detail.html
+msgid "Disputes"
+msgstr "Ενστάσεις"
+
+#: templates/accounts/dashboard.html
+msgid "Do both?"
+msgstr "Κάνεις και τα δύο;"
+
+#: core/dates.py
+msgid "Done"
+msgstr "Τέλος"
+
+#: templates/accounts/worker_detail.html
+msgid "Download résumé (PDF)"
+msgstr "Λήψη βιογραφικού (PDF)"
+
+#: core/models.py
+msgid "Drywall/Framing"
+msgstr "Γυψοσανίδα/Σκελετοί"
+
+#: templates/notifications/email/reminder.txt
+msgid "Each of these has somebody on the other end of it waiting for an answer."
+msgstr "Σε καθένα από αυτά υπάρχει κάποιος από την άλλη πλευρά που περιμένει απάντηση."
+
+#: templates/jobs/job_detail.html
+msgid "Edit"
+msgstr "Επεξεργασία"
+
+#: templates/jobs/job_detail.html
+msgid "Edit application"
+msgstr "Επεξεργασία αίτησης"
+
+#: templates/accounts/dashboard.html
+msgid "Edit client profile"
+msgstr "Επεξεργασία προφίλ πελάτη"
+
+#: templates/accounts/client_edit.html
+msgid "Edit client profile — Construction's Finest"
+msgstr "Επεξεργασία προφίλ πελάτη — Construction's Finest"
+
+#: templates/accounts/client_detail.html
+msgid "Edit hiring profile"
+msgstr "Επεξεργασία προφίλ εργοδότη"
+
+#: templates/accounts/client_detail.html
+#: templates/accounts/worker_detail.html
+msgid "Edit name and photo"
+msgstr "Επεξεργασία ονόματος και φωτογραφίας"
+
+#: templates/jobs/job_form.html
+msgid "Edit post"
+msgstr "Επεξεργασία αγγελίας"
+
+#: templates/jobs/job_form.html
+msgid "Edit this post"
+msgstr "Επεξεργασία αυτής της αγγελίας"
+
+#: templates/accounts/worker_detail.html
+msgid "Edit work profile"
+msgstr "Επεξεργασία επαγγελματικού προφίλ"
+
+#: templates/accounts/dashboard.html
+msgid "Edit worker profile"
+msgstr "Επεξεργασία προφίλ τεχνίτη"
+
+#: templates/accounts/worker_edit.html
+msgid "Edit worker profile — Construction's Finest"
+msgstr "Επεξεργασία προφίλ τεχνίτη — Construction's Finest"
+
+#: templates/accounts/dashboard.html
+msgid "Edit your details"
+msgstr "Επεξεργασία των στοιχείων σου"
+
+#: core/models.py
+msgid "Electrician"
+msgstr "Ηλεκτρολόγος"
+
+#: accounts/forms.py
+msgid "Email me about my jobs"
+msgstr "Στείλτε μου email για τις δουλειές μου"
+
+#: accounts/models.py
+msgid "Email me when something needs my answer."
+msgstr ""
+
+#: core/state_machine.py
+#: templates/worklog/workspace.html
+msgid "Ended early"
+msgstr "Τελείωσε νωρίτερα"
+
+#: core/state_machine.py
+msgid "Escrow held"
+msgstr "Σε μεσεγγύηση"
+
+#: jobs/forms.py
+msgid "Escrow means the money is charged before the worker travels and released once you sign the day off. Settling directly is between the two of you — we keep the record, not the money."
+msgstr "Η μεσεγγύηση σημαίνει ότι τα χρήματα χρεώνονται πριν ξεκινήσει ο τεχνίτης και αποδεσμεύονται μόλις εγκρίνεις την ημέρα. Ο απευθείας διακανονισμός είναι μεταξύ σας — εμείς κρατάμε το αρχείο, όχι τα χρήματα."
+
+#: notifications/models.py
+msgid "Escrow was funded"
+msgstr ""
+
+#: jobs/models.py
+msgid "Expected length of the day."
+msgstr "Αναμενόμενη διάρκεια της ημέρας."
+
+#: templates/accounts/_worker_card.html
+msgid "Experience"
+msgstr "Εμπειρία"
+
+#: core/state_machine.py
+msgid "Expired"
+msgstr "Έληξε"
+
+#: payments/models.py
+msgid "Failed"
+msgstr "Απέτυχε"
+
+#: templates/_required_note.html
+msgid "Fields marked"
+msgstr "Τα πεδία με σήμανση"
+
+#: templates/assistant/_form_offer.html
+msgid "Fill it in by chat"
+msgstr "Συμπλήρωσέ το με συνομιλία"
+
+#: templates/jobs/_filters.html
+msgid "Filters"
+msgstr "Φίλτρα"
+
+#: templates/accounts/client_detail.html
+#: templates/accounts/dashboard.html
+#: templates/accounts/feed.html
+#: templates/base.html
+#: templates/jobs/job_detail.html
+#: templates/jobs/job_list.html
+msgid "Find work"
+msgstr "Βρες δουλειά"
+
+#: templates/accounts/feed.html
+msgid "Find work."
+msgstr "Βρες δουλειά."
+
+#: templates/accounts/dashboard.html
+#: templates/accounts/feed.html
+#: templates/accounts/worker_detail.html
+#: templates/base.html
+#: templates/jobs/worker_list.html
+msgid "Find workers"
+msgstr "Βρες τεχνίτες"
+
+#: templates/payments/payouts.html
+msgid "Finish setup"
+msgstr "Ολοκλήρωση ρύθμισης"
+
+#: templates/jobs/job_list.html
+msgid "Finish your profile"
+msgstr "Ολοκλήρωσε το προφίλ σου"
+
+#: templates/worklog/workspace.html
+msgid "Finished a normal day? Mark it done and the client has %(approval_hours)s hours to approve before it releases on its own."
+msgstr "Τελείωσες μια κανονική μέρα; Σήμανέ την ως ολοκληρωμένη και ο πελάτης έχει %(approval_hours)s ώρες να εγκρίνει πριν αποδεσμευτεί από μόνη της."
+
+#: templates/worklog/workspace.html
+msgid "Flag as ended early"
+msgstr "Σήμανση ως πρόωρα ολοκληρωμένο"
+
+#: templates/notifications/email/tomorrow.txt
+msgid "For %(client)s."
+msgstr "Για %(client)s."
+
+#: templates/jobs/review_form.html
+msgid "For %(title)s on %(day)s."
+msgstr "Για %(title)s στις %(day)s."
+
+#: accounts/forms.py
+msgid "Framing and finish carpentry, own tools"
+msgstr "Σκελετοί και φινίρισμα, δικά μου εργαλεία"
+
+#: accounts/models.py
+msgid "Free %(days)s"
+msgstr "Ελεύθερος %(days)s"
+
+#: accounts/models.py
+msgid "Free %(days)s +%(count)s more"
+msgstr "Ελεύθερος %(days)s +%(count)s ακόμη"
+
+#: accounts/models.py
+msgid "Free on selected days"
+msgstr "Ελεύθερος σε επιλεγμένες ημέρες"
+
+#: templates/jobs/job_applicants.html
+msgid "Free that day"
+msgstr "Ελεύθερος εκείνη την ημέρα"
+
+#: templates/accounts/feed.html
+msgid "Free to look"
+msgstr "Δωρεάν για περιήγηση"
+
+#: templates/worklog/workspace.html
+msgid "Frozen until someone reviews it. Nothing releases automatically from here."
+msgstr "Παγωμένο μέχρι να το εξετάσει κάποιος. Τίποτα δεν αποδεσμεύεται αυτόματα από εδώ."
+
+#: jobs/models.py
+msgid "Full time"
+msgstr "Πλήρης απασχόληση"
+
+#: templates/accounts/_worker_card.html
+msgid "Full-time"
+msgstr "Πλήρης απασχόληση"
+
+#: accounts/models.py
+msgid "Full-time positions are posted as standing jobs, not day gigs."
+msgstr "Οι θέσεις πλήρους απασχόλησης ανεβαίνουν ως μόνιμες θέσεις, όχι ως μεροκάματα."
+
+#: accounts/forms.py
+msgid "Full-time roles are posted as standing positions, not day gigs. You can still take gigs either way."
+msgstr "Οι θέσεις πλήρους απασχόλησης ανεβαίνουν ως μόνιμες θέσεις, όχι ως μεροκάματα. Μπορείς να παίρνεις μεροκάματα έτσι κι αλλιώς."
+
+#: templates/accounts/worker_edit.html
+msgid "Full-time work"
+msgstr "Εργασία πλήρους απασχόλησης"
+
+#: templates/payments/escrow_detail.html
+msgid "Fund this gig"
+msgstr "Χρηματοδότησε αυτό το μεροκάματο"
+
+#: payments/models.py
+msgid "Funds held"
+msgstr "Κρατημένα κεφάλαια"
+
+#: core/models.py
+msgid "General labor"
+msgstr "Γενικές εργασίες"
+
+#: templates/core/about.html
+msgid "Get started"
+msgstr "Ξεκίνα"
+
+#: templates/accounts/dashboard.html
+#: templates/payments/payouts.html
+msgid "Getting paid"
+msgstr "Πώς πληρώνεσαι"
+
+#: templates/payments/payouts.html
+msgid "Getting paid — Construction's Finest"
+msgstr "Πώς πληρώνεσαι — Construction's Finest"
+
+#: templates/accounts/_feed_items.html
+#: templates/jobs/_job_row.html
+#: templates/jobs/job_detail.html
+#: templates/jobs/job_post_choose.html
+#: templates/jobs/offer_choose.html
+#: templates/messaging/start_direct.html
+#: templates/messaging/thread.html
+msgid "Gig"
+msgstr "Μεροκάματο"
+
+#: templates/payments/payouts.html
+msgid "Gig pay goes through the platform. Set this up once and the money lands in your bank after each job."
+msgstr "Η πληρωμή του μεροκάματου περνά από την πλατφόρμα. Ρύθμισέ το μία φορά και τα χρήματα μπαίνουν στην τράπεζά σου μετά από κάθε δουλειά."
+
+#: jobs/forms.py
+msgid "Give it a short name"
+msgstr "Δώσε ένα σύντομο όνομα"
+
+#: templates/payments/escrow_detail.html
+msgid "Go to the job"
+msgstr "Πήγαινε στη δουλειά"
+
+#: core/models.py
+msgid "HVAC"
+msgstr "Θέρμανση/Κλιματισμός"
+
+#: core/models.py
+msgid "Heavy equipment operator"
+msgstr "Χειριστής βαρέων μηχανημάτων"
+
+#: core/test_i18n.py
+msgid "Hello"
+msgstr "Γεια"
+
+#: templates/assistant/_widget.html
+msgid "Help"
+msgstr "Βοήθεια"
+
+#: templates/assistant/_widget.html
+msgid "Help me fill out a form"
+msgstr "Βοήθησέ με να συμπληρώσω μια φόρμα"
+
+#: templates/accounts/feed.html
+msgid "Hire crew."
+msgstr "Βρες συνεργείο."
+
+#: templates/accounts/client_detail.html
+msgid "Hiring right now"
+msgstr "Προσλαμβάνει τώρα"
+
+#: templates/accounts/dashboard.html
+msgid "Hiring someone for a job of your own?"
+msgstr "Ψάχνεις κάποιον για δική σου δουλειά;"
+
+#: jobs/forms.py
+msgid "Hold it in escrow until the day is signed off"
+msgstr "Κρατήσέ τα σε μεσεγγύηση μέχρι να εγκριθεί η ημέρα"
+
+#: jobs/models.py
+msgid "Hold the client's payment until the day is signed off."
+msgstr "Κρατά την πληρωμή του πελάτη μέχρι να εγκριθεί η ημέρα."
+
+#: templates/base.html
+msgid "Home"
+msgstr "Αρχική"
+
+#: jobs/forms.py
+#: jobs/models.py
+#: templates/jobs/counter_form.html
+#: templates/jobs/job_detail.html
+msgid "Hours"
+msgstr "Ώρες"
+
+#: templates/worklog/workspace.html
+msgid "Hours worked"
+msgstr "Ώρες εργασίας"
+
+#: templates/assistant/_widget.html
+msgid "How can I help?"
+msgstr "Πώς μπορώ να βοηθήσω;"
+
+#: jobs/forms.py
+#: templates/jobs/job_detail.html
+msgid "How did it go?"
+msgstr "Πώς πήγε;"
+
+#: assistant/options.py
+msgid "How do I get paid?"
+msgstr ""
+
+#: assistant/options.py
+msgid "How do I post a job?"
+msgstr ""
+
+#: assistant/options.py
+msgid "How do ratings work?"
+msgstr ""
+
+#: assistant/options.py
+msgid "How does check-in work?"
+msgstr ""
+
+#: jobs/forms.py
+msgid "How is this paid?"
+msgstr "Πώς πληρώνεται;"
+
+#: templates/base.html
+#: templates/core/whitepaper.html
+msgid "How it works"
+msgstr "Πώς λειτουργεί"
+
+#: templates/core/about.html
+msgid "How it works — Construction's Finest"
+msgstr "Πώς λειτουργεί — Construction's Finest"
+
+#: templates/accounts/feed.html
+msgid "How it works&nbsp;→"
+msgstr "Πώς λειτουργεί&nbsp;→"
+
+#: templates/jobs/_negotiation.html
+msgid "How the terms were agreed"
+msgstr "Πώς συμφωνήθηκαν οι όροι"
+
+#: templates/accounts/select_role.html
+msgid "How will you use Construction's Finest? Pick both if you do both — plenty of people do."
+msgstr "Πώς θα χρησιμοποιήσεις το Construction's Finest; Διάλεξε και τα δύο αν κάνεις και τα δύο — πολλοί το κάνουν."
+
+#: accounts/forms.py
+msgid "How will you use the platform?"
+msgstr "Πώς θα χρησιμοποιήσεις την πλατφόρμα;"
+
+#: accounts/forms.py
+msgid "How you appear to everyone else on the platform."
+msgstr "Έτσι εμφανίζεσαι σε όλους τους άλλους στην πλατφόρμα."
+
+#: templates/assistant/_widget.html
+msgid "How you get paid, check-ins, ratings, where things are."
+msgstr "Πώς πληρώνεσαι, check-in, αξιολογήσεις, πού βρίσκεται τι."
+
+#: templates/assistant/_widget.html
+msgid "I have a question about the app"
+msgstr "Έχω μια ερώτηση για την εφαρμογή"
+
+#: templates/assistant/_form_offer.html
+msgid "I'll ask one thing at a time and fill this in for you. You'll see the finished form here before anything is saved."
+msgstr "Θα ρωτάω ένα πράγμα κάθε φορά και θα το συμπληρώνω για σένα. Θα δεις την ολοκληρωμένη φόρμα εδώ πριν αποθηκευτεί οτιδήποτε."
+
+#: templates/assistant/_widget.html
+msgid "I'll ask you a few questions and fill it in for you."
+msgstr "Θα σου κάνω μερικές ερωτήσεις και θα τη συμπληρώσω για σένα."
+
+#: templates/worklog/workspace.html
+msgid "I've arrived"
+msgstr "Έφτασα"
+
+#: templates/core/about.html
+msgid "If a client adds site coordinates, a check-in records how far away it looked. It is a note on the record, never a condition of checking in — GPS on a building site is unreliable, and a worker who is genuinely there must never be locked out by their handset."
+msgstr "Αν ο πελάτης προσθέσει συντεταγμένες του εργοταξίου, το check-in καταγράφει πόσο μακριά φάνηκε. Είναι σημείωση στο αρχείο, ποτέ προϋπόθεση για το check-in — το GPS σε εργοτάξιο είναι αναξιόπιστο, και ένας τεχνίτης που είναι όντως εκεί δεν πρέπει ποτέ να αποκλείεται από το κινητό του."
+
+#: templates/notifications/email/tomorrow.txt
+msgid "If something has changed, say so now rather than on the day — the thread is on the job page."
+msgstr "Αν κάτι άλλαξε, πες το τώρα και όχι την ημέρα — η συνομιλία είναι στη σελίδα της δουλειάς."
+
+#: jobs/forms.py
+msgid "If you add these, we can sanity-check the worker's check-in against the site. It is only ever a note on the record — never a condition of them checking in."
+msgstr "Αν τα προσθέσεις, μπορούμε να διασταυρώσουμε πρόχειρα το check-in του τεχνίτη με το εργοτάξιο. Είναι πάντα μόνο σημείωση στο αρχείο — ποτέ προϋπόθεση για το check-in."
+
+#: templates/core/about.html
+msgid "If you choose escrow on a gig"
+msgstr "Αν διαλέξεις μεσεγγύηση σε ένα μεροκάματο"
+
+#: jobs/models.py
+msgid "In %(days)s day"
+msgid_plural "In %(days)s days"
+msgstr[0] "Σε %(days)s ημέρα"
+msgstr[1] "Σε %(days)s ημέρες"
+
+#: core/state_machine.py
+msgid "In progress"
+msgstr "Σε εξέλιξη"
+
+#: templates/jobs/job_detail.html
+#: templates/worklog/workspace.html
+msgid "Is the work done?"
+msgstr "Τελείωσε η δουλειά;"
+
+#: templates/notifications/email/escrow_funded.txt
+msgid "It is released when the day is signed off."
+msgstr "Αποδεσμεύονται όταν η μέρα εγκριθεί."
+
+#: templates/notifications/email/payment_released.txt
+msgid "It lands in your account on your payout provider's usual schedule."
+msgstr "Φτάνουν στον λογαριασμό σου με το συνηθισμένο πρόγραμμα του παρόχου πληρωμών."
+
+#: notifications/mail.py
+msgid "Job closed: %(job)s"
+msgstr "Η δουλειά έκλεισε: %(job)s"
+
+#: templates/worklog/workspace.html
+msgid "Job complete"
+msgstr "Η δουλειά ολοκληρώθηκε"
+
+#: templates/jobs/job_detail.html
+msgid "Job done"
+msgstr "Η δουλειά τελείωσε"
+
+#: templates/jobs/job_detail.html
+msgid "Job done — close it"
+msgstr "Η δουλειά τελείωσε — κλείσ' την"
+
+#: templates/worklog/workspace.html
+msgid "Job post"
+msgstr "Αγγελία εργασίας"
+
+#: core/test_i18n.py
+#: templates/base.html
+msgid "Jobs"
+msgstr "Δουλειές"
+
+#: templates/accounts/client_detail.html
+msgid "Jobs completed"
+msgstr "Ολοκληρωμένες δουλειές"
+
+#: templates/accounts/_worker_card.html
+#: templates/accounts/worker_detail.html
+#: templates/jobs/job_applicants.html
+msgid "Jobs done"
+msgstr "Δουλειές που έγιναν"
+
+#: templates/accounts/worker_detail.html
+msgid "Joined %(since)s"
+msgstr "Μέλος από %(since)s"
+
+#: templates/accounts/worker_detail.html
+msgid "Just message them"
+msgstr "Απλώς στείλε του μήνυμα"
+
+#: templates/core/about.html
+msgid "Keeping it honest"
+msgstr "Να μένει τίμιο"
+
+#: core/models.py
+msgid "Landscaping/Excavation"
+msgstr "Διαμόρφωση/Εκσκαφές"
+
+#: templates/jobs/job_detail.html
+#: templates/jobs/mine.html
+msgid "Leave a rating"
+msgstr "Άφησε αξιολόγηση"
+
+#: jobs/models.py
+msgid "Leave blank for a single flat rate."
+msgstr "Άφησέ το κενό για μία ενιαία τιμή."
+
+#: jobs/forms.py
+msgid "Leave blank if it is a single flat rate."
+msgstr "Άφησέ το κενό αν είναι μία ενιαία τιμή."
+
+#: templates/accounts/client_edit.html
+msgid "Leave blank if you're hiring as an individual."
+msgstr "Άφησέ το κενό αν προσλαμβάνεις ως ιδιώτης."
+
+#: templates/accounts/worker_edit.html
+msgid "Leave the second box empty for a single flat rate."
+msgstr "Άφησε το δεύτερο πεδίο κενό για μία ενιαία τιμή."
+
+#: templates/jobs/review_form.html
+msgid "Leave this rating"
+msgstr "Άφησε αυτή την αξιολόγηση"
+
+#: templates/accounts/worker_edit.html
+msgid "Licence number"
+msgstr "Αριθμός άδειας"
+
+#: templates/accounts/worker_edit.html
+msgid "Licence numbers"
+msgstr "Αριθμοί αδειών"
+
+#: templates/accounts/worker_detail.html
+msgid "Licences"
+msgstr "Άδειες"
+
+#: templates/accounts/_feed_items.html
+msgid "Loading more work…"
+msgstr "Φόρτωση περισσότερων δουλειών…"
+
+#: templates/core/about.html
+msgid "Look at the board first"
+msgstr "Δες πρώτα τον πίνακα"
+
+#: templates/accounts/worker_detail.html
+msgid "Looking for right now"
+msgstr "Ψάχνει αυτή τη στιγμή"
+
+#: templates/accounts/dashboard.html
+msgid "Looking to pick up work yourself?"
+msgstr "Ψάχνεις εσύ για δουλειά;"
+
+#: templates/jobs/job_detail.html
+msgid "Mark it done. Once the client agrees, the job closes and you can both leave a rating."
+msgstr "Σήμανέ τη ως ολοκληρωμένη. Μόλις συμφωνήσει ο πελάτης, η δουλειά κλείνει και μπορείτε να αφήσετε αξιολόγηση."
+
+#: templates/worklog/workspace.html
+msgid "Mark it finished and the client confirms. Payment is between the two of you — we record that the job happened, nothing more."
+msgstr "Σήμανέ τη ως ολοκληρωμένη και ο πελάτης επιβεβαιώνει. Η πληρωμή είναι μεταξύ σας — εμείς καταγράφουμε ότι η δουλειά έγινε, τίποτα άλλο."
+
+#: templates/jobs/job_detail.html
+msgid "Marking the work finished and confirming it live on the job page."
+msgstr "Η σήμανση της δουλειάς ως ολοκληρωμένης και η επιβεβαίωση βρίσκονται στη σελίδα της δουλειάς."
+
+#: core/models.py
+msgid "Mason/Concrete"
+msgstr "Χτίστης/Μπετόν"
+
+#: templates/messaging/thread.html
+msgid "Message"
+msgstr "Μήνυμα"
+
+#: templates/jobs/job_detail.html
+msgid "Message the client"
+msgstr "Στείλε μήνυμα στον πελάτη"
+
+#: templates/base.html
+#: templates/messaging/inbox.html
+#: templates/worklog/workspace.html
+msgid "Messages"
+msgstr "Μηνύματα"
+
+#: templates/messaging/inbox.html
+msgid "Messages — Construction's Finest"
+msgstr "Μηνύματα — Construction's Finest"
+
+#: templates/base.html
+msgid "Mine"
+msgstr "Τα δικά μου"
+
+#: core/test_i18n.py
+msgid "Missing"
+msgstr "Λείπει"
+
+#: templates/worklog/workspace.html
+msgid "Money held"
+msgstr "Χρήματα σε κράτηση"
+
+#: templates/core/about.html
+msgid "Most people settle that between themselves, and this board does not get in the way of it. For the times you would rather not work on a promise, a gig can be put through escrow — the client's card is charged before the worker travels, and the money is released after the day."
+msgstr "Οι περισσότεροι το τακτοποιούν μεταξύ τους, και ο πίνακας δεν μπαίνει εμπόδιο σε αυτό. Για τις φορές που δεν θέλεις να δουλέψεις με υπόσχεση, ένα μεροκάματο μπορεί να περάσει από μεσεγγύηση — η κάρτα του πελάτη χρεώνεται πριν ξεκινήσει ο τεχνίτης και τα χρήματα αποδεσμεύονται μετά την ημέρα."
+
+#: templates/base.html
+msgid "My profile"
+msgstr "Το προφίλ μου"
+
+#: accounts/forms.py
+msgid "Name"
+msgstr "Όνομα"
+
+#: templates/jobs/counter_form.html
+msgid "Name your price"
+msgstr "Όρισε την τιμή σου"
+
+#: jobs/forms.py
+msgid "Name, bio, or service area"
+msgstr "Όνομα, βιογραφικό ή περιοχή εξυπηρέτησης"
+
+#: jobs/forms.py
+msgid "Neighbourhood, cross streets, or site name."
+msgstr "Γειτονιά, διασταύρωση ή όνομα εργοταξίου."
+
+#: accounts/templatetags/account_extras.py
+#: templates/accounts/_worker_card.html
+#: templates/accounts/client_detail.html
+#: templates/jobs/job_applicants.html
+#: templates/jobs/job_detail.html
+msgid "New"
+msgstr "Νέο"
+
+#: templates/accounts/_feed_items.html
+msgid "New client"
+msgstr "Νέος πελάτης"
+
+#: templates/jobs/job_list.html
+msgid "New gigs go up daily — and workers who've filled in a profile get found by clients before a post is ever written."
+msgstr "Νέα μεροκάματα ανεβαίνουν καθημερινά — και οι τεχνίτες που έχουν συμπληρώσει προφίλ βρίσκονται από πελάτες πριν καν γραφτεί αγγελία."
+
+#: templates/jobs/_offer_worker.html
+msgid "New here"
+msgstr "Νέος εδώ"
+
+#: templates/accounts/client_detail.html
+#: templates/accounts/worker_detail.html
+msgid "New here — not enough completed jobs yet for rates to mean anything."
+msgstr "Νέος εδώ — δεν υπάρχουν ακόμη αρκετές ολοκληρωμένες δουλειές ώστε τα ποσοστά να σημαίνουν κάτι."
+
+#: notifications/models.py
+msgid "New message"
+msgstr ""
+
+#: notifications/mail.py
+msgid "New message about %(job)s"
+msgstr "Νέο μήνυμα για το %(job)s"
+
+#: templates/jobs/job_form.html
+msgid "New post"
+msgstr "Νέα αγγελία"
+
+#: templates/accounts/feed.html
+msgid "New profiles go up daily — check back."
+msgstr "Νέα προφίλ ανεβαίνουν καθημερινά — ξαναδές το."
+
+#: templates/jobs/mine.html
+msgid "New terms — your move"
+msgstr "Νέοι όροι — η σειρά σου"
+
+#: templates/notifications/email/job_posted.txt
+msgid "New work in %(trade)s: %(title)s."
+msgstr "Νέα δουλειά σε %(trade)s: %(title)s."
+
+#: notifications/models.py
+msgid "New work in your trade"
+msgstr "Νέα δουλειά στην ειδικότητά σου"
+
+#: notifications/mail.py
+msgid "New work posted: %(job)s"
+msgstr "Νέα δουλειά: %(job)s"
+
+#: templates/worklog/workspace.html
+msgid "Next"
+msgstr "Επόμενο"
+
+#: core/dates.py
+msgid "Next month"
+msgstr "Επόμενος μήνας"
+
+#: assistant/options.py
+#: templates/payments/payouts.html
+msgid "No"
+msgstr "Όχι"
+
+#: templates/jobs/mine.html
+msgid "No applicants yet"
+msgstr "Καμία υποψηφιότητα ακόμη"
+
+#: templates/accounts/_reviews.html
+msgid "No comment left."
+msgstr "Δεν άφησε σχόλιο."
+
+#: templates/messaging/inbox.html
+msgid "No conversations yet."
+msgstr "Καμία συνομιλία ακόμη."
+
+#: core/dates.py
+msgid "No day picked yet."
+msgstr "Δεν έχεις διαλέξει ημέρα ακόμη."
+
+#: core/dates.py
+msgid "No days picked yet."
+msgstr "Δεν έχεις διαλέξει ημέρες ακόμη."
+
+#: templates/messaging/_dm_row.html
+msgid "No messages yet"
+msgstr "Κανένα μήνυμα ακόμη"
+
+#: templates/messaging/thread.html
+msgid "No messages yet — say something."
+msgstr "Κανένα μήνυμα ακόμη — πες κάτι."
+
+#: templates/accounts/feed.html
+msgid "No open work at the moment."
+msgstr "Καμία ανοιχτή δουλειά αυτή τη στιγμή."
+
+#: templates/jobs/job_list.html
+msgid "No open work matches these filters."
+msgstr "Καμία ανοιχτή δουλειά δεν ταιριάζει με αυτά τα φίλτρα."
+
+#: templates/accounts/worker_edit.html
+msgid "No photos yet."
+msgstr "Καμία φωτογραφία ακόμη."
+
+#: templates/accounts/_reviews.html
+msgid "No reviews yet — they arrive once a job is finished and rated."
+msgstr "Καμία αξιολόγηση ακόμη — έρχονται μόλις μια δουλειά ολοκληρωθεί και αξιολογηθεί."
+
+#: templates/jobs/_negotiation.html
+msgid "No thanks"
+msgstr "Όχι ευχαριστώ"
+
+#: templates/worklog/workspace.html
+msgid "No timer on this one: with no money held there is nothing to release, so it stays here until they agree."
+msgstr "Καμία αντίστροφη μέτρηση εδώ: αφού δεν κρατούνται χρήματα, δεν υπάρχει τίποτα να αποδεσμευτεί, οπότε μένει έτσι μέχρι να συμφωνήσει."
+
+#: templates/accounts/worker_detail.html
+msgid "No trades listed."
+msgstr "Δεν έχουν δηλωθεί ειδικότητες."
+
+#: templates/accounts/dashboard.html
+msgid "No trades selected yet — clients search by trade, so this is the one to fill in first."
+msgstr "Δεν έχεις επιλέξει ειδικότητες — οι πελάτες ψάχνουν ανά ειδικότητα, οπότε αυτό συμπλήρωσέ το πρώτο."
+
+#: templates/jobs/worker_list.html
+msgid "No workers match these filters."
+msgstr "Κανένας τεχνίτης δεν ταιριάζει με αυτά τα φίλτρα."
+
+#: templates/jobs/job_applicants.html
+msgid "Nobody has applied yet."
+msgstr "Κανείς δεν έχει κάνει αίτηση ακόμη."
+
+#: templates/notifications/email/job_posted.txt
+msgid "Nobody has been picked yet. Apply, or name your own price if the money isn't right."
+msgstr "Δεν έχει επιλεγεί κανείς ακόμη. Κάνε αίτηση, ή πες τη δική σου τιμή αν τα λεφτά δεν σε καλύπτουν."
+
+#: templates/jobs/job_detail.html
+msgid "Nobody is holding an answer to this. It's still private, so it isn't on the board — post it publicly and anyone can apply."
+msgstr "Κανείς δεν περιμένει απάντηση σε αυτό. Είναι ακόμη ιδιωτικό, οπότε δεν βρίσκεται στον πίνακα — δημοσίευσέ το και μπορεί να κάνει αίτηση οποιοσδήποτε."
+
+#: templates/accounts/feed.html
+#: templates/jobs/worker_list.html
+msgid "Nobody's listed here yet."
+msgstr "Δεν έχει καταχωρηθεί κανείς ακόμη."
+
+#: templates/jobs/offer_choose.html
+msgid "None of these the right work?"
+msgstr "Καμία από αυτές δεν κάνει;"
+
+#: templates/accounts/_worker_card.html
+#: templates/accounts/client_detail.html
+#: templates/accounts/worker_detail.html
+#: templates/jobs/job_applicants.html
+msgid "None yet"
+msgstr "Κανένα ακόμη"
+
+#: core/test_i18n.py
+msgid "Not a string in the catalogue"
+msgstr "Not a string in the catalogue"
+
+#: templates/jobs/job_applicants.html
+msgid "Not at that price"
+msgstr "Όχι σε αυτή την τιμή"
+
+#: templates/worklog/workspace.html
+msgid "Not checked in yet"
+msgstr "Δεν έχει γίνει check-in ακόμη"
+
+#: accounts/models.py
+msgid "Not currently available"
+msgstr "Μη διαθέσιμος αυτή τη στιγμή"
+
+#: jobs/models.py
+msgid "Not selected"
+msgstr "Δεν επιλέχθηκε"
+
+#: templates/accounts/_worker_card.html
+msgid "Not stated"
+msgstr "Δεν δηλώθηκε"
+
+#: templates/accounts/worker_detail.html
+msgid "Not taking work at the moment, so offers are turned off. Their profile stays up — worth checking back."
+msgstr "Δεν δέχεται δουλειές αυτή τη στιγμή, οπότε οι προσφορές είναι κλειστές. Το προφίλ παραμένει — αξίζει να ξαναδείς."
+
+#: accounts/models.py
+msgid "Not taking work right now"
+msgstr "Δεν δέχεται δουλειές αυτή τη στιγμή"
+
+#: templates/payments/payouts.html
+msgid "Not yet"
+msgstr "Όχι ακόμη"
+
+#: templates/worklog/workspace.html
+msgid "Not yet — this day is still ahead."
+msgstr "Όχι ακόμη — αυτή η ημέρα δεν έχει έρθει."
+
+#: templates/notifications/email/offer_received.txt
+msgid "Nothing is agreed until you accept it, and declining needs no reason."
+msgstr "Τίποτα δεν κλείνει μέχρι να το δεχτείς, και η άρνηση δεν χρειάζεται αιτιολογία."
+
+#: templates/jobs/counter_form.html
+msgid "Nothing is booked by sending this. It goes back to the other side, who can say yes, say no, or come back with something else again."
+msgstr "Δεν κλείνει τίποτα με την αποστολή. Πηγαίνει πίσω στην άλλη πλευρά, που μπορεί να πει ναι, να πει όχι, ή να επανέλθει με κάτι άλλο."
+
+#: templates/jobs/job_form.html
+msgid "Nothing is charged by posting. If you choose escrow, you fund it when you confirm a worker; otherwise payment stays between the two of you."
+msgstr "Δεν χρεώνεται τίποτα με τη δημοσίευση. Αν διαλέξεις μεσεγγύηση, τη χρηματοδοτείς όταν επιβεβαιώνεις τεχνίτη· αλλιώς η πληρωμή μένει μεταξύ σας."
+
+#: templates/jobs/offer_form.html
+msgid "Nothing is charged by sending this. How it is paid is the choice above, and it stays between you unless you both pick escrow."
+msgstr "Δεν χρεώνεται τίποτα με την αποστολή. Ο τρόπος πληρωμής είναι η επιλογή παραπάνω, και μένει μεταξύ σας εκτός αν διαλέξετε μεσεγγύηση."
+
+#: templates/jobs/offer_form.html
+msgid "Nothing is charged now or later — you and the worker settle this between you."
+msgstr "Δεν χρεώνεται τίποτα τώρα ούτε αργότερα — εσύ και ο τεχνίτης το τακτοποιείτε μεταξύ σας."
+
+#: templates/jobs/offer_form.html
+msgid "Nothing is charged now. If they accept, you fund the escrow and the money is held until the day's work is signed off."
+msgstr "Δεν χρεώνεται τίποτα τώρα. Αν δεχτεί, χρηματοδοτείς τη μεσεγγύηση και τα χρήματα κρατούνται μέχρι να εγκριθεί η δουλειά της ημέρας."
+
+#: templates/jobs/offer_choose.html
+msgid "Nothing is retyped and nothing is copied — they are being sent this post as it stands, and it stays on the board while they decide."
+msgstr "Τίποτα δεν ξαναγράφεται και τίποτα δεν αντιγράφεται — τους στέλνεται αυτή η αγγελία όπως είναι, και μένει στον πίνακα όσο αποφασίζουν."
+
+#: templates/notifications/email/dispute.txt
+msgid "Nothing moves on its own from here — somebody reads it and decides."
+msgstr "Από εδώ και πέρα τίποτα δεν προχωράει μόνο του — κάποιος το διαβάζει και αποφασίζει."
+
+#: templates/jobs/job_list.html
+msgid "Nothing on the board right now."
+msgstr "Τίποτα στον πίνακα αυτή τη στιγμή."
+
+#: templates/accounts/client_detail.html
+msgid "Nothing open at the moment. Their track record below still tells you what they're like to work for."
+msgstr "Τίποτα ανοιχτό αυτή τη στιγμή. Το ιστορικό παρακάτω σου λέει πάντως πώς είναι να δουλεύεις γι' αυτόν."
+
+#: templates/payments/escrow_detail.html
+msgid "Nothing reaches the worker until you sign the day off, or the approval window runs out. Call it off before they start and the hold is released."
+msgstr "Τίποτα δεν φτάνει στον τεχνίτη μέχρι να εγκρίνεις την ημέρα ή να λήξει το παράθυρο έγκρισης. Ακύρωσέ το πριν ξεκινήσει και η κράτηση αποδεσμεύεται."
+
+#: templates/jobs/mine.html
+msgid "Offer"
+msgstr "Προσφορά"
+
+#: templates/jobs/offer_choose.html
+#: templates/jobs/offer_form.html
+msgid "Offer %(who)s a job"
+msgstr "Πρόσφερε δουλειά στον/στην %(who)s"
+
+#: jobs/views.py
+msgid "Offer sent to %(worker)s. You'll hear back here and in messages."
+msgstr "Η προσφορά στάλθηκε στον/στην %(worker)s. Θα ενημερωθείς εδώ και στα μηνύματα."
+
+#: templates/jobs/offer_form.html
+msgid "Offer them one of your open jobs instead."
+msgstr "Πρότεινέ τους μία από τις ανοιχτές σου δουλειές."
+
+#: templates/accounts/feed.html
+msgid "Offer, counter, message, and settle it the way you both want."
+msgstr "Πρόσφερε, αντιπρότεινε, στείλε μήνυμα και τακτοποιήστε το όπως θέλετε κι οι δύο."
+
+#: templates/jobs/mine.html
+msgid "Offered directly"
+msgstr "Προσφέρθηκε απευθείας"
+
+#: jobs/views.py
+msgid "Offered to %(who)s — all %(count)s days."
+msgstr "Στάλθηκε στον/στην %(who)s — και τις %(count)s ημέρες."
+
+#: jobs/views.py
+msgid "Offered to %(who)s."
+msgstr "Στάλθηκε στον/στην %(who)s."
+
+#: templates/jobs/mine.html
+msgid "Offered to you"
+msgstr "Προσφέρθηκε σε σένα"
+
+#: templates/accounts/worker_detail.html
+msgid "Offers that include these days can't be accepted — they are taken. Any day not marked is free."
+msgstr ""
+
+#: templates/jobs/mine.html
+msgid "Offers you've sent"
+msgstr "Προσφορές που έστειλες"
+
+#: accounts/forms.py
+msgid "Offers, applications, messages and anything waiting on your answer. Never marketing, and one switch turns off the lot."
+msgstr "Προσφορές, αιτήσεις, μηνύματα και ό,τι περιμένει απάντησή σου. Ποτέ διαφημίσεις, και ένας διακόπτης τα κλείνει όλα."
+
+#: accounts/models.py
+msgid "On a longer-term placement"
+msgstr "Σε πιο μακροχρόνια τοποθέτηση"
+
+#: templates/accounts/worker_detail.html
+msgid "On a longer-term placement with no set finish date. Worth asking if you're planning ahead."
+msgstr "Σε πιο μακροχρόνια τοποθέτηση χωρίς ορισμένη ημερομηνία λήξης. Αξίζει να ρωτήσεις αν σχεδιάζεις από νωρίς."
+
+#: templates/core/about.html
+msgid "On the fee."
+msgstr "Για την προμήθεια."
+
+#: jobs/models.py
+msgid "On the table"
+msgstr "Στο τραπέζι"
+
+#: templates/jobs/counter_form.html
+msgid "On the table now"
+msgstr "Στο τραπέζι τώρα"
+
+#: templates/worklog/workspace.html
+msgid "Once the job is finished you can each leave a rating."
+msgstr "Μόλις ολοκληρωθεί η δουλειά μπορείτε να αφήσετε αξιολόγηση."
+
+#: templates/jobs/job_form.html
+msgid "One date, one price. You choose below how it is paid."
+msgstr "Μία ημερομηνία, μία τιμή. Διάλεξε παρακάτω πώς πληρώνεται."
+
+#: templates/jobs/job_detail.html
+msgid "One day of a %(n)s-day booking, %(first)s to %(last)s. %(pay)s per day — %(total)s and %(hours)s hours in all. Each day is agreed and signed off on its own."
+msgstr "Μία ημέρα από κράτηση %(n)s ημερών, %(first)s έως %(last)s. %(pay)s ανά ημέρα — %(total)s και %(hours)s ώρες συνολικά. Κάθε ημέρα συμφωνείται και εγκρίνεται ξεχωριστά."
+
+#: jobs/models.py
+msgid "One-day gig"
+msgstr "Μεροκάματο μίας ημέρας"
+
+#: accounts/forms.py
+msgid "One-line intro"
+msgstr "Σύντομη περιγραφή"
+
+#: jobs/models.py
+msgid "Ongoing"
+msgstr "Συνεχής"
+
+#: templates/jobs/job_post_choose.html
+msgid "Ongoing or longer-term work at an hourly or daily rate. Workers apply, you pick someone, and you settle up directly."
+msgstr "Συνεχής ή πιο μακροχρόνια εργασία με ωριαία ή ημερήσια αμοιβή. Οι τεχνίτες κάνουν αίτηση, εσύ διαλέγεις, και τακτοποιείτε απευθείας."
+
+#: templates/jobs/job_form.html
+msgid "Ongoing work at a rate. Workers apply and you pick."
+msgstr "Συνεχής εργασία με αμοιβή. Οι τεχνίτες κάνουν αίτηση και εσύ διαλέγεις."
+
+#: accounts/forms.py
+msgid "Only shown to people you're working with on a job."
+msgstr "Εμφανίζεται μόνο σε όσους συνεργάζεσαι σε κάποια δουλειά."
+
+#: jobs/forms.py
+msgid "Only this worker sees it. The description above is the job itself and stays with the post."
+msgstr "Μόνο αυτός ο τεχνίτης το βλέπει. Η περιγραφή παραπάνω είναι η ίδια η δουλειά και μένει με την αγγελία."
+
+#: jobs/forms.py
+msgid "Only this worker sees it. The post itself stays as it is."
+msgstr "Μόνο αυτός ο μάστορας το βλέπει. Η αγγελία μένει όπως είναι."
+
+#: accounts/forms.py
+msgid "Only your age is ever shown, never the date."
+msgstr "Εμφανίζεται μόνο η ηλικία σου, ποτέ η ημερομηνία."
+
+#: templates/messaging/start_direct.html
+msgid "Open a thread"
+msgstr "Άνοιξε συνομιλία"
+
+#: templates/accounts/feed.html
+msgid "Open posts, newest first. Applying is free."
+msgstr "Ανοιχτές αγγελίες, πρώτα οι νεότερες. Η αίτηση είναι δωρεάν."
+
+#: templates/accounts/client_detail.html
+msgid "Open right now"
+msgstr "Ανοιχτό αυτή τη στιγμή"
+
+#: templates/notifications/email/application.txt
+msgid "Open the applicants list to see who else is in, and to pick somebody."
+msgstr "Άνοιξε τη λίστα υποψηφίων για να δεις ποιοι άλλοι ενδιαφέρονται και να διαλέξεις."
+
+#: templates/assistant/_widget.html
+msgid "Open the assistant"
+msgstr "Άνοιξε τον βοηθό"
+
+#: templates/jobs/job_detail.html
+msgid "Open the job"
+msgstr "Άνοιξε τη δουλειά"
+
+#: accounts/models.py
+msgid "Open to a full-time job?"
+msgstr "Ανοιχτός σε δουλειά πλήρους απασχόλησης;"
+
+#: jobs/forms.py
+msgid "Open to full-time"
+msgstr "Ανοιχτοί σε πλήρη απασχόληση"
+
+#: templates/accounts/worker_detail.html
+msgid "Open to offers — their rate is %(rate)s."
+msgstr "Δέχεται προσφορές — η αμοιβή του είναι %(rate)s."
+
+#: accounts/models.py
+msgid "Open to ongoing work"
+msgstr "Ανοιχτός σε συνεχή εργασία"
+
+#: accounts/models.py
+msgid "Optional PDF résumé."
+msgstr "Προαιρετικό βιογραφικό σε PDF."
+
+#: templates/accounts/worker_edit.html
+msgid "Optional PDF."
+msgstr "Προαιρετικό PDF."
+
+#: jobs/forms.py
+msgid "Optional — what makes you right for this one?"
+msgstr "Προαιρετικό — τι σε κάνει κατάλληλο γι' αυτή;"
+
+#: templates/core/about.html
+msgid "Optional, and off unless the client picks it when posting. This is what happens when they do."
+msgstr "Προαιρετική, και ανενεργή εκτός αν τη διαλέξει ο πελάτης κατά τη δημοσίευση. Να τι γίνεται όταν τη διαλέξει."
+
+#: templates/accounts/worker_edit.html
+msgid "Optional. Only fill in the ones for trades you selected above."
+msgstr "Προαιρετικό. Συμπλήρωσε μόνο όσα αφορούν τις ειδικότητες που επέλεξες παραπάνω."
+
+#: jobs/models.py
+msgid "Optional. What makes you right for this one?"
+msgstr "Προαιρετικό. Τι σε κάνει κατάλληλο γι' αυτή;"
+
+#: jobs/forms.py
+msgid "Paid by"
+msgstr "Πληρωμή ανά"
+
+#: core/state_machine.py
+#: templates/worklog/workspace.html
+msgid "Paid out"
+msgstr "Πληρώθηκε"
+
+#: core/models.py
+msgid "Painter"
+msgstr "Ελαιοχρωματιστής"
+
+#: templates/accounts/worker_detail.html
+msgid "Past work"
+msgstr "Προηγούμενες δουλειές"
+
+#: jobs/models.py
+#: templates/jobs/counter_form.html
+msgid "Pay"
+msgstr "Πληρωμή"
+
+#: jobs/models.py
+msgid "Pay not set"
+msgstr "Δεν ορίστηκε πληρωμή"
+
+#: templates/jobs/job_detail.html
+msgid "Pay per day"
+msgstr "Πληρωμή ανά ημέρα"
+
+#: templates/payments/escrow_detail.html
+msgid "Payment"
+msgstr "Πληρωμή"
+
+#: templates/jobs/job_detail.html
+#: templates/worklog/workspace.html
+msgid "Payment detail"
+msgstr "Λεπτομέρειες πληρωμής"
+
+#: templates/jobs/job_detail.html
+msgid "Payment is arranged directly between you two — nothing is held here."
+msgstr "Η πληρωμή κανονίζεται απευθείας μεταξύ σας — δεν κρατείται τίποτα εδώ."
+
+#: templates/worklog/workspace.html
+msgid "Payment is between the two of you. We record that the job happened — nothing is held and nothing is released."
+msgstr "Η πληρωμή είναι μεταξύ σας. Εμείς καταγράφουμε ότι η δουλειά έγινε — τίποτα δεν κρατείται και τίποτα δεν αποδεσμεύεται."
+
+#: templates/jobs/job_apply.html
+msgid "Payment on this one is arranged directly between you and the client."
+msgstr "Η πληρωμή σε αυτή κανονίζεται απευθείας μεταξύ σου και του πελάτη."
+
+#: templates/payments/escrow_detail.html
+msgid "Payments aren't switched on in this install."
+msgstr "Οι πληρωμές δεν είναι ενεργοποιημένες σε αυτή την εγκατάσταση."
+
+#: templates/payments/payouts.html
+msgid "Payments aren't switched on yet."
+msgstr "Οι πληρωμές δεν έχουν ενεργοποιηθεί ακόμη."
+
+#: templates/payments/payouts.html
+msgid "Payouts enabled"
+msgstr "Οι πληρωμές ενεργοποιήθηκαν"
+
+#: accounts/models.py
+msgid "Per day"
+msgstr "Ανά ημέρα"
+
+#: accounts/models.py
+msgid "Per hour"
+msgstr "Ανά ώρα"
+
+#: jobs/models.py
+msgid "Per hour or per day."
+msgstr "Ανά ώρα ή ανά ημέρα."
+
+#: accounts/forms.py
+msgid "Phone"
+msgstr "Τηλέφωνο"
+
+#: templates/accounts/worker_edit.html
+msgid "Photos of past work"
+msgstr "Φωτογραφίες προηγούμενων δουλειών"
+
+#: core/dates.py
+msgid "Pick a day"
+msgstr "Διάλεξε ημέρα"
+
+#: jobs/forms.py
+msgid "Pick at least one day."
+msgstr "Διάλεξε τουλάχιστον μία ημέρα."
+
+#: core/dates.py
+msgid "Pick days"
+msgstr "Διάλεξε ημέρες"
+
+#: jobs/forms.py
+msgid "Pick one of your open jobs, or write a new one."
+msgstr "Διάλεξε μία από τις ανοιχτές σου δουλειές, ή γράψε καινούργια."
+
+#: jobs/forms.py
+msgid "Pick one or more. Each day is booked and paid separately."
+msgstr "Διάλεξε μία ή περισσότερες. Κάθε ημέρα κλείνεται και πληρώνεται ξεχωριστά."
+
+#: accounts/forms.py
+msgid "Pick the days you can work. Past dates can't be chosen."
+msgstr "Διάλεξε τις ημέρες που μπορείς να δουλέψεις. Οι περασμένες ημερομηνίες δεν επιλέγονται."
+
+#: templates/messaging/start_direct.html
+msgid "Pick which gig you're contacting them about."
+msgstr "Διάλεξε για ποιο μεροκάματο επικοινωνείς μαζί του."
+
+#: templates/payments/escrow_detail.html
+#: templates/payments/payouts.html
+msgid "Platform fee"
+msgstr "Προμήθεια πλατφόρμας"
+
+#: core/models.py
+msgid "Plumber"
+msgstr "Υδραυλικός"
+
+#: templates/jobs/job_post_choose.html
+msgid "Position"
+msgstr "Θέση"
+
+#: templates/jobs/job_form.html
+#: templates/messaging/start_direct.html
+msgid "Post a gig"
+msgstr "Ανέβασε μεροκάματο"
+
+#: templates/accounts/_feed_items.html
+#: templates/accounts/dashboard.html
+#: templates/accounts/feed.html
+#: templates/jobs/job_list.html
+#: templates/jobs/mine.html
+#: templates/jobs/worker_list.html
+msgid "Post a job"
+msgstr "Ανέβασε αγγελία"
+
+#: templates/jobs/job_post_choose.html
+msgid "Post a job — Construction's Finest"
+msgstr "Ανέβασε αγγελία — Construction's Finest"
+
+#: templates/jobs/job_form.html
+msgid "Post a position"
+msgstr "Ανέβασε θέση"
+
+#: templates/jobs/job_form.html
+msgid "Post it"
+msgstr "Ανέβασέ το"
+
+#: templates/jobs/job_detail.html
+msgid "Post it on the board"
+msgstr "Ανέβασέ το στον πίνακα"
+
+#: templates/jobs/job_list.html
+msgid "Post the first job"
+msgstr "Ανέβασε την πρώτη αγγελία"
+
+#: templates/jobs/worker_list.html
+msgid "Post the job anyway — new workers see the board before they finish their own profile, and posts are what bring them in."
+msgstr "Ανέβασε την αγγελία έτσι κι αλλιώς — οι νέοι τεχνίτες βλέπουν τον πίνακα πριν ολοκληρώσουν το προφίλ τους, και οι αγγελίες είναι που τους φέρνουν."
+
+#: templates/accounts/dashboard.html
+msgid "Post work, apply, agree terms, message, and rate each other when the job is done. Escrow is there if you want it on a particular deal."
+msgstr "Ανέβασε δουλειά, κάνε αίτηση, συμφωνήστε όρους, στείλτε μηνύματα και αξιολογήστε ο ένας τον άλλον όταν τελειώσει. Η μεσεγγύηση είναι διαθέσιμη αν τη θέλετε σε κάποια συμφωνία."
+
+#: core/state_machine.py
+msgid "Posted"
+msgstr "Δημοσιευμένο"
+
+#: templates/jobs/job_detail.html
+msgid "Posted %(ago)s ago"
+msgstr "Δημοσιεύτηκε πριν %(ago)s"
+
+#: templates/jobs/job_detail.html
+msgid "Posted by"
+msgstr "Δημοσιεύτηκε από"
+
+#: templates/jobs/mine.html
+msgid "Posted by you"
+msgstr "Δημοσιεύτηκε από σένα"
+
+#: jobs/views.py
+msgid "Posted. Workers can see it now."
+msgstr "Δημοσιεύτηκε. Οι τεχνίτες μπορούν να τη δουν τώρα."
+
+#: templates/jobs/job_applicants.html
+msgid "Posts with a clear title and a real rate get picked up fastest — and you don't have to wait. Find someone in this trade and offer it to them by name."
+msgstr "Οι αγγελίες με σαφή τίτλο και πραγματική αμοιβή βρίσκουν άνθρωπο πιο γρήγορα — και δεν χρειάζεται να περιμένεις. Βρες κάποιον σε αυτή την ειδικότητα και πρόσφερέ του τη δουλειά ονομαστικά."
+
+#: core/dates.py
+msgid "Previous month"
+msgstr "Προηγούμενος μήνας"
+
+#: templates/core/whitepaper.html
+msgid "Print or save as PDF"
+msgstr "Εκτύπωση ή αποθήκευση ως PDF"
+
+#: templates/jobs/job_detail.html
+#: templates/jobs/mine.html
+msgid "Private offer"
+msgstr "Ιδιωτική προσφορά"
+
+#: templates/base.html
+msgid "Profile"
+msgstr "Προφίλ"
+
+#: accounts/forms.py
+msgid "Profile photo"
+msgstr "Φωτογραφία προφίλ"
+
+#: templates/core/about.html
+msgid "Profiles show completion and dispute rates only after %(min_jobs_for_stats)s finished jobs. Below that they read \"New\" — one bad first day should not brand someone with a 0% completion rate forever, and a single job at 100% is not evidence of anything either."
+msgstr "Τα προφίλ δείχνουν ποσοστά ολοκλήρωσης και ενστάσεων μόνο μετά από %(min_jobs_for_stats)s ολοκληρωμένες δουλειές. Κάτω από αυτό γράφουν \"Νέο\" — μια κακή πρώτη μέρα δεν πρέπει να σφραγίζει κάποιον με 0% ολοκλήρωση για πάντα, ούτε μία δουλειά στο 100% αποδεικνύει κάτι."
+
+#: templates/accounts/feed.html
+msgid "Profiles with the trade, the rate and the days they are free."
+msgstr "Προφίλ με την ειδικότητα, την αμοιβή και τις ημέρες που είναι ελεύθεροι."
+
+#: core/models.py
+msgid "Prompt for a licence number on worker profiles in this trade."
+msgstr "Ζήτα αριθμό άδειας στα προφίλ τεχνιτών αυτής της ειδικότητας."
+
+#: templates/jobs/counter_form.html
+msgid "Put different terms up"
+msgstr "Πρότεινε διαφορετικούς όρους"
+
+#: templates/core/whitepaper.html
+msgid "Questions this doesn't answer? The"
+msgstr "Ερωτήσεις που δεν απαντώνται εδώ; Η"
+
+#: accounts/forms.py
+#: jobs/forms.py
+#: templates/accounts/worker_detail.html
+#: templates/accounts/worker_edit.html
+#: templates/jobs/job_applicants.html
+#: templates/jobs/job_detail.html
+msgid "Rate"
+msgstr "Αμοιβή"
+
+#: templates/jobs/review_form.html
+msgid "Rate %(who)s"
+msgstr "Αξιολόγησε τον/την %(who)s"
+
+#: accounts/models.py
+#: jobs/models.py
+msgid "Rate on request"
+msgstr "Αμοιβή κατόπιν αιτήματος"
+
+#: templates/jobs/mine.html
+msgid "Rate these"
+msgstr "Αξιολόγησε αυτές"
+
+#: templates/assistant/_form_offer.html
+msgid "Rather just answer a few questions?"
+msgstr "Προτιμάς απλώς να απαντήσεις μερικές ερωτήσεις;"
+
+#: templates/accounts/_worker_card.html
+#: templates/accounts/worker_detail.html
+#: templates/jobs/job_applicants.html
+msgid "Rating"
+msgstr "Αξιολόγηση"
+
+#: templates/accounts/client_detail.html
+msgid "Rating from workers"
+msgstr "Αξιολόγηση από τεχνίτες"
+
+#: templates/core/about.html
+msgid "Read the whitepaper"
+msgstr "Διάβασε τη λευκή βίβλο"
+
+#: templates/payments/payouts.html
+msgid "Ready"
+msgstr "Έτοιμο"
+
+#: templates/accounts/feed.html
+msgid "Real people, named trades"
+msgstr "Πραγματικοί άνθρωποι, συγκεκριμένες ειδικότητες"
+
+#: core/state_machine.py
+msgid "Refunded"
+msgstr "Επιστράφηκε"
+
+#: payments/models.py
+msgid "Released to worker"
+msgstr "Αποδεσμεύτηκε στον τεχνίτη"
+
+#: templates/worklog/workspace.html
+msgid "Releases after the job is signed off"
+msgstr "Αποδεσμεύεται αφού εγκριθεί η δουλειά"
+
+#: templates/worklog/workspace.html
+msgid "Releases on its own unless someone disputes the hours."
+msgstr "Αποδεσμεύεται από μόνο του εκτός αν κάποιος υποβάλει ένσταση για τις ώρες."
+
+#: core/dates.py
+#: templates/accounts/worker_edit.html
+msgid "Remove"
+msgstr "Αφαίρεση"
+
+#: jobs/models.py
+msgid "Replaced by a later offer"
+msgstr "Αντικαταστάθηκε από νεότερη προσφορά"
+
+#: templates/notifications/email/message.txt
+msgid "Reply in the thread — they'll see it there."
+msgstr "Απάντησε στη συνομιλία — εκεί θα το δουν."
+
+#: worklog/models.py
+msgid "Resolved — paid to worker"
+msgstr "Επιλύθηκε — πληρώθηκε στον τεχνίτη"
+
+#: worklog/models.py
+msgid "Resolved — refunded to client"
+msgstr "Επιλύθηκε — επιστράφηκε στον πελάτη"
+
+#: payments/models.py
+msgid "Returned to client"
+msgstr "Επιστράφηκε στον πελάτη"
+
+#: templates/accounts/_reviews.html
+msgid "Reviews"
+msgstr "Αξιολογήσεις"
+
+#: assistant/views.py
+msgid "Right — let's do %(noun)s together. I'll ask one thing at a time, and you can answer however you like. Nothing gets saved until you've seen the finished form and pressed save."
+msgstr "Ωραία — ας κάνουμε %(noun)s μαζί. Θα ρωτάω ένα πράγμα κάθε φορά και μπορείς να απαντάς όπως θέλεις. Τίποτα δεν αποθηκεύεται μέχρι να δεις την ολοκληρωμένη φόρμα και να πατήσεις αποθήκευση."
+
+#: core/models.py
+msgid "Roofer"
+msgstr "Στεγαστής"
+
+#: templates/accounts/worker_edit.html
+msgid "Résumé"
+msgstr "Βιογραφικό"
+
+#: accounts/forms.py
+msgid "Résumé (PDF, optional)"
+msgstr "Βιογραφικό (PDF, προαιρετικό)"
+
+#: templates/jobs/job_apply.html
+msgid "Save"
+msgstr "Αποθήκευση"
+
+#: templates/jobs/job_form.html
+msgid "Save changes"
+msgstr "Αποθήκευση αλλαγών"
+
+#: templates/accounts/details.html
+msgid "Save details"
+msgstr "Αποθήκευση στοιχείων"
+
+#: templates/accounts/client_edit.html
+#: templates/accounts/worker_edit.html
+msgid "Save profile"
+msgstr "Αποθήκευση προφίλ"
+
+#: templates/jobs/job_detail.html
+#: templates/jobs/review_form.html
+#: templates/worklog/workspace.html
+msgid "Saving…"
+msgstr "Αποθήκευση…"
+
+#: jobs/forms.py
+msgid "Search"
+msgstr "Αναζήτηση"
+
+#: templates/base.html
+msgid "Sections"
+msgstr "Ενότητες"
+
+#: templates/accounts/feed.html
+msgid "See all"
+msgstr "Δες όλα"
+
+#: templates/accounts/_feed_items.html
+#: templates/jobs/mine.html
+msgid "See the job"
+msgstr "Δες τη δουλειά"
+
+#: jobs/models.py
+msgid "Selected"
+msgstr "Επιλέχθηκε"
+
+#: templates/accounts/worker_detail.html
+msgid "Self-reported"
+msgstr "Δηλωμένο από τον ίδιο"
+
+#: templates/accounts/worker_edit.html
+msgid "Self-reported. Construction's Finest does not verify licence numbers yet, and never shows them to clients as verified."
+msgstr "Δηλωμένο από τον ίδιο. Το Construction's Finest δεν επαληθεύει ακόμη αριθμούς αδειών, και ποτέ δεν τους εμφανίζει στους πελάτες ως επαληθευμένους."
+
+#: templates/assistant/_widget.html
+#: templates/messaging/thread.html
+msgid "Send"
+msgstr "Αποστολή"
+
+#: templates/jobs/job_apply.html
+msgid "Send application"
+msgstr "Αποστολή αίτησης"
+
+#: templates/jobs/offer_choose.html
+#: templates/jobs/offer_form.html
+msgid "Send the offer"
+msgstr "Στείλε την προσφορά"
+
+#: templates/jobs/offer_choose.html
+msgid "Send them something you already have up, or write a new one. Either way only they can accept it."
+msgstr "Στείλ’ τους κάτι που έχεις ήδη ανεβάσει, ή γράψε καινούργιο. Και στις δύο περιπτώσεις μόνο αυτοί μπορούν να το δεχτούν."
+
+#: templates/jobs/counter_form.html
+msgid "Send these terms"
+msgstr "Στείλε αυτούς τους όρους"
+
+#: templates/jobs/offer_choose.html
+#: templates/jobs/offer_form.html
+msgid "Sent as your first message in a thread, so they can ask a question without having to say no first."
+msgstr "Στέλνεται ως το πρώτο σου μήνυμα σε μια συνομιλία, ώστε να μπορεί να ρωτήσει κάτι χωρίς να χρειαστεί να αρνηθεί πρώτα."
+
+#: templates/payments/payouts.html
+msgid "Set up payouts"
+msgstr "Ρύθμισε τις πληρωμές"
+
+#: accounts/models.py
+msgid "Shown at the top of your profile. Change it as often as you like."
+msgstr "Εμφανίζεται στην κορυφή του προφίλ σου. Άλλαξέ το όσο συχνά θέλεις."
+
+#: accounts/forms.py
+msgid "Shown under your name — e.g. “Framing and finish carpentry, own tools”."
+msgstr "Εμφανίζεται κάτω από το όνομά σου — π.χ. «Σκελετοί και φινίρισμα, δικά μου εργαλεία»."
+
+#: templates/base.html
+msgid "Sign in"
+msgstr "Σύνδεση"
+
+#: templates/jobs/job_detail.html
+msgid "Sign in to apply"
+msgstr "Συνδέσου για να κάνεις αίτηση"
+
+#: templates/base.html
+msgid "Sign out"
+msgstr "Αποσύνδεση"
+
+#: templates/core/about.html
+msgid "Sign-in is Google only. There is no password here to phish, reset, or leak."
+msgstr "Η σύνδεση γίνεται μόνο με Google. Δεν υπάρχει κωδικός εδώ για να υποκλαπεί, να επαναφερθεί ή να διαρρεύσει."
+
+#: jobs/forms.py
+msgid "Site latitude (optional)"
+msgstr "Γεωγραφικό πλάτος εργοταξίου (προαιρετικό)"
+
+#: jobs/forms.py
+msgid "Site longitude (optional)"
+msgstr "Γεωγραφικό μήκος εργοταξίου (προαιρετικό)"
+
+#: assistant/options.py
+msgid "Skip"
+msgstr ""
+
+#: templates/base.html
+msgid "Skip to content"
+msgstr "Μετάβαση στο περιεχόμενο"
+
+#: templates/notifications/email/reminder.txt
+msgid "Some things on your list are still waiting on you:"
+msgstr "Κάποια πράγματα στη λίστα σου περιμένουν ακόμη εσένα:"
+
+#: notifications/mail.py
+msgid "Somebody applied for %(job)s"
+msgstr "Κάποιος έκανε αίτηση για το %(job)s"
+
+#: notifications/models.py
+msgid "Somebody applied to your job"
+msgstr ""
+
+#: jobs/views.py
+msgid "Someone has already been selected for this job."
+msgstr "Κάποιος έχει ήδη επιλεγεί για αυτή τη δουλειά."
+
+#: notifications/models.py
+msgid "Something is waiting for you"
+msgstr "Κάτι περιμένει εσένα"
+
+#: templates/worklog/workspace.html
+msgid "Something's wrong with this"
+msgstr "Κάτι δεν πάει καλά με αυτό"
+
+#: assistant/views.py
+msgid "Sorry — I can't reach the assistant right now. You can still fill the form in yourself, everything works as normal."
+msgstr "Συγγνώμη — δεν μπορώ να συνδεθώ με τον βοηθό αυτή τη στιγμή. Μπορείς να συμπληρώσεις τη φόρμα μόνος σου, όλα λειτουργούν κανονικά."
+
+#: assistant/views.py
+msgid "Sorry, I didn't catch that — could you say it another way?"
+msgstr "Συγγνώμη, δεν το κατάλαβα — μπορείς να το πεις αλλιώς;"
+
+#: accounts/models.py
+msgid "Specific days"
+msgstr "Συγκεκριμένες ημέρες"
+
+#: jobs/forms.py
+msgid "Standing and gigs"
+msgstr "Μόνιμες θέσεις και μεροκάματα"
+
+#: jobs/models.py
+msgid "Standing position"
+msgstr "Μόνιμη θέση"
+
+#: templates/payments/escrow_detail.html
+#: templates/payments/payouts.html
+msgid "Status"
+msgstr "Κατάσταση"
+
+#: templates/payments/payouts.html
+msgid "Stripe still needs something from you. Clients can't fund a gig with you on it until this is finished."
+msgstr "Το Stripe χρειάζεται ακόμη κάτι από σένα. Οι πελάτες δεν μπορούν να χρηματοδοτήσουν μεροκάματο με εσένα μέχρι να ολοκληρωθεί αυτό."
+
+#: templates/base.html
+msgid "Switch theme"
+msgstr "Αλλαγή θέματος"
+
+#: core/state_machine.py
+msgid "System"
+msgstr "Σύστημα"
+
+#: templates/worklog/workspace.html
+msgid "Tap this when you arrive. It starts the clock and tells the client you're there."
+msgstr "Πάτα το μόλις φτάσεις. Ξεκινά το χρονόμετρο και ειδοποιεί τον πελάτη ότι είσαι εκεί."
+
+#: jobs/models.py
+msgid "Temporary / short term"
+msgstr "Προσωρινή / βραχυπρόθεσμη"
+
+#: jobs/views.py
+msgid "Thanks — that's on their profile now."
+msgstr "Ευχαριστούμε — μπήκε στο προφίλ του."
+
+#: worklog/services.py
+msgid "That day hasn't come yet — you can mark it done from %(day)s."
+msgstr "Αυτή η ημέρα δεν έχει έρθει ακόμη — μπορείς να τη σημειώσεις ως ολοκληρωμένη από %(day)s."
+
+#: jobs/forms.py
+msgid "That job isn't open to offer any more — it may have been taken or already sent to somebody."
+msgstr "Αυτή η δουλειά δεν είναι πλέον διαθέσιμη — μπορεί να κλείστηκε ή να στάλθηκε ήδη σε κάποιον."
+
+#: jobs/forms.py
+msgid "That's %(count)s days — %(limit)s at a time is the limit. Post these and write the rest as a second batch."
+msgstr "Αυτές είναι %(count)s ημέρες — το όριο είναι %(limit)s κάθε φορά. Δημοσίευσε αυτές και γράψε τις υπόλοιπες σε δεύτερη παρτίδα."
+
+#: assistant/views.py
+msgid "That's a lot of messages in one go — give it a few minutes and try again."
+msgstr "Αυτά είναι πολλά μηνύματα μαζί — δώσε λίγα λεπτά και ξαναδοκίμασε."
+
+#: assistant/views.py
+msgid "That's everything I need. Open the form below — it's filled in with your answers. Change anything that isn't right by clicking straight into it, then press save."
+msgstr "Αυτά ήταν όλα. Άνοιξε τη φόρμα παρακάτω — είναι συμπληρωμένη με τις απαντήσεις σου. Άλλαξε ό,τι δεν είναι σωστό πατώντας πάνω του και μετά πάτησε αποθήκευση."
+
+#: templates/accounts/_feed_items.html
+msgid "That's everything for now."
+msgstr "Αυτά για την ώρα."
+
+#: templates/core/about.html
+msgid "The board is public and readable without an account. Find a job, send a message with your application, and the client picks from everyone who put their hand up."
+msgstr "Ο πίνακας είναι δημόσιος και διαβάζεται χωρίς λογαριασμό. Βρες μια δουλειά, στείλε μήνυμα με την αίτησή σου, και ο πελάτης διαλέγει ανάμεσα σε όσους δήλωσαν ενδιαφέρον."
+
+#: templates/worklog/workspace.html
+msgid "The client can approve sooner. If they do nothing, it releases anyway."
+msgstr "Ο πελάτης μπορεί να εγκρίνει νωρίτερα. Αν δεν κάνει τίποτα, αποδεσμεύεται έτσι κι αλλιώς."
+
+#: templates/worklog/workspace.html
+msgid "The client confirms and it closes"
+msgstr "Ο πελάτης επιβεβαιώνει και κλείνει"
+
+#: templates/jobs/job_detail.html
+msgid "The client funds the escrow after you accept."
+msgstr "Ο πελάτης χρηματοδοτεί τη μεσεγγύηση αφού δεχτείς."
+
+#: templates/core/about.html
+msgid "The client funds the job"
+msgstr "Ο πελάτης χρηματοδοτεί τη δουλειά"
+
+#: templates/core/about.html
+msgid "The client has %(approval_hours)s hours to approve or dispute. If they say nothing, the money releases anyway. Silence is approval here on purpose: an unresponsive client must not be able to strand a worker's pay by simply not opening the app."
+msgstr "Ο πελάτης έχει %(approval_hours)s ώρες για να εγκρίνει ή να υποβάλει ένσταση. Αν δεν πει τίποτα, τα χρήματα αποδεσμεύονται έτσι κι αλλιώς. Η σιωπή ισοδυναμεί με έγκριση επίτηδες: ένας πελάτης που δεν απαντά δεν πρέπει να μπορεί να μπλοκάρει την πληρωμή ενός τεχνίτη απλώς μην ανοίγοντας την εφαρμογή."
+
+#: templates/payments/escrow_detail.html
+msgid "The client hasn't funded this gig yet."
+msgstr "Ο πελάτης δεν έχει χρηματοδοτήσει ακόμη αυτό το μεροκάματο."
+
+#: templates/jobs/job_apply.html
+msgid "The client sees your worker profile with this — your trades, rate, experience and reviews. Nothing else is sent."
+msgstr "Ο πελάτης βλέπει μαζί με αυτό το προφίλ σου ως τεχνίτη — ειδικότητες, αμοιβή, εμπειρία και κριτικές. Τίποτα άλλο δεν αποστέλλεται."
+
+#: templates/worklog/workspace.html
+msgid "The day ended early"
+msgstr "Η ημέρα τελείωσε νωρίτερα"
+
+#: templates/jobs/job_detail.html
+msgid "The job is done. Leave a rating for the other side — theirs for you is written separately, and neither of you sees the other's before writing it."
+msgstr "Η δουλειά ολοκληρώθηκε. Άφησε αξιολόγηση για την άλλη πλευρά — η δική του για σένα γράφεται ξεχωριστά, και κανείς δεν βλέπει την άλλη πριν γράψει τη δική του."
+
+#: jobs/forms.py
+msgid "The line people see on the board — a few words, not the whole job."
+msgstr "Η γραμμή που βλέπουν στον πίνακα — λίγες λέξεις, όχι όλη η δουλειά."
+
+#: templates/core/whitepaper.html
+msgid "The model behind Construction's Finest: how escrow works, why job and payment state are one machine, and the deliberate limits of v1."
+msgstr "Το μοντέλο πίσω από το Construction's Finest: πώς λειτουργεί η μεσεγγύηση, γιατί η κατάσταση της δουλειάς και της πληρωμής είναι μία μηχανή, και τα σκόπιμα όρια της v1."
+
+#: templates/notifications/email/escrow_funded.txt
+msgid "The money for %(title)s is now held by the platform."
+msgstr "Τα χρήματα για το %(title)s κρατούνται πλέον από την πλατφόρμα."
+
+#: templates/payments/escrow_detail.html
+msgid "The money is committed but not taken. It's released to the worker after the job — or back to the client if it's called off."
+msgstr "Τα χρήματα δεσμεύονται αλλά δεν εισπράττονται. Αποδεσμεύονται στον τεχνίτη μετά τη δουλειά — ή επιστρέφουν στον πελάτη αν ακυρωθεί."
+
+#: notifications/mail.py
+msgid "The money is held for %(job)s"
+msgstr "Τα χρήματα κρατούνται για το %(job)s"
+
+#: templates/notifications/email/dispute.txt
+msgid "The reason given:"
+msgstr "Η αιτιολογία:"
+
+#: templates/core/about.html
+msgid "The trades already had places to find work. What they did not have was any answer to the question every worker asks before a first job with a stranger:"
+msgstr "Τα τεχνικά επαγγέλματα είχαν ήδη μέρη για να βρίσκουν δουλειά. Αυτό που δεν είχαν ήταν απάντηση στην ερώτηση που κάνει κάθε τεχνίτης πριν από την πρώτη δουλειά με άγνωστο:"
+
+#: templates/core/about.html
+msgid "The two kinds of post"
+msgstr "Τα δύο είδη αγγελίας"
+
+#: templates/jobs/job_post_choose.html
+msgid "The two work differently once someone takes it on."
+msgstr "Τα δύο λειτουργούν διαφορετικά μόλις κάποιος αναλάβει."
+
+#: templates/core/about.html
+msgid "The whitepaper covers how the job lifecycle is modelled, the optional escrow mechanism, and the trust model behind the ratings."
+msgstr "Η λευκή βίβλος καλύπτει πώς μοντελοποιείται ο κύκλος ζωής της δουλειάς, τον προαιρετικό μηχανισμό μεσεγγύησης και το μοντέλο εμπιστοσύνης πίσω από τις αξιολογήσεις."
+
+#: templates/jobs/job_detail.html
+#: templates/jobs/offer_form.html
+msgid "The work"
+msgstr "Η δουλειά"
+
+#: templates/worklog/workspace.html
+msgid "The work is done"
+msgstr "Η δουλειά τελείωσε"
+
+#: templates/core/about.html
+msgid "The work is signed off"
+msgstr "Η δουλειά εγκρίνεται"
+
+#: notifications/models.py
+msgid "The work was marked finished"
+msgstr ""
+
+#: templates/core/about.html
+msgid "The worker checks in on site"
+msgstr "Ο τεχνίτης κάνει check-in στο εργοτάξιο"
+
+#: templates/core/about.html
+msgid "The worker is paid"
+msgstr "Ο τεχνίτης πληρώνεται"
+
+#: templates/worklog/workspace.html
+msgid "The worker marks it finished"
+msgstr "Ο τεχνίτης τη σημαίνει ως ολοκληρωμένη"
+
+#: templates/worklog/workspace.html
+msgid "The worker marks this when the day is done"
+msgstr "Ο τεχνίτης το σημειώνει όταν τελειώσει η ημέρα"
+
+#: templates/jobs/job_detail.html
+msgid "They didn't leave a note — the job is below."
+msgstr "Δεν άφησε σημείωμα — η δουλειά είναι παρακάτω."
+
+#: templates/worklog/workspace.html
+msgid "They left early"
+msgstr "Έφυγε νωρίτερα"
+
+#: templates/notifications/email/application.txt
+#: templates/notifications/email/offer_answered.txt
+#: templates/notifications/email/offer_received.txt
+msgid "They wrote:"
+msgstr "Έγραψαν:"
+
+#: templates/messaging/start_direct.html
+msgid "They'll see the gig alongside your first message, so they know what they're being asked about."
+msgstr "Θα δει το μεροκάματο μαζί με το πρώτο σου μήνυμα, ώστε να ξέρει για τι τον ρωτάς."
+
+#: templates/jobs/job_detail.html
+msgid "They've answered with different terms — see above."
+msgstr "Απάντησε με διαφορετικούς όρους — δες παραπάνω."
+
+#: templates/jobs/job_detail.html
+msgid "They've marked the work done."
+msgstr "Σήμανε τη δουλειά ως ολοκληρωμένη."
+
+#: templates/worklog/workspace.html
+msgid "They've marked the work finished."
+msgstr "Σήμανε τη δουλειά ως ολοκληρωμένη."
+
+#: templates/jobs/_offer_worker.html
+msgid "They've said they're free on"
+msgstr "Δήλωσε ότι είναι ελεύθερος στις"
+
+#: templates/jobs/counter_form.html
+msgid "This also puts you forward for the job."
+msgstr "Αυτό σε προτείνει και για τη δουλειά."
+
+#: jobs/forms.py
+msgid "This booking already has %(days)s. Pick a different day."
+msgstr "Αυτή η κράτηση έχει ήδη %(days)s. Διάλεξε άλλη ημέρα."
+
+#: templates/jobs/job_detail.html
+msgid "This date has passed. It is still open, but nothing sweeps old gigs yet."
+msgstr "Αυτή η ημερομηνία πέρασε. Παραμένει ανοιχτό, αλλά δεν υπάρχει ακόμη αυτόματος καθαρισμός παλιών μεροκάματων."
+
+#: templates/jobs/job_detail.html
+msgid "This day"
+msgstr "Αυτή η ημέρα"
+
+#: templates/worklog/workspace.html
+msgid "This freezes the payment and hands it to a person. Use it when the hours or the work are actually wrong — not to negotiate."
+msgstr "Αυτό παγώνει την πληρωμή και την παραδίδει σε άνθρωπο. Χρησιμοποίησέ το όταν οι ώρες ή η δουλειά είναι όντως λάθος — όχι για διαπραγμάτευση."
+
+#: templates/jobs/review_form.html
+msgid "This goes on their profile and stays there. One rating per job, from each side — so take a second over it."
+msgstr "Αυτό μπαίνει στο προφίλ του και μένει εκεί. Μία αξιολόγηση ανά δουλειά από κάθε πλευρά — οπότε αφιέρωσε ένα δευτερόλεπτο."
+
+#: templates/payments/payouts.html
+msgid "This install has no Stripe keys. Everything else works — you just can't set up payouts until they're added."
+msgstr "Αυτή η εγκατάσταση δεν έχει κλειδιά Stripe. Όλα τα υπόλοιπα λειτουργούν — απλώς δεν μπορείς να ρυθμίσεις πληρωμές μέχρι να προστεθούν."
+
+#: templates/accounts/worker_edit.html
+msgid "This is what clients see when they search for your trade."
+msgstr "Αυτό βλέπουν οι πελάτες όταν ψάχνουν την ειδικότητά σου."
+
+#: templates/accounts/client_edit.html
+msgid "This is what workers see when you post a job."
+msgstr "Αυτό βλέπουν οι τεχνίτες όταν ανεβάζεις αγγελία."
+
+#: templates/accounts/details.html
+msgid "This is you, not a role. The same name and photo show whether you're picking up work or hiring someone."
+msgstr "Αυτός είσαι εσύ, όχι ρόλος. Το ίδιο όνομα και η ίδια φωτογραφία εμφανίζονται είτε ψάχνεις δουλειά είτε προσλαμβάνεις."
+
+#: templates/jobs/job_detail.html
+msgid "This offer is closed"
+msgstr "Αυτή η προσφορά έκλεισε"
+
+#: templates/jobs/job_apply.html
+msgid "This one runs through escrow: the client funds it before you travel, and it releases on its own once the day is signed off."
+msgstr "Αυτή περνά από μεσεγγύηση: ο πελάτης τη χρηματοδοτεί πριν ξεκινήσεις και αποδεσμεύεται μόνη της μόλις εγκριθεί η ημέρα."
+
+#: templates/jobs/_offer_worker.html
+msgid "Those are the days to aim for — you can still ask about any other."
+msgstr "Αυτές είναι οι ημέρες που να στοχεύσεις — μπορείς πάντως να ρωτήσεις για οποιαδήποτε άλλη."
+
+#: templates/worklog/workspace.html
+msgid "Those hours aren't right"
+msgstr "Αυτές οι ώρες δεν είναι σωστές"
+
+#: templates/messaging/inbox.html
+msgid "Threads open once a worker applies to one of your jobs, or once you apply to one."
+msgstr "Οι συνομιλίες ανοίγουν μόλις ένας τεχνίτης κάνει αίτηση σε δουλειά σου, ή μόλις κάνεις εσύ αίτηση σε κάποια."
+
+#: jobs/forms.py
+msgid "Title, description, or area"
+msgstr "Τίτλος, περιγραφή ή περιοχή"
+
+#: assistant/options.py
+#: jobs/models.py
+msgid "Today"
+msgstr "Σήμερα"
+
+#: assistant/options.py
+#: jobs/models.py
+msgid "Tomorrow"
+msgstr "Αύριο"
+
+#: notifications/mail.py
+msgid "Tomorrow: %(job)s"
+msgstr "Αύριο: %(job)s"
+
+#: jobs/views.py
+msgid "Took %(taken)s of the %(total)s days. %(missed)s could not be accepted — it was taken, cancelled or clashes with work you already have. The rest are yours."
+msgstr "Πήρες %(taken)s από τις %(total)s ημέρες. %(missed)s δεν έγιναν δεκτές — πιάστηκαν, ακυρώθηκαν ή συμπίπτουν με δουλειά που έχεις ήδη. Οι υπόλοιπες είναι δικές σου."
+
+#: jobs/models.py
+msgid "Total for the day."
+msgstr "Σύνολο για την ημέρα."
+
+#: templates/jobs/job_detail.html
+msgid "Total pay"
+msgstr "Συνολική πληρωμή"
+
+#: jobs/forms.py
+msgid "Total pay for the day"
+msgstr "Συνολική πληρωμή για την ημέρα"
+
+#: jobs/forms.py
+msgid "Trade"
+msgstr "Ειδικότητα"
+
+#: templates/core/about.html
+msgid "Trade licences on a profile are self-reported and shown as exactly that. Check with your state board before hiring for regulated work."
+msgstr "Οι επαγγελματικές άδειες σε ένα προφίλ δηλώνονται από τον ίδιο και εμφανίζονται ακριβώς ως τέτοιες. Έλεγξε στην αρμόδια αρχή πριν προσλάβεις για ρυθμιζόμενη εργασία."
+
+#: accounts/forms.py
+#: templates/accounts/worker_edit.html
+msgid "Trades"
+msgstr "Ειδικότητες"
+
+#: templates/jobs/job_list.html
+msgid "Try clearing the trade, or search a wider area — gigs are posted for a single day and the board turns over fast."
+msgstr "Δοκίμασε να καθαρίσεις την ειδικότητα ή να ψάξεις σε ευρύτερη περιοχή — τα μεροκάματα ανεβαίνουν για μία μέρα και ο πίνακας ανανεώνεται γρήγορα."
+
+#: templates/jobs/worker_list.html
+msgid "Try widening the search area, or drop the trade filter — most people list more than one trade and only tag their main one."
+msgstr "Δοκίμασε να διευρύνεις την περιοχή ή να αφαιρέσεις το φίλτρο ειδικότητας — οι περισσότεροι έχουν πάνω από μία ειδικότητα και δηλώνουν μόνο την κύρια."
+
+#: jobs/models.py
+msgid "Turned down"
+msgstr "Απορρίφθηκε"
+
+#: jobs/forms.py
+msgid "Turned up on time, tidy work, no chasing."
+msgstr "Ήρθε στην ώρα του, καθαρή δουλειά, χωρίς κυνηγητό."
+
+#: templates/core/about.html
+msgid "Two ways to get hired"
+msgstr "Δύο τρόποι για να σε προσλάβουν"
+
+#: jobs/forms.py
+msgid "Type"
+msgstr "Τύπος"
+
+#: jobs/forms.py
+msgid "Type of position"
+msgstr "Τύπος θέσης"
+
+#: templates/assistant/_widget.html
+msgid "Type your answer…"
+msgstr "Γράψε την απάντησή σου…"
+
+#: templates/worklog/workspace.html
+msgid "Under review"
+msgstr "Υπό εξέταση"
+
+#: templates/accounts/client_detail.html
+msgid "Under way"
+msgstr "Σε εξέλιξη"
+
+#: accounts/forms.py
+msgid "Up to (leave blank for a flat rate)"
+msgstr "Έως (άφησέ το κενό για ενιαία τιμή)"
+
+#: jobs/forms.py
+msgid "Up to (optional)"
+msgstr "Έως (προαιρετικό)"
+
+#: notifications/mail.py
+msgid "Update on %(job)s"
+msgstr "Ενημέρωση για το %(job)s"
+
+#: templates/jobs/job_apply.html
+msgid "Update your application"
+msgstr "Ενημέρωσε την αίτησή σου"
+
+#: templates/accounts/worker_detail.html
+msgid "Verified"
+msgstr "Επαληθευμένο"
+
+#: templates/accounts/dashboard.html
+msgid "View as others see it"
+msgstr "Δες το όπως το βλέπουν οι άλλοι"
+
+#: templates/jobs/job_detail.html
+msgid "View their profile"
+msgstr "Δες το προφίλ του"
+
+#: templates/jobs/job_detail.html
+msgid "Waiting on the client to agree the work is done."
+msgstr "Αναμονή να συμφωνήσει ο πελάτης ότι η δουλειά ολοκληρώθηκε."
+
+#: templates/worklog/workspace.html
+msgid "Waiting on the client to confirm."
+msgstr "Αναμονή επιβεβαίωσης από τον πελάτη."
+
+#: templates/worklog/workspace.html
+msgid "Waiting on the client to fund the gig"
+msgstr "Αναμονή να χρηματοδοτήσει ο πελάτης το μεροκάματο"
+
+#: jobs/models.py
+msgid "Waiting on the worker"
+msgstr "Αναμονή για τον τεχνίτη"
+
+#: templates/jobs/_waiting.html
+msgid "Waiting on you"
+msgstr "Περιμένουν εσένα"
+
+#: templates/core/about.html
+msgid "Want the detail?"
+msgstr "Θες τις λεπτομέρειες;"
+
+#: templates/accounts/worker_detail.html
+msgid "Wants full-time"
+msgstr "Θέλει πλήρη απασχόληση"
+
+#: templates/core/about.html
+msgid "We are not your employer."
+msgstr "Δεν είμαστε ο εργοδότης σου."
+
+#: templates/core/about.html
+msgid "We do not judge who was right."
+msgstr "Δεν κρίνουμε ποιος είχε δίκιο."
+
+#: templates/core/about.html
+msgid "We do not use location to block anyone."
+msgstr "Δεν χρησιμοποιούμε την τοποθεσία για να αποκλείσουμε κανέναν."
+
+#: templates/core/about.html
+msgid "We do not verify licence numbers."
+msgstr "Δεν επαληθεύουμε αριθμούς αδειών."
+
+#: jobs/forms.py
+msgid "We'll settle it directly — cash, invoice, our own way"
+msgstr "Θα το διακανονίσουμε απευθείας — μετρητά, τιμολόγιο, με τον τρόπο μας"
+
+#: templates/accounts/select_role.html
+msgid "Welcome"
+msgstr "Καλώς ήρθες"
+
+#: templates/accounts/select_role.html
+msgid "Welcome — Construction's Finest"
+msgstr "Καλώς ήρθες — Construction's Finest"
+
+#: core/models.py
+msgid "Welder"
+msgstr "Συγκολλητής"
+
+#: accounts/models.py
+msgid "What are you looking for right now?"
+msgstr "Τι ψάχνεις αυτή τη στιγμή;"
+
+#: templates/jobs/job_post_choose.html
+msgid "What are you posting?"
+msgstr "Τι ανεβάζεις;"
+
+#: templates/assistant/_widget.html
+msgid "What do you need?"
+msgstr "Τι χρειάζεσαι;"
+
+#: templates/worklog/workspace.html
+msgid "What gets paid"
+msgstr "Τι πληρώνεται"
+
+#: assistant/options.py
+msgid "What is escrow?"
+msgstr ""
+
+#: jobs/forms.py
+msgid "What the worker is paid in full, before the platform fee."
+msgstr "Τι πληρώνεται ο τεχνίτης συνολικά, πριν την προμήθεια της πλατφόρμας."
+
+#: templates/accounts/feed.html
+msgid "What to browse"
+msgstr "Τι να δεις"
+
+#: templates/core/about.html
+msgid "What we do"
+msgstr "Τι κάνουμε"
+
+#: templates/core/about.html
+msgid "What we don't do"
+msgstr "Τι δεν κάνουμε"
+
+#: templates/jobs/counter_form.html
+msgid "What's posted"
+msgstr "Τι έχει ανέβει"
+
+#: assistant/options.py
+msgid "What's the platform fee?"
+msgstr ""
+
+#: jobs/forms.py
+msgid "Where in town?"
+msgstr "Πού στην πόλη;"
+
+#: accounts/forms.py
+msgid "Where you're based"
+msgstr "Πού εδρεύεις"
+
+#: accounts/forms.py
+#: jobs/forms.py
+msgid "Which days?"
+msgstr "Ποιες ημέρες;"
+
+#: jobs/forms.py
+#: templates/jobs/offer_choose.html
+msgid "Which job?"
+msgstr "Ποια δουλειά;"
+
+#: templates/assistant/_widget.html
+msgid "Which one?"
+msgstr "Ποια;"
+
+#: templates/base.html
+msgid "Whitepaper"
+msgstr "Λευκή βίβλος"
+
+#: templates/core/whitepaper.html
+msgid "Whitepaper — Construction's Finest"
+msgstr "Λευκή βίβλος — Construction's Finest"
+
+#: jobs/forms.py
+msgid "Why you're asking them, what the day looks like, where to park, who to ask for on site…"
+msgstr "Γιατί τον ζητάς, πώς είναι η ημέρα, πού να παρκάρει, ποιον να ζητήσει στο εργοτάξιο…"
+
+#: jobs/models.py
+msgid "Why — one line is plenty."
+msgstr "Γιατί — μία γραμμή αρκεί."
+
+#: jobs/forms.py
+msgid "Why? (optional)"
+msgstr "Γιατί; (προαιρετικό)"
+
+#: templates/jobs/job_detail.html
+msgid "Withdraw"
+msgstr "Απόσυρση"
+
+#: templates/jobs/job_detail.html
+msgid "Withdraw the offer"
+msgstr "Απόσυρε την προσφορά"
+
+#: jobs/models.py
+msgid "Withdrawn"
+msgstr "Αποσύρθηκε"
+
+#: templates/accounts/dashboard.html
+msgid "Work"
+msgstr "Δουλειά"
+
+#: templates/core/about.html
+msgid "Work arranged here is between the client and the worker. We hold the money and keep the record."
+msgstr "Η δουλειά που κανονίζεται εδώ είναι μεταξύ πελάτη και τεχνίτη. Εμείς κρατάμε τα χρήματα και το αρχείο."
+
+#: notifications/mail.py
+msgid "Work marked finished: %(job)s"
+msgstr "Η δουλειά δηλώθηκε ολοκληρωμένη: %(job)s"
+
+#: core/state_machine.py
+#: jobs/models.py
+#: templates/accounts/dashboard.html
+#: worklog/models.py
+msgid "Worker"
+msgstr "Τεχνίτης"
+
+#: templates/accounts/dashboard.html
+msgid "Worker and client"
+msgstr "Τεχνίτης και πελάτης"
+
+#: templates/payments/escrow_detail.html
+msgid "Worker gets"
+msgstr "Ο τεχνίτης παίρνει"
+
+#: templates/worklog/workspace.html
+msgid "Worker is owed"
+msgstr "Οφείλονται στον τεχνίτη"
+
+#: templates/worklog/workspace.html
+msgid "Worker on site"
+msgstr "Τεχνίτης στο εργοτάξιο"
+
+#: templates/accounts/dashboard.html
+#: templates/accounts/worker_edit.html
+msgid "Worker profile"
+msgstr "Προφίλ τεχνίτη"
+
+#: jobs/models.py
+msgid "Worker rating the client"
+msgstr "Ο τεχνίτης αξιολογεί τον πελάτη"
+
+#: templates/base.html
+msgid "Workers"
+msgstr "Τεχνίτες"
+
+#: jobs/forms.py
+msgid "Workers who said they'd take a permanent position."
+msgstr "Τεχνίτες που δήλωσαν ότι θα δέχονταν μόνιμη θέση."
+
+#: templates/jobs/job_detail.html
+msgid "Working this job"
+msgstr "Δουλεύει αυτή τη δουλειά"
+
+#: templates/jobs/job_detail.html
+msgid "Works out to"
+msgstr "Βγαίνει"
+
+#: templates/jobs/offer_choose.html
+msgid "Write them a new job instead."
+msgstr "Γράψ’ τους καινούργια δουλειά."
+
+#: assistant/options.py
+#: templates/payments/payouts.html
+msgid "Yes"
+msgstr "Ναι"
+
+#: templates/messaging/thread.html
+msgid "You"
+msgstr "Εσύ"
+
+#: templates/jobs/mine.html
+msgid "You applied to"
+msgstr "Έκανες αίτηση σε"
+
+#: templates/accounts/dashboard.html
+msgid "You can add the other side to this same account — your reputation stays in one place."
+msgstr "Μπορείς να προσθέσεις και την άλλη πλευρά στον ίδιο λογαριασμό — η φήμη σου μένει σε ένα μέρος."
+
+#: templates/notifications/email/job_closed.txt
+msgid "You can leave a rating now. It's the only thing on this site that tells the next person what you were like to work with."
+msgstr "Μπορείς να αφήσεις αξιολόγηση. Είναι το μόνο πράγμα εδώ που λέει στον επόμενο πώς ήταν να δουλέψει μαζί σου."
+
+#: templates/worklog/workspace.html
+msgid "You can mark it done on %(day)s, once the day has actually been worked. Days already worked can be signed off now from their own page."
+msgstr "Μπορείς να τη σημειώσεις ως ολοκληρωμένη στις %(day)s, αφού πρώτα δουλευτεί. Οι ημέρες που έχουν ήδη δουλευτεί υπογράφονται τώρα από τη δική τους σελίδα."
+
+#: accounts/forms.py
+msgid "You can pick both, and you can add the other one later."
+msgstr "Μπορείς να διαλέξεις και τα δύο, και να προσθέσεις το άλλο αργότερα."
+
+#: jobs/views.py
+msgid "You can rate this once the job is finished and its day has passed."
+msgstr "Μπορείς να την αξιολογήσεις μόλις η δουλειά ολοκληρωθεί και περάσει η ημέρα της."
+
+#: templates/jobs/_negotiation.html
+msgid "You fund escrow next."
+msgstr "Στη συνέχεια χρηματοδοτείς τη μεσεγγύηση."
+
+#: notifications/mail.py
+msgid "You got the job: %(job)s"
+msgstr "Πήρες τη δουλειά: %(job)s"
+
+#: templates/messaging/start_direct.html
+msgid "You have no open gigs to contact them about."
+msgstr "Δεν έχεις ανοιχτά μεροκάματα για να επικοινωνήσεις μαζί του."
+
+#: templates/jobs/mine.html
+msgid "You haven't applied to anything yet."
+msgstr "Δεν έχεις κάνει αίτηση πουθενά ακόμη."
+
+#: templates/jobs/mine.html
+msgid "You haven't posted anything yet."
+msgstr "Δεν έχεις ανεβάσει τίποτα ακόμη."
+
+#: templates/core/about.html
+msgid "You must be %(minimum_age)s or over. Construction sites are regulated workplaces, and that is the floor in most jurisdictions."
+msgstr "Πρέπει να είσαι %(minimum_age)s ή άνω. Τα εργοτάξια είναι ρυθμιζόμενοι χώροι εργασίας, και αυτό είναι το κατώτατο όριο στις περισσότερες δικαιοδοσίες."
+
+#: templates/jobs/job_detail.html
+msgid "You rated this"
+msgstr "Την αξιολόγησες"
+
+#: notifications/models.py
+msgid "You were offered a job"
+msgstr ""
+
+#: notifications/models.py
+msgid "You were picked for a job"
+msgstr ""
+
+#: notifications/models.py
+msgid "You were rated"
+msgstr ""
+
+#: notifications/mail.py
+msgid "You were rated for %(job)s"
+msgstr "Αξιολογήθηκες για το %(job)s"
+
+#: templates/accounts/worker_detail.html
+msgid "You write the day, the hours and the price. They accept or decline, and how it is paid is up to the two of you."
+msgstr "Εσύ ορίζεις την ημέρα, τις ώρες και την τιμή. Δέχεται ή απορρίπτει, και ο τρόπος πληρωμής είναι δική σας υπόθεση."
+
+#: templates/payments/payouts.html
+msgid "You'll be handed to Stripe to confirm who you are and where the money goes. We never see your bank details."
+msgstr "Θα μεταφερθείς στο Stripe για να επιβεβαιώσεις ποιος είσαι και πού πηγαίνουν τα χρήματα. Δεν βλέπουμε ποτέ τα τραπεζικά σου στοιχεία."
+
+#: jobs/views.py
+msgid "You're already booked on %(days)s, so this one can't be accepted as it stands. Nothing has been changed."
+msgstr "Είσαι ήδη κλεισμένος/η στις %(days)s, οπότε αυτή δεν μπορεί να γίνει δεκτή όπως είναι. Δεν άλλαξε τίποτα."
+
+#: templates/worklog/workspace.html
+msgid "You're due on site"
+msgstr "Πρέπει να είσαι στο εργοτάξιο"
+
+#: templates/notifications/email/_wrapper.txt
+msgid "You're getting this because something on the site needs your answer. Turn these off any time from your profile:"
+msgstr "Το λαμβάνεις επειδή κάτι στο σάιτ περιμένει την απάντησή σου. Μπορείς να τα κλείσεις οποτεδήποτε από το προφίλ σου:"
+
+#: notifications/models.py
+msgid "You're working tomorrow"
+msgstr "Αύριο δουλεύεις"
+
+#: templates/notifications/email/tomorrow.txt
+msgid "You're working tomorrow: %(title)s."
+msgstr "Αύριο δουλεύεις: %(title)s."
+
+#: jobs/views.py
+msgid "You've already rated this one."
+msgstr "Την έχεις αξιολογήσει ήδη."
+
+#: notifications/mail.py
+msgid "You've been offered work: %(job)s"
+msgstr "Σου προσφέρθηκε δουλειά: %(job)s"
+
+#: notifications/mail.py
+msgid "You've been paid for %(job)s"
+msgstr "Πληρώθηκες για το %(job)s"
+
+#: notifications/mail.py
+msgid "You've got something waiting"
+msgstr "Κάτι περιμένει την απάντησή σου"
+
+#: templates/messaging/_dm_row.html
+msgid "You:"
+msgstr "Εσύ:"
+
+#: templates/accounts/dashboard.html
+msgid "Your account — Construction's Finest"
+msgstr "Ο λογαριασμός σου — Construction's Finest"
+
+#: templates/jobs/job_detail.html
+msgid "Your application"
+msgstr "Η αίτησή σου"
+
+#: templates/accounts/details.html
+msgid "Your details"
+msgstr "Τα στοιχεία σου"
+
+#: templates/accounts/details.html
+msgid "Your details — Construction's Finest"
+msgstr "Τα στοιχεία σου — Construction's Finest"
+
+#: templates/accounts/details.html
+msgid "Your email comes from Google and can't be changed here. Your phone is only shown to people you're actively working with on a job."
+msgstr "Το email σου έρχεται από την Google και δεν αλλάζει εδώ. Το τηλέφωνό σου εμφανίζεται μόνο σε όσους συνεργάζεσαι ενεργά σε κάποια δουλειά."
+
+#: templates/accounts/dashboard.html
+#: templates/jobs/mine.html
+msgid "Your jobs"
+msgstr "Οι δουλειές σου"
+
+#: templates/jobs/mine.html
+msgid "Your jobs — Construction's Finest"
+msgstr "Οι δουλειές σου — Construction's Finest"
+
+#: templates/assistant/_widget.html
+msgid "Your message"
+msgstr "Το μήνυμά σου"
+
+#: templates/jobs/offer_choose.html
+#: templates/jobs/offer_form.html
+msgid "Your message to them"
+msgstr "Το μήνυμά σου προς αυτόν"
+
+#: templates/jobs/mine.html
+msgid "Your move — they countered"
+msgstr "Η σειρά σου — έκανε αντιπροσφορά"
+
+#: templates/accounts/worker_edit.html
+msgid "Your name, photo and age live on"
+msgstr "Το όνομα, η φωτογραφία και η ηλικία σου βρίσκονται στα"
+
+#: notifications/models.py
+msgid "Your offer was answered"
+msgstr ""
+
+#: notifications/mail.py
+msgid "Your offer was answered: %(job)s"
+msgstr "Απαντήθηκε η προσφορά σου: %(job)s"
+
+#: templates/worklog/workspace.html
+msgid "Your phone may ask to share location. It's only used as a rough check and is never a condition of checking in — say no and nothing changes."
+msgstr "Το κινητό σου μπορεί να ζητήσει την τοποθεσία. Χρησιμοποιείται μόνο ως πρόχειρος έλεγχος και ποτέ ως προϋπόθεση για το check-in — πες όχι και δεν αλλάζει τίποτα."
+
+#: templates/jobs/_negotiation.html
+msgid "Your terms are with"
+msgstr "Οι όροι σου βρίσκονται στον"
+
+#: templates/jobs/mine.html
+msgid "Your terms are with them"
+msgstr "Οι όροι σου βρίσκονται σε αυτόν"
+
+#: templates/jobs/job_detail.html
+msgid "Yours"
+msgstr "Δικό σου"
+
+#: templates/jobs/job_list.html
+msgid "Yours would be the first."
+msgstr "Η δική σου θα ήταν η πρώτη."
+
+#: templates/accounts/dashboard.html
+msgid "a client"
+msgstr "πελάτης"
+
+#: templates/accounts/dashboard.html
+msgid "a worker"
+msgstr "τεχνίτης"
+
+#: templates/core/about.html
+msgid "am I actually going to get paid?"
+msgstr "θα πληρωθώ τελικά;"
+
+#: templates/jobs/job_detail.html
+msgid "approves in %(hours)s hr"
+msgstr "εγκρίνει σε %(hours)s ώρες"
+
+#: templates/_required_note.html
+msgid "are required."
+msgstr "είναι υποχρεωτικά."
+
+#: templates/jobs/_negotiation.html
+msgid "asked for"
+msgstr "ζήτησε"
+
+#: accounts/models.py
+#: jobs/models.py
+msgid "day"
+msgstr "ημέρα"
+
+#: jobs/forms.py
+msgid "e.g. Can't do the 14th, but the 15th works."
+msgstr "π.χ. Στις 14 δεν μπορώ, αλλά στις 15 παίζει."
+
+#: jobs/forms.py
+msgid "e.g. Framing carpenter, 2-storey rebuild"
+msgstr "π.χ. Ξυλουργός σκελετών, ανακατασκευή διώροφου"
+
+#: jobs/forms.py
+msgid "e.g. That's a long day for the price — €280 and it's yours."
+msgstr ""
+
+#: accounts/forms.py
+msgid "e.g. north side, will travel citywide"
+msgstr "π.χ. βόρεια περιοχή, μετακινούμαι σε όλη την πόλη"
+
+#: accounts/models.py
+#: jobs/models.py
+#: templates/accounts/_feed_items.html
+#: templates/jobs/_job_row.html
+#: templates/jobs/mine.html
+msgid "hr"
+msgstr "ώρα"
+
+#: templates/core/about.html
+msgid "is an open role paid at a rate rather than a total: full-time, part-time, ongoing. We introduce the two sides and step out of it."
+msgstr "είναι μια ανοιχτή θέση που πληρώνεται με αμοιβή αντί για συνολικό ποσό: πλήρης, μερική, συνεχής απασχόληση. Συστήνουμε τις δύο πλευρές και αποσυρόμαστε."
+
+#: templates/core/about.html
+msgid "is one dated shift at a fixed price — a day, a price, a site. It has a defined end that both sides can agree has happened, which is what makes it simple to close."
+msgstr "είναι μία βάρδια με ημερομηνία και σταθερή τιμή — μια μέρα, μια τιμή, ένα εργοτάξιο. Έχει σαφές τέλος που και οι δύο πλευρές μπορούν να συμφωνήσουν ότι συνέβη, κι αυτό το κάνει απλό να κλείσει."
+
+#: templates/worklog/workspace.html
+msgid "left"
+msgstr "απομένουν"
+
+#: templates/core/whitepaper.html
+msgid "page covers the same ground in plainer language."
+msgstr "σελίδα καλύπτει τα ίδια θέματα με απλούστερα λόγια."
+
+#: templates/accounts/dashboard.html
+msgid "profile"
+msgstr "προφίλ"
+
+#: templates/accounts/worker_detail.html
+msgid "see their hiring profile"
+msgstr "δες το προφίλ του ως εργοδότη"
+
+#: templates/accounts/client_detail.html
+msgid "see their worker profile"
+msgstr "δες το προφίλ του ως τεχνίτη"
+
+#: templates/base.html
+msgid "unread"
+msgstr "μη αναγνωσμένα"
+
+#: templates/accounts/worker_edit.html
+msgid "your account details"
+msgstr "τα στοιχεία του λογαριασμού σου"
+
+#: notifications/mail.py
+msgid "your job"
+msgstr "τη δουλειά σου"
+
+#: templates/worklog/workspace.html
+msgid "· location matched the site"
+msgstr "· η τοποθεσία ταίριαξε με το εργοτάξιο"
+
+#: templates/core/whitepaper.html
+msgid "← How it works"
+msgstr "← Πώς λειτουργεί"

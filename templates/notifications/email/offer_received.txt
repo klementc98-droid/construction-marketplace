@@ -1,0 +1,9 @@
+{% load i18n money_extras %}{% blocktranslate %}{{ client }} has offered you work: {{ title }}.{% endblocktranslate %}
+
+{% blocktranslate with amount=pay|money h=hours|floatformat:"-2" %}{{ amount }} for {{ h }} hours{% endblocktranslate %}
+{% if note %}
+{% translate "They wrote:" %}
+
+  {{ note }}
+{% endif %}
+{% translate "Nothing is agreed until you accept it, and declining needs no reason." %}

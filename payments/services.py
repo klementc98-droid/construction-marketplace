@@ -8,17 +8,24 @@ dispute must move exactly the same money in exactly the same way.
 
 from __future__ import annotations
 
+import logging
 from decimal import Decimal
 
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from config import business_rules as rules
-from core.state_machine import Actor, JobState, assert_transition
+from notifications.models import Kind
+from notifications.services import booking_key, notify
+
+from core.state_machine import claim, Actor, JobState, assert_transition
 from jobs.models import Job, JobType
 
 from . import gateway
 from .models import EscrowPayment, EscrowStatus, StripeAccount
+
+
+logger = logging.getLogger(__name__)
 
 
 class EscrowError(RuntimeError):
@@ -31,12 +38,46 @@ class EscrowError(RuntimeError):
 
 
 def ensure_stripe_account(worker) -> StripeAccount:
-    """Fetch or create the worker's Connect account."""
+    """Fetch or create the worker's Connect account.
+
+    The read and the write cannot be made one operation, because between them
+    sits a call to somebody else's server — so this is not "check then insert",
+    which two requests arriving together both pass. It is protected at both
+    ends instead.
+
+    At Stripe's end, an idempotency key derived from the worker: two concurrent
+    creations return the *same* account rather than opening a second one. That
+    is the half that matters, because an orphaned Connect account is the one
+    outcome this database cannot clean up — nothing here would ever point at
+    it, and only Stripe knows it exists.
+
+    At ours, the OneToOne. Whichever request loses the insert reads back the
+    row the winner wrote, and both callers end up with the same account, which
+    is also the same account Stripe returned to each of them.
+
+    The key is stable for the life of the worker on purpose. Stripe keys expire
+    after 24 hours, so this stops being a shortcut around a retry a day later
+    and starts being what it is meant to be: protection against the same
+    creation running twice at once.
+    """
     existing = StripeAccount.objects.filter(worker=worker).first()
     if existing:
         return existing
-    account_id = gateway.create_express_account(email=worker.user.email)
-    return StripeAccount.objects.create(worker=worker, account_id=account_id)
+
+    account_id = gateway.create_express_account(
+        email=worker.user.email,
+        country=worker.region.country,
+        idempotency_key=f"connect-account:{worker.pk}",
+    )
+    try:
+        with transaction.atomic():
+            return StripeAccount.objects.create(
+                worker=worker, account_id=account_id
+            )
+    except IntegrityError:
+        # Somebody else got there first. Their row names the same Stripe
+        # account, because the key above made Stripe hand us both the same one.
+        return StripeAccount.objects.get(worker=worker)
 
 
 def refresh_account_flags(account: StripeAccount) -> StripeAccount:
@@ -95,8 +136,66 @@ def funding_blocker(job: Job) -> str | None:
     return None
 
 
+def _live_checkout(escrow: EscrowPayment) -> str | None:
+    """The checkout already open for this escrow, if there still is one.
+
+    Asked of Stripe rather than assumed from our own row, because only Stripe
+    knows whether a session is still open, has been paid, or has expired — and
+    the three want different answers. One network call, on the second press of
+    a button, to avoid opening a second way to pay for the same job.
+
+    A session we cannot look up at all is treated as gone. That is the same
+    outcome as before any of this existed — a fresh checkout — and it keeps a
+    stale id from making a job permanently unfundable.
+    """
+    if not (escrow.checkout_session_id and escrow.checkout_url):
+        return None
+    try:
+        live = gateway.retrieve_session(escrow.checkout_session_id)
+    except gateway.StripeNotConfigured:
+        raise
+    except Exception:                       # noqa: BLE001 - see the docstring
+        return None
+
+    if live.get("status") == "open":
+        return escrow.checkout_url
+
+    # Paid, and our webhook has not landed yet. The one thing that must not
+    # happen here is a second session: the client has already committed a card
+    # to this job. Recording it is idempotent, so doing it now simply means the
+    # browser got here first.
+    if live.get("payment_status") == "paid" or live.get("status") == "complete":
+        intent = live.get("payment_intent")
+        if intent:
+            mark_authorized(escrow, intent)
+        raise EscrowError("This job is already funded.")
+    return None
+
+
 def start_funding(job: Job, *, success_url: str, cancel_url: str) -> str:
-    """Create (or reuse) the escrow row and return a Stripe Checkout URL."""
+    """Create (or reuse) the escrow row and return a Stripe Checkout URL.
+
+    The escrow row is one per job, not one per attempt — but *starting* an
+    attempt was not atomic, and that is a different thing. Two requests a
+    double-click apart both read a row that is not yet AUTHORIZED, both call
+    Stripe, and two Checkout Sessions exist for one job. Each carries its own
+    PaymentIntent; if the client completes both, there are two holds on a real
+    card and this database has a record of one. Nothing here would ever release
+    the other — it would sit on their card until it expired.
+
+    So an attempt is claimed rather than assumed, in two layers.
+
+    A checkout already open is handed back instead of a second one being made.
+    That alone covers the double-click, which is how this happens in practice.
+
+    Underneath it, Stripe's own idempotency key, scoped to the attempt. Two
+    calls that get past the check above compute the same key — they read the
+    same counter — so Stripe returns one session to both rather than creating
+    two. The counter is what lets a client who abandoned a checkout yesterday
+    still start a genuinely new one today, and it is incremented with a
+    conditional UPDATE so that concurrent callers do not count the same attempt
+    twice.
+    """
     blocker = funding_blocker(job)
     if blocker:
         raise EscrowError(blocker)
@@ -116,6 +215,11 @@ def start_funding(job: Job, *, success_url: str, cancel_url: str) -> str:
     if escrow.status in (EscrowStatus.RELEASED, EscrowStatus.REFUNDED):
         raise EscrowError("This job's payment is already settled.")
 
+    open_already = _live_checkout(escrow)
+    if open_already:
+        return open_already
+
+    attempt = escrow.funding_attempts + 1
     account = job.assigned_worker.stripe_account
     session_id, url = gateway.create_checkout_session(
         job_title=job.title,
@@ -125,10 +229,22 @@ def start_funding(job: Job, *, success_url: str, cancel_url: str) -> str:
         success_url=success_url,
         cancel_url=cancel_url,
         metadata={"job_id": str(job.pk), "escrow_id": str(escrow.pk)},
+        idempotency_key=f"escrow:{escrow.pk}:attempt:{attempt}",
     )
-    escrow.checkout_session_id = session_id
-    escrow.status = EscrowStatus.PENDING
-    escrow.save(update_fields=["checkout_session_id", "status", "updated_at"])
+
+    # Conditional on the attempt we read, so the loser of a race records
+    # nothing rather than counting the same attempt a second time. Both are
+    # holding the same session either way — that is what the key bought.
+    EscrowPayment.objects.filter(
+        pk=escrow.pk, funding_attempts=escrow.funding_attempts
+    ).update(
+        funding_attempts=attempt,
+        checkout_session_id=session_id,
+        checkout_url=url,
+        status=EscrowStatus.PENDING,
+        updated_at=timezone.now(),
+    )
+    escrow.refresh_from_db()
     return url
 
 
@@ -143,18 +259,84 @@ def mark_authorized(escrow: EscrowPayment, payment_intent_id: str) -> EscrowPaym
     if escrow.status == EscrowStatus.AUTHORIZED:
         return escrow
 
-    job = Job.objects.select_for_update().get(pk=escrow.job_id)
+    job = Job.objects.get(pk=escrow.job_id)
     assert_transition(job.state, JobState.ESCROW_HELD, Actor.CLIENT)
+
+    # The status check above is read from an instance somebody else may already
+    # have moved. This is the same question asked of the database at the moment
+    # of writing, which is the only place it can be answered honestly when the
+    # webhook and the browser are both here — the collision this docstring
+    # promises is constant, so it is worth being exact about.
+    #
+    # A lost claim is a no-op and not a refusal: both callers are doing the
+    # right thing, and the second one arriving late is the expected case.
+    authorized_at = timezone.now()
+    if not claim(
+        EscrowPayment,
+        escrow.pk,
+        field="status",
+        expect=escrow.status,
+        to=EscrowStatus.AUTHORIZED,
+        payment_intent_id=payment_intent_id,
+        authorized_at=authorized_at,
+    ):
+        escrow.refresh_from_db()
+        return escrow
 
     escrow.payment_intent_id = payment_intent_id
     escrow.status = EscrowStatus.AUTHORIZED
-    escrow.authorized_at = timezone.now()
-    escrow.save(
-        update_fields=["payment_intent_id", "status", "authorized_at", "updated_at"]
-    )
+    escrow.authorized_at = authorized_at
+
+    # Checked, unlike before — but not reordered, and the difference from
+    # release is worth being exact about. There, claiming the job first means a
+    # lost race costs nothing because Stripe has not been called yet. Here the
+    # hold already exists: this function runs *because* Stripe said so. There
+    # is no ordering that makes the money go away.
+    #
+    # So the two failures are told apart. The record of the hold is kept
+    # whatever happens — an authorisation on a real card with nothing in this
+    # database pointing at it is the one outcome nobody can clean up. What is
+    # not done is pretend the job is funded when it is no longer the job we
+    # read: ``expire_stale_gigs`` moves ACCEPTED gigs whose day has passed, and
+    # a client funding one as the hourly sweep runs is exactly this collision.
+    if not claim(Job, job.pk, expect=job.state, to=JobState.ESCROW_HELD):
+        job.refresh_from_db()
+        divergence = (
+            f"Hold recorded, but the job had moved to {job.state} and was not "
+            f"marked funded. The authorisation is live and needs a decision."
+        )
+        EscrowPayment.objects.filter(pk=escrow.pk).update(
+            last_error=divergence[:500], updated_at=timezone.now()
+        )
+        escrow.last_error = divergence
+        # Loud, because nothing else will notice: no state is wrong enough for
+        # a constraint to catch, and both rows are individually plausible.
+        logger.error(
+            "escrow %s authorized on job %s in state %s — not marked funded",
+            escrow.pk,
+            job.pk,
+            job.state,
+        )
+        # And no "the money is held" email. On a job that has expired or been
+        # called off that sentence is worse than silence: it is an invitation
+        # to turn up.
+        return escrow
 
     job.state = JobState.ESCROW_HELD
-    job.save(update_fields=["state", "updated_at"])
+
+    # The one an escrow worker most needs. ACCEPTED and ESCROW_HELD are
+    # deliberately different states because only the second is worth crossing
+    # town for, and until now the difference was visible only to somebody
+    # already looking at the page.
+    notify(
+        escrow.worker.user,
+        Kind.ESCROW_FUNDED,
+        job=job,
+        dedupe=booking_key("funded", job),
+        job_title=job.title,
+        pay=str(job.fixed_pay),
+        hours=str(job.gig_hours),
+    )
     return escrow
 
 
@@ -177,23 +359,78 @@ def release(
     if escrow.status != EscrowStatus.AUTHORIZED:
         raise EscrowError("There is no held payment to release on this job.")
 
-    job = Job.objects.select_for_update().get(pk=escrow.job_id)
+    job = Job.objects.get(pk=escrow.job_id)
     assert_transition(job.state, JobState.PAID_OUT, actor)
 
     if amount is not None and amount > escrow.amount:
         raise EscrowError("Cannot release more than was held.")
 
+    # Claimed BEFORE Stripe is called, and this is the ordering that matters
+    # most in the codebase. A client tapping approve in the same second the
+    # settlement cron reaches this job is not a hypothetical — both read an
+    # AUTHORIZED hold from their own instance, both pass the checks above, and
+    # both would call capture on the same intent. Stripe refuses the second,
+    # so the money is safe either way, but the app takes a gateway exception on
+    # a job that was in fact paid correctly, which is a bad night for whoever
+    # has to work out what happened.
+    #
+    # Rolling back is what makes this safe to do first: if the capture throws,
+    # @transaction.atomic puts the status back to AUTHORIZED and the next run
+    # tries again.
+    released_at = timezone.now()
+
+    # The job is claimed first, and its result is checked. Both halves of that
+    # sentence were missing, and the second one is the bug.
+    #
+    # Two rows have to agree here, and only one of them was being decided
+    # honestly. The escrow was claimed with a conditional UPDATE; the job was
+    # moved with one whose answer was thrown away. So a client approving in the
+    # same second as somebody raising a dispute could leave the money captured,
+    # the escrow RELEASED, and the job sitting in DISPUTED — a dispute that can
+    # never be honoured, because what it is disputing has already been paid.
+    #
+    # Claiming the job first is what makes losing that race cost nothing:
+    # nothing external has happened yet, so the answer is simply "somebody
+    # moved this, stop". Doing it after the capture would mean discovering the
+    # collision with the money already gone.
+    if not claim(Job, job.pk, expect=job.state, to=JobState.PAID_OUT):
+        raise EscrowError(
+            "This job moved while the payment was being released — nothing has "
+            "been captured. Open it and see where it stands before trying again."
+        )
+
+    if not claim(
+        EscrowPayment,
+        escrow.pk,
+        field="status",
+        expect=EscrowStatus.AUTHORIZED,
+        to=EscrowStatus.RELEASED,
+        released_at=released_at,
+    ):
+        escrow.refresh_from_db()
+        return escrow
+
     result = gateway.capture_payment_intent(escrow.payment_intent_id, amount=amount)
 
     escrow.status = EscrowStatus.RELEASED
     escrow.captured_amount = result["amount_received"]
-    escrow.released_at = timezone.now()
-    escrow.save(
-        update_fields=["status", "captured_amount", "released_at", "updated_at"]
-    )
+    escrow.released_at = released_at
+    escrow.save(update_fields=["captured_amount", "updated_at"])
 
+    # Already claimed above; this only brings the instance in hand up to date.
     job.state = JobState.PAID_OUT
-    job.save(update_fields=["state", "updated_at"])
+
+    notify(
+        escrow.worker.user,
+        Kind.PAYMENT_RELEASED,
+        job=job,
+        # Not keyed on the booking: each day of a week is its own capture and
+        # its own amount, and rolling them into one email would tell somebody
+        # they had been paid once for five days' work.
+        dedupe="",
+        job_title=job.title,
+        amount=f"{rules.CURRENCY_SYMBOL}{escrow.worker_payout}",
+    )
     return escrow
 
 
@@ -210,17 +447,40 @@ def refund(escrow: EscrowPayment, *, actor: str) -> EscrowPayment:
     if escrow.status != EscrowStatus.AUTHORIZED:
         raise EscrowError("There is no held payment to return on this job.")
 
-    job = Job.objects.select_for_update().get(pk=escrow.job_id)
+    job = Job.objects.get(pk=escrow.job_id)
     assert_transition(job.state, JobState.REFUNDED, actor)
+
+    # Claimed before the gateway, for the reason given on release: two admins
+    # resolving the same dispute is rarer than a cron meeting a click, but it
+    # cancels the same intent twice and reads exactly as badly.
+    refunded_at = timezone.now()
+
+    # The job first and checked, for the reason given at length on release: two
+    # rows have to agree, and a claim whose answer is discarded decides
+    # nothing. Losing it here costs nothing at all, because the hold has not
+    # been cancelled yet.
+    if not claim(Job, job.pk, expect=job.state, to=JobState.REFUNDED):
+        raise EscrowError(
+            "This job moved while the payment was being returned — the hold is "
+            "untouched. Open it and see where it stands before trying again."
+        )
+
+    if not claim(
+        EscrowPayment,
+        escrow.pk,
+        field="status",
+        expect=EscrowStatus.AUTHORIZED,
+        to=EscrowStatus.REFUNDED,
+        refunded_at=refunded_at,
+    ):
+        escrow.refresh_from_db()
+        return escrow
 
     gateway.cancel_payment_intent(escrow.payment_intent_id)
 
     escrow.status = EscrowStatus.REFUNDED
-    escrow.refunded_at = timezone.now()
-    escrow.save(update_fields=["status", "refunded_at", "updated_at"])
-
+    escrow.refunded_at = refunded_at
     job.state = JobState.REFUNDED
-    job.save(update_fields=["state", "updated_at"])
     return escrow
 
 
