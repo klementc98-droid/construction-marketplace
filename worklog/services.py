@@ -16,6 +16,7 @@ from django.utils.formats import date_format
 from django.utils.translation import gettext as _
 
 from config import business_rules as rules
+from core.money import money
 from core.state_machine import can_transition, claim, Actor, JobState, assert_transition
 from jobs.models import Job, JobType, booking_of
 from notifications.models import Kind
@@ -424,7 +425,7 @@ def flag_early_end(job: Job, user, *, hours_worked: Decimal, note: str = "") -> 
         job,
         user,
         f"Flagged this as ended early after {hours_label} hours. "
-        f"${completion.payable_amount} would be released. If that's wrong, "
+        f"{money(completion.payable_amount)} would be released. If that's wrong, "
         f"raise a dispute within {window_hours} hours."
         + (f"\n\nNote: {note}" if note else ""),
     )

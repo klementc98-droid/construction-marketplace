@@ -751,6 +751,7 @@ msgid "Current résumé"
 msgstr "Τρέχον βιογραφικό"
 
 #: jobs/forms.py
+#: jobs/models.py
 #: templates/jobs/counter_form.html
 #: templates/jobs/job_detail.html
 msgid "Date"
@@ -1159,6 +1160,7 @@ msgid "Home"
 msgstr "Αρχική"
 
 #: jobs/forms.py
+#: jobs/models.py
 #: templates/jobs/counter_form.html
 #: templates/jobs/job_detail.html
 msgid "Hours"
@@ -1903,6 +1905,7 @@ msgstr "Ελαιοχρωματιστής"
 msgid "Past work"
 msgstr "Προηγούμενες δουλειές"
 
+#: jobs/models.py
 #: templates/jobs/counter_form.html
 msgid "Pay"
 msgstr "Πληρωμή"

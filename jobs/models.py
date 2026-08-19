@@ -1091,12 +1091,16 @@ class Counter(TimestampedModel):
         job = self.job
         rows = []
         if self.fixed_pay is not None and self.fixed_pay != job.fixed_pay:
-            rows.append(("Pay", f"${job.fixed_pay:,.0f}", f"${self.fixed_pay:,.0f}"))
+            # money(), not a literal sign. core.money exists because the symbol
+            # was written out by hand in a dozen places, and this was one of
+            # the ones the sweep missed: the whole app said € and the single
+            # screen asking somebody to agree to a number said $.
+            rows.append((_("Pay"), money(job.fixed_pay), money(self.fixed_pay)))
         if self.gig_date is not None and self.gig_date != job.gig_date:
-            rows.append(("Date", _day(job.gig_date), _day(self.gig_date)))
+            rows.append((_("Date"), _day(job.gig_date), _day(self.gig_date)))
         if self.gig_hours is not None and self.gig_hours != job.gig_hours:
             hours = (job.gig_hours or Decimal("0")).normalize()
-            rows.append(("Hours", f"{hours}", f"{self.gig_hours.normalize()}"))
+            rows.append((_("Hours"), f"{hours}", f"{self.gig_hours.normalize()}"))
         return rows
 
     def apply_to(self, job: "Job") -> list[str]:

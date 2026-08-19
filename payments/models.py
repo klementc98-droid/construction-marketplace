@@ -19,6 +19,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 from accounts.models import WorkerProfile
+from core.money import money
 from core.models import TimestampedModel
 from jobs.models import Job
 
@@ -127,7 +128,7 @@ class EscrowPayment(TimestampedModel):
         ordering = ("-created_at",)
 
     def __str__(self) -> str:
-        return f"${self.amount} for {self.job}"
+        return f"{money(self.amount, 2)} for {self.job}"
 
     @property
     def is_held(self) -> bool:

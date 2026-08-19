@@ -19,6 +19,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import WorkerProfile
+from core.money import money
 from core.state_machine import JobState
 
 from .models import (
@@ -611,8 +612,8 @@ class PublicBoardTests(CounterFixture):
         response = self.client.get(
             reverse("jobs:applicants", kwargs={"pk": self.job.pk})
         )
-        self.assertContains(response, "$280")
-        self.assertContains(response, "$260")
+        self.assertContains(response, money(Decimal("280")))
+        self.assertContains(response, money(Decimal("260")))
 
     def test_accepting_one_price_settles_the_job_and_moots_the_rest(self):
         mine = self.counter(Party.WORKER, fixed_pay=Decimal("280"))
@@ -688,7 +689,8 @@ class PublicBoardTests(CounterFixture):
         self.assertContains(response, "waiting on")
 
     def test_a_client_awaiting_an_answer_cannot_hire_at_the_posted_price_either(self):
-        """Their own outstanding counter is the live proposal; $240 is not."""
+        """Their own outstanding counter is the live proposal; the posted price
+        is not."""
         self.counter(Party.CLIENT, worker=self.rival, fixed_pay=Decimal("260"))
         application = Application.objects.create(job=self.job, worker=self.rival)
 
@@ -814,7 +816,10 @@ class DisplayTests(CounterFixture):
     def test_the_change_is_shown_as_before_and_after(self):
         """A price shown alone is not a proposal anyone can weigh."""
         counter = self.counter(Party.WORKER, fixed_pay=Decimal("280"))
-        self.assertEqual(counter.changes, [("Pay", "$240", "$280")])
+        self.assertEqual(
+            counter.changes,
+            [("Pay", money(Decimal("240")), money(Decimal("280")))],
+        )
 
     def test_changes_is_reachable_from_a_template(self):
         """It must take no arguments — a template cannot pass one, and would
@@ -836,7 +841,7 @@ class DisplayTests(CounterFixture):
             login()
             response = self.client.get(reverse("jobs:detail", kwargs={"pk": self.job.pk}))
             with self.subTest(user=response.context["user"].email):
-                self.assertContains(response, "$280")
+                self.assertContains(response, money(Decimal("280")))
 
     def test_only_the_side_whose_turn_it_is_sees_an_accept_button(self):
         counter = self.counter(Party.WORKER, fixed_pay=Decimal("280"))
