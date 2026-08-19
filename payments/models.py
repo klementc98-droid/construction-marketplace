@@ -37,7 +37,16 @@ class StripeAccount(TimestampedModel):
     worker = models.OneToOneField(
         WorkerProfile, on_delete=models.CASCADE, related_name="stripe_account"
     )
-    account_id = models.CharField(max_length=64, unique=True)
+    #: Blank between the moment this row claims the worker and the moment
+    #: Stripe answers with an id. That gap is the whole reason the row is
+    #: written first: a crash inside it used to leave an account open at Stripe
+    #: with nothing here pointing at it, and the next attempt a day later —
+    #: past the idempotency window — would open a second one. An empty id is a
+    #: record saying "an account was being made for this worker", which is
+    #: exactly what reconciliation needs to go and find it.
+    #:
+    #: Unique, but not against other blanks: two workers may each be mid-flight.
+    account_id = models.CharField(max_length=64, blank=True, default="")
 
     #: Mirrors of Stripe's flags, refreshed from `account.updated` webhooks and
     #: whenever the worker returns from onboarding. Never authoritative.
@@ -47,9 +56,25 @@ class StripeAccount(TimestampedModel):
 
     class Meta:
         ordering = ("-created_at",)
+        constraints = [
+            # One row per account, still — but blanks are exempt, because a
+            # blank is not an account yet. Partial, so the database enforces
+            # what the removed ``unique=True`` did without forbidding the
+            # in-flight state that makes the orphan findable.
+            models.UniqueConstraint(
+                fields=["account_id"],
+                condition=~models.Q(account_id=""),
+                name="one_row_per_stripe_account",
+            ),
+        ]
+
+    @property
+    def is_open(self) -> bool:
+        """Has Stripe actually answered with an account?"""
+        return bool(self.account_id)
 
     def __str__(self) -> str:
-        return f"{self.worker.user} ({self.account_id})"
+        return f"{self.worker.user} ({self.account_id or 'not yet opened'})"
 
     @property
     def is_ready(self) -> bool:
@@ -102,9 +127,29 @@ class EscrowPayment(TimestampedModel):
     platform_fee = models.DecimalField(max_digits=9, decimal_places=2)
     worker_payout = models.DecimalField(max_digits=9, decimal_places=2)
 
-    #: What was actually captured. Differs from ``amount`` when phase 5
-    #: releases a prorated amount for a job that ended early.
+    #: What was actually settled. Three columns, not one, and they are a
+    #: different thing from the three above.
+    #:
+    #: The agreed figures are a snapshot of the deal: they must not move when
+    #: the platform fee changes next month. These are what happened — and on a
+    #: day that ended early they are smaller, because less was captured and the
+    #: fee follows the capture down.
+    #:
+    #: Keeping only ``captured_amount`` left the split un-recorded, so every
+    #: reader afterwards had to choose between a payout that was agreed and a
+    #: capture that happened, with no way to say what the worker was actually
+    #: paid. The notification chose wrong and told somebody they had received
+    #: the full figure on a day that settled at two thirds of it.
+    #:
+    #: Null until release. A hold that has never been captured has no actual
+    #: anything, and zero would be a claim rather than an absence.
     captured_amount = models.DecimalField(
+        max_digits=9, decimal_places=2, null=True, blank=True
+    )
+    captured_fee = models.DecimalField(
+        max_digits=9, decimal_places=2, null=True, blank=True
+    )
+    captured_payout = models.DecimalField(
         max_digits=9, decimal_places=2, null=True, blank=True
     )
 

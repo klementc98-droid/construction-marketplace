@@ -453,7 +453,6 @@ def _release_for(completion: Completion, *, actor: str) -> Completion:
     return completion
 
 
-@transaction.atomic
 def approve(job: Job, user) -> Completion:
     """Client approves release before the window lapses.
 
@@ -468,6 +467,20 @@ def approve(job: Job, user) -> Completion:
     can never release money for a day nobody has worked yet. On a week where
     Monday is finished and Thursday has not happened, approving pays Monday and
     leaves Thursday's hold exactly where it is.
+
+    **Each day settles in its own transaction, and this function deliberately
+    has none of its own.** It used to be wrapped in ``@transaction.atomic``,
+    which reads like safety and was the bug: every day of the booking is a
+    separate Stripe capture, and a rollback cannot reach money that has already
+    moved. Monday captured, Tuesday failed, the transaction unwound — and
+    Monday's money was gone at Stripe while the database had forgotten taking
+    it. The next run would find Monday unsettled and try to capture it again.
+
+    Atomicity was never available here. What is available is that each capture
+    is committed before the next is attempted, so a failure stops the run
+    instead of erasing the ones that worked. Whoever pressed the button is told
+    which days went through, because "something failed" on a week of work is
+    not an answer anybody can act on.
     """
     if job.client.user_id != user.pk:
         raise WorkflowError("Only the client who posted this can approve it.")
@@ -476,13 +489,41 @@ def approve(job: Job, user) -> Completion:
     if completion is None:
         raise WorkflowError("Nothing to approve yet.")
 
-    due = (
+    due = list(
         Completion.objects.filter(job__in=booking_of(job), settled_at__isnull=True)
         .select_related("job")
         .order_by("job__gig_date")
     )
+
+    settled = []
     for pending in due:
-        _release_for(pending, actor=Actor.CLIENT)
+        try:
+            # One day, one transaction, committed on the way out. The next
+            # day's capture starts from a database that already knows about
+            # this one.
+            with transaction.atomic():
+                _release_for(pending, actor=Actor.CLIENT)
+        except Exception as refusal:            # noqa: BLE001 - re-raised below
+            # Every failure, not only the tidy ones. A gateway timeout is
+            # exactly when somebody needs to be told which days already went
+            # through — it is the case most likely to make them press again on
+            # the belief that nothing happened. Nothing is swallowed: with no
+            # day settled the original travels up untouched, and otherwise it
+            # is the cause of what replaces it.
+            if not settled:
+                raise
+            # Some days are paid and one is not. Saying only "failed" would
+            # invite pressing it again on the belief that nothing happened.
+            days = ", ".join(
+                date_format(c.job.gig_date, "j M") for c in settled if c.job.gig_date
+            )
+            raise EscrowError(
+                f"Paid {len(settled)} of {len(due)} days ({days}). "
+                f"The next one stopped: {refusal} "
+                "The days already paid stay paid — approving again picks up "
+                "from where this left off."
+            ) from refusal
+        settled.append(pending)
 
     completion.refresh_from_db()
     return completion
