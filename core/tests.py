@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from django.test import SimpleTestCase, TestCase
+from django.urls import reverse
 from dotenv import dotenv_values
 
 from config import business_rules as rules
@@ -180,3 +181,63 @@ class SeedDataTests(TestCase):
     def test_launch_region_exists_and_is_active(self):
         region = Region.objects.get(slug=rules.DEFAULT_REGION_SLUG)
         self.assertTrue(region.is_active)
+
+
+class WhitepaperLanguageTests(TestCase):
+    """The document exists once per language, and the page picks by reader.
+
+    Not gettext: two thousand words of prose in a catalogue is unreadable to
+    whoever maintains it and unusable to whoever translates it. The unit a
+    translator works in is the document, so the unit stored is the document.
+    """
+
+    def test_greek_gets_the_greek_document(self):
+        from django.utils import translation
+
+        from core.views import _whitepaper_html
+
+        with translation.override("el"):
+            html = _whitepaper_html("el")
+        self.assertIn("Περίληψη", html)
+        self.assertNotIn("The problem", html)
+
+    def test_english_gets_the_original(self):
+        from core.views import _whitepaper_html
+
+        html = _whitepaper_html("en")
+        self.assertIn("The problem", html)
+
+    def test_a_language_with_no_document_falls_back(self):
+        """An untranslated language reads English rather than an empty page."""
+        from core.views import _whitepaper_path
+
+        self.assertEqual(_whitepaper_path("fr").name, "whitepaper.md")
+
+    def test_a_regional_code_finds_the_language_document(self):
+        from core.views import _whitepaper_path
+
+        self.assertEqual(_whitepaper_path("el-gr").name, "whitepaper.el.md")
+
+    def test_the_page_renders_in_greek(self):
+        """Through a request, which is where the language is actually decided.
+
+        translation.override does not reach a test client request — the locale
+        middleware works it out from the request itself — so the header is what
+        makes this a test of the page rather than of the function under it.
+        """
+        response = self.client.get(
+            reverse("core:whitepaper"), headers={"accept-language": "el"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Μηχανική εμπιστοσύνης")
+
+    def test_both_documents_keep_the_table_and_the_diagram(self):
+        """Section 4 is a table and section 6 is a diagram; without the
+        extensions they render as a wall of text in either language."""
+        from core.views import _whitepaper_html
+
+        for language in ("en", "el"):
+            with self.subTest(language=language):
+                html = _whitepaper_html(language)
+                self.assertIn("<table>", html)
+                self.assertIn("<pre>", html)
