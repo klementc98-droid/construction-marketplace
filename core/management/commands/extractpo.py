@@ -106,7 +106,15 @@ def scan(root: Path) -> dict[tuple[str, str | None], set[str]]:
     def note(key, path):
         found.setdefault(key, set()).add(str(path))
 
-    for path in sorted(root.rglob("*.html")):
+    # .txt as well as .html, and the reason is a bug this had: every email
+    # template is a .txt, so scanning only .html quietly decided that forty-odd
+    # translated email strings had disappeared from the source and dropped them
+    # from the catalogue. The next compile then sent Greek recipients a
+    # half-English email — and the failure is silent at both ends, because an
+    # untranslated string renders as its English original rather than as a gap.
+    for path in sorted(
+        p for pattern in ("*.html", "*.txt") for p in root.rglob(pattern)
+    ):
         if ".venv" in path.parts:
             continue
         text = path.read_text(encoding="utf-8")
