@@ -10,6 +10,8 @@ from __future__ import annotations
 from django.db import models
 from django.utils.translation import gettext, gettext_lazy as _
 
+from config import business_rules as rules
+
 
 class TimestampedModel(models.Model):
     """Created/updated stamps for anything worth auditing later."""
@@ -37,6 +39,18 @@ class Region(TimestampedModel):
     #: market's local time — "the 48 hours expired" must not depend on where
     #: the server happens to be running.
     timezone = models.CharField(max_length=64, default="America/New_York")
+
+    #: ISO 3166-1 alpha-2. Where the market *is*, which the app needs for one
+    #: reason beyond display: a worker's Stripe Connect account is opened in a
+    #: country, and country decides what onboarding asks for, which
+    #: capabilities exist and whether payouts work at all.
+    #:
+    #: It lives here rather than on the worker because it is a fact about the
+    #: market, not a preference of the person — everyone working a region is
+    #: paid under that region's rules. It was a default argument reading "US"
+    #: on the gateway function, which is a coherent answer for exactly one
+    #: launch market and silently wrong for every other.
+    country = models.CharField(max_length=2, default=rules.DEFAULT_REGION_COUNTRY)
 
     #: Lets a market be prepared before it opens, or paused, without deleting
     #: it and orphaning every job that referenced it.

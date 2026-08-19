@@ -58,12 +58,27 @@ def from_cents(amount: int) -> Decimal:
 # ---------------------------------------------------------------------------
 
 
-def create_express_account(email: str, country: str = "US") -> str:
+def create_express_account(
+    email: str, *, country: str, idempotency_key: str | None = None
+) -> str:
     """Create the worker's Connect account and return its id.
 
     Express, so Stripe owns identity verification, the payout schedule and the
     dashboard the worker sees. Building any of that ourselves would mean
     holding identity documents, which v1 has no business doing.
+
+    ``country`` is required and has no default. It used to default to "US",
+    which is a coherent answer for one launch market and silently wrong for
+    every other: country decides which capabilities a Connect account can have,
+    what onboarding asks the worker for, and whether payouts are possible at
+    all. A default here is a business decision hidden in a function signature,
+    so the caller now has to say it — see Region.country.
+
+    ``idempotency_key`` is Stripe's own protection against the same creation
+    running twice. Two requests arriving together both find no local account
+    and both call this; with a key derived from the worker, Stripe returns the
+    *same* account to both instead of opening a second one that nothing in this
+    database will ever point at.
     """
     _client()
     account = stripe.Account.create(
@@ -75,6 +90,7 @@ def create_express_account(email: str, country: str = "US") -> str:
             "transfers": {"requested": True},
         },
         business_type="individual",
+        **({"idempotency_key": idempotency_key} if idempotency_key else {}),
     )
     return account.id
 
@@ -115,6 +131,7 @@ def create_checkout_session(
     success_url: str,
     cancel_url: str,
     metadata: dict[str, str],
+    idempotency_key: str | None = None,
 ) -> tuple[str, str]:
     """Authorise (do not capture) the client's card. Returns (id, url).
 
@@ -128,6 +145,14 @@ def create_checkout_session(
     to the worker's account and our cut to the platform, in one movement. Doing
     the split ourselves afterwards would mean a window where the full amount
     sits in our balance and the worker is an unsecured creditor.
+
+    ``idempotency_key`` makes a repeated call return the session the first one
+    created rather than opening a second. It matters more here than anywhere
+    else in this module: a second session is a second PaymentIntent, and a
+    second PaymentIntent that somebody completes is a second hold on a real
+    card that this database has no record of and will never release. The key
+    belongs to one *attempt* — see ``start_funding``, which changes it when the
+    client genuinely starts again.
     """
     _client()
     session = stripe.checkout.Session.create(
@@ -151,6 +176,7 @@ def create_checkout_session(
         metadata=metadata,
         success_url=success_url,
         cancel_url=cancel_url,
+        **({"idempotency_key": idempotency_key} if idempotency_key else {}),
     )
     return session.id, session.url
 

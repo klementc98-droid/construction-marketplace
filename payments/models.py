@@ -116,7 +116,18 @@ class EscrowPayment(TimestampedModel):
     )
 
     checkout_session_id = models.CharField(max_length=255, blank=True, db_index=True)
+    #: Where that session sends the client. Stored rather than rebuilt, so a
+    #: second press of Fund can hand back the checkout already open instead of
+    #: opening another one — see ``start_funding``.
+    checkout_url = models.URLField(max_length=500, blank=True)
     payment_intent_id = models.CharField(max_length=255, blank=True, db_index=True)
+
+    #: How many times funding has been *started*, not how many times it
+    #: succeeded. It exists to be part of the Stripe idempotency key: within
+    #: one attempt a repeated call must return the same session, and a client
+    #: who abandons checkout and comes back tomorrow must be able to get a new
+    #: one. A counter is the smallest thing that says which of the two this is.
+    funding_attempts = models.PositiveIntegerField(default=0)
 
     authorized_at = models.DateTimeField(null=True, blank=True)
     released_at = models.DateTimeField(null=True, blank=True)

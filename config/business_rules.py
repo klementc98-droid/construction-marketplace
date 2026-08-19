@@ -123,6 +123,12 @@ MIN_JOBS_FOR_PUBLIC_STATS: int = _int("MIN_JOBS_FOR_PUBLIC_STATS", 3)
 DEFAULT_REGION_SLUG: str = os.getenv("DEFAULT_REGION_SLUG", "default-region")
 DEFAULT_REGION_NAME: str = os.getenv("DEFAULT_REGION_NAME", "Launch City")
 DEFAULT_REGION_TIMEZONE: str = os.getenv("DEFAULT_REGION_TIMEZONE", "America/New_York")
+#: ISO 3166-1 alpha-2, and it reaches Stripe: a worker's Connect account is
+#: opened in the country of the region they work in. Country decides which
+#: capabilities exist, what onboarding asks for and whether payouts are
+#: possible at all, so it is not a field anyone can default their way through
+#: — ``create_express_account`` used to assume "US" for everybody.
+DEFAULT_REGION_COUNTRY: str = os.getenv("DEFAULT_REGION_COUNTRY", "US")
 
 
 # ---------------------------------------------------------------------------

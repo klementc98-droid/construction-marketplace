@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from config import business_rules as rules
@@ -34,12 +34,46 @@ class EscrowError(RuntimeError):
 
 
 def ensure_stripe_account(worker) -> StripeAccount:
-    """Fetch or create the worker's Connect account."""
+    """Fetch or create the worker's Connect account.
+
+    The read and the write cannot be made one operation, because between them
+    sits a call to somebody else's server — so this is not "check then insert",
+    which two requests arriving together both pass. It is protected at both
+    ends instead.
+
+    At Stripe's end, an idempotency key derived from the worker: two concurrent
+    creations return the *same* account rather than opening a second one. That
+    is the half that matters, because an orphaned Connect account is the one
+    outcome this database cannot clean up — nothing here would ever point at
+    it, and only Stripe knows it exists.
+
+    At ours, the OneToOne. Whichever request loses the insert reads back the
+    row the winner wrote, and both callers end up with the same account, which
+    is also the same account Stripe returned to each of them.
+
+    The key is stable for the life of the worker on purpose. Stripe keys expire
+    after 24 hours, so this stops being a shortcut around a retry a day later
+    and starts being what it is meant to be: protection against the same
+    creation running twice at once.
+    """
     existing = StripeAccount.objects.filter(worker=worker).first()
     if existing:
         return existing
-    account_id = gateway.create_express_account(email=worker.user.email)
-    return StripeAccount.objects.create(worker=worker, account_id=account_id)
+
+    account_id = gateway.create_express_account(
+        email=worker.user.email,
+        country=worker.region.country,
+        idempotency_key=f"connect-account:{worker.pk}",
+    )
+    try:
+        with transaction.atomic():
+            return StripeAccount.objects.create(
+                worker=worker, account_id=account_id
+            )
+    except IntegrityError:
+        # Somebody else got there first. Their row names the same Stripe
+        # account, because the key above made Stripe hand us both the same one.
+        return StripeAccount.objects.get(worker=worker)
 
 
 def refresh_account_flags(account: StripeAccount) -> StripeAccount:
@@ -98,8 +132,66 @@ def funding_blocker(job: Job) -> str | None:
     return None
 
 
+def _live_checkout(escrow: EscrowPayment) -> str | None:
+    """The checkout already open for this escrow, if there still is one.
+
+    Asked of Stripe rather than assumed from our own row, because only Stripe
+    knows whether a session is still open, has been paid, or has expired — and
+    the three want different answers. One network call, on the second press of
+    a button, to avoid opening a second way to pay for the same job.
+
+    A session we cannot look up at all is treated as gone. That is the same
+    outcome as before any of this existed — a fresh checkout — and it keeps a
+    stale id from making a job permanently unfundable.
+    """
+    if not (escrow.checkout_session_id and escrow.checkout_url):
+        return None
+    try:
+        live = gateway.retrieve_session(escrow.checkout_session_id)
+    except gateway.StripeNotConfigured:
+        raise
+    except Exception:                       # noqa: BLE001 - see the docstring
+        return None
+
+    if live.get("status") == "open":
+        return escrow.checkout_url
+
+    # Paid, and our webhook has not landed yet. The one thing that must not
+    # happen here is a second session: the client has already committed a card
+    # to this job. Recording it is idempotent, so doing it now simply means the
+    # browser got here first.
+    if live.get("payment_status") == "paid" or live.get("status") == "complete":
+        intent = live.get("payment_intent")
+        if intent:
+            mark_authorized(escrow, intent)
+        raise EscrowError("This job is already funded.")
+    return None
+
+
 def start_funding(job: Job, *, success_url: str, cancel_url: str) -> str:
-    """Create (or reuse) the escrow row and return a Stripe Checkout URL."""
+    """Create (or reuse) the escrow row and return a Stripe Checkout URL.
+
+    The escrow row is one per job, not one per attempt — but *starting* an
+    attempt was not atomic, and that is a different thing. Two requests a
+    double-click apart both read a row that is not yet AUTHORIZED, both call
+    Stripe, and two Checkout Sessions exist for one job. Each carries its own
+    PaymentIntent; if the client completes both, there are two holds on a real
+    card and this database has a record of one. Nothing here would ever release
+    the other — it would sit on their card until it expired.
+
+    So an attempt is claimed rather than assumed, in two layers.
+
+    A checkout already open is handed back instead of a second one being made.
+    That alone covers the double-click, which is how this happens in practice.
+
+    Underneath it, Stripe's own idempotency key, scoped to the attempt. Two
+    calls that get past the check above compute the same key — they read the
+    same counter — so Stripe returns one session to both rather than creating
+    two. The counter is what lets a client who abandoned a checkout yesterday
+    still start a genuinely new one today, and it is incremented with a
+    conditional UPDATE so that concurrent callers do not count the same attempt
+    twice.
+    """
     blocker = funding_blocker(job)
     if blocker:
         raise EscrowError(blocker)
@@ -119,6 +211,11 @@ def start_funding(job: Job, *, success_url: str, cancel_url: str) -> str:
     if escrow.status in (EscrowStatus.RELEASED, EscrowStatus.REFUNDED):
         raise EscrowError("This job's payment is already settled.")
 
+    open_already = _live_checkout(escrow)
+    if open_already:
+        return open_already
+
+    attempt = escrow.funding_attempts + 1
     account = job.assigned_worker.stripe_account
     session_id, url = gateway.create_checkout_session(
         job_title=job.title,
@@ -128,10 +225,22 @@ def start_funding(job: Job, *, success_url: str, cancel_url: str) -> str:
         success_url=success_url,
         cancel_url=cancel_url,
         metadata={"job_id": str(job.pk), "escrow_id": str(escrow.pk)},
+        idempotency_key=f"escrow:{escrow.pk}:attempt:{attempt}",
     )
-    escrow.checkout_session_id = session_id
-    escrow.status = EscrowStatus.PENDING
-    escrow.save(update_fields=["checkout_session_id", "status", "updated_at"])
+
+    # Conditional on the attempt we read, so the loser of a race records
+    # nothing rather than counting the same attempt a second time. Both are
+    # holding the same session either way — that is what the key bought.
+    EscrowPayment.objects.filter(
+        pk=escrow.pk, funding_attempts=escrow.funding_attempts
+    ).update(
+        funding_attempts=attempt,
+        checkout_session_id=session_id,
+        checkout_url=url,
+        status=EscrowStatus.PENDING,
+        updated_at=timezone.now(),
+    )
+    escrow.refresh_from_db()
     return url
 
 
