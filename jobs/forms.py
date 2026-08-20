@@ -258,11 +258,18 @@ class GigForm(_BaseJobForm):
                 for question, fields, *rest in self.STEPS
                 if fields != ["use_escrow"]
             ]
-            self.STEPS[-1] = (
-                self.STEPS[-1][0],
-                self.STEPS[-1][1],
-                ["site_latitude", "site_longitude"],
-            )
+            # Only where the coordinates exist, and OfferForm is why: it drops
+            # them and ends on the covering note instead, so "the last step" is
+            # a different screen there and would be handed a fold of fields the
+            # form does not have. steps() would filter them back out and the
+            # bug would be invisible until somebody put a real field in that
+            # fold.
+            if "site_latitude" in self.fields:
+                self.STEPS[-1] = (
+                    self.STEPS[-1][0],
+                    self.STEPS[-1][1],
+                    ["site_latitude", "site_longitude"],
+                )
 
     def clean_gig_dates(self) -> list:
         dates = parse_date_list(
@@ -385,6 +392,25 @@ class OfferForm(GigForm):
     a latitude, and leaving the fields in makes the form look like paperwork.
     They can still add them later by editing the job.
     """
+
+    #: The same questions in the same order as posting, which is the point:
+    #: somebody who has posted a job once should recognise this screen. Two
+    #: differences, both from the form itself rather than the sequence — there
+    #: are no site coordinates to fold away, and the covering note is a
+    #: question of its own at the end.
+    #:
+    #: The note goes last deliberately. It is the one answer that depends on
+    #: all the others: what you write to a person changes once you know you are
+    #: asking them for three days rather than one.
+    STEPS = [
+        (_("What kind of work is it?"), ["trade"]),
+        (_("Which days?"), ["gig_dates"]),
+        (_("How long, and how much?"), ["gig_hours", "fixed_pay"]),
+        (_("Who can do this?"), ["experience_wanted"]),
+        (_("Tell them about it"), ["title", "description", "region", "location"]),
+        (_("How is it paid?"), ["use_escrow"]),
+        (_("Your message to them"), ["note"]),
+    ]
 
     note = forms.CharField(
         label=_("Anything they should know?"),

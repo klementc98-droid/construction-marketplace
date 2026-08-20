@@ -18,38 +18,76 @@
     </p>
   {% endif %}
 
+  {% comment %} Who this is for, above the questions and outside the form. It is the
+     reason the page is open and it stays on screen while the steps change —
+     the one thing here that is not an answer to anything.
+  {% endcomment %}
   {% include "jobs/_offer_worker.html" %}
 
-  <form method="post">
+  {% comment %} One question per screen, the same way posting works, because it is the
+     same form underneath: OfferForm is a GigForm with a covering note. A
+     client who has posted a gig has already been asked these questions in this
+     order, and the whole value of that is lost if writing to one person looks
+     like different software.
+
+     Every step is in the page, inside one form that posts once. The script
+     hides all but the current one; with no script the fieldsets are a form
+     with headings on it. There is no wizard state on the server, so there is
+     no half-written offer to strand and nothing to migrate when the questions
+     change.
+  {% endcomment %}
+  <form method="post" class="card stepform" data-steps="">
     {% csrf_token %}
     {{ form.non_field_errors }}
+    {% for field in form.hidden_fields %}{{ field }}{% endfor %}
 
-    <div class="card">
-      <h2>{% translate "The work" %}</h2>
-      {% include "_required_note.html" %}
-      {% for field in form %}
-        {% if field.name != "note" %}{% include "_field.html" %}{% endif %}
-      {% endfor %}
-      <p class="trust">
-        <svg class="trust-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-shield"/></svg>
-        {% if escrow_available %}{% translate "Nothing is charged by sending this. How it is paid is the choice above, and it stays between you unless you both pick escrow." %}{% else %}{% translate "Nothing is charged by sending this. You and the worker settle the day between you." %}{% endif %}
-      </p>
-    </div>
+    {% include "jobs/_step_progress.html" with total=form.steps|length %}
 
-    {% comment %} The covering note is its own card, not the last field of a long form. It
-       is the part that makes this an offer to a person rather than a job spec,
-       and it is the first thing they read.
+    {% for step in form.steps %}
+      <fieldset class="step{% if step.label_said %} step-said{% endif %}"
+                data-step="{{ step.index }}">
+        <legend class="step-q">{{ step.question }}</legend>
+        {% for field in step.fields %}{% include "_field.html" %}{% endfor %}
+
+        {% comment %} Said on the screen where the money is decided, not buried on a help
+           page. With escrow on offer that is the payment question itself, and
+           "the choice above" is the pair of radios directly above the line.
+           Without it there is no such screen, so it is said where the price is
+           typed instead — the moment somebody wonders who is holding it.
+        {% endcomment %}
+        {% if "use_escrow" in step.field_names %}
+          <p class="trust">
+            <svg class="trust-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-shield"/></svg>
+            {% translate "Nothing is charged by sending this. How it is paid is the choice above, and it stays between you unless you both pick escrow." %}
+          </p>
+        {% elif not escrow_available and "fixed_pay" in step.field_names %}
+          <p class="trust">
+            <svg class="trust-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-shield"/></svg>
+            {% translate "Nothing is charged by sending this. You and the worker settle the day between you." %}
+          </p>
+        {% endif %}
+
+        {% comment %} The note's own screen. What it becomes matters more than what it is
+           — a message in a thread, not a field on a record — and that is worth
+           saying beside the box rather than after the form.
+        {% endcomment %}
+        {% if "note" in step.field_names %}
+          <p class="note">
+            {% translate "Sent as your first message in a thread, so they can ask a question without having to say no first." %}
+          </p>
+        {% endif %}
+      </fieldset>
+    {% endfor %}
+
+    {% comment %} One set of buttons for the whole form. Back and Next are added by the
+       script and removed with it; Send the offer is the form's real submit and
+       works on its own with nothing running.
     {% endcomment %}
-    <div class="card">
-      <h2>{% translate "Your message to them" %}</h2>
-      {% include "_field.html" with field=form.note %}
-      <p class="note">
-        {% translate "Sent as your first message in a thread, so they can ask a question without having to say no first." %}
-      </p>
-    </div>
-
-    <div class="btn-row" style="margin-top:0">
-      <button class="btn" type="submit" data-busy-label="Sending…">{% translate "Send the offer" %}</button>
+    <div class="btn-row step-nav" style="margin-top:16px">
+      <button class="btn step-next" type="button" hidden>{% translate "Next" %}</button>
+      <button class="btn step-submit" type="submit"
+              data-busy-label="{% translate "Sending…" %}">{% translate "Send the offer" %}</button>
+      <button class="btn step-back secondary" type="button" hidden>{% translate "Back" %}</button>
       <a class="btn secondary" href="{% url 'accounts:worker_detail' worker.pk %}">{% translate "Cancel" %}</a>
     </div>
   </form>

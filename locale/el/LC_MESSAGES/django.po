@@ -549,6 +549,7 @@ msgstr "Αναμονή εξέτασης"
 #: templates/accounts/worker_edit.html
 #: templates/jobs/job_apply.html
 #: templates/jobs/job_form.html
+#: templates/jobs/offer_form.html
 #: templates/messaging/start_direct.html
 msgid "Back"
 msgstr "Πίσω"
@@ -1521,6 +1522,7 @@ msgstr "Νέα δουλειά: %(job)s"
 
 #: templates/accounts/worker_edit.html
 #: templates/jobs/job_form.html
+#: templates/jobs/offer_form.html
 #: templates/worklog/workspace.html
 msgid "Next"
 msgstr "Επόμενο"
@@ -2345,6 +2347,10 @@ msgstr "Στείλ’ τους κάτι που έχεις ήδη ανεβάσε�
 msgid "Send these terms"
 msgstr "Στείλε αυτούς τους όρους"
 
+#: templates/jobs/offer_form.html
+msgid "Sending…"
+msgstr "Στέλνεται…"
+
 #: templates/jobs/offer_choose.html
 #: templates/jobs/offer_form.html
 msgid "Sent as your first message in a thread, so they can ask a question without having to say no first."
@@ -2621,7 +2627,6 @@ msgid "The whitepaper covers how the job lifecycle is modelled, the optional esc
 msgstr "Η λευκή βίβλος καλύπτει πώς μοντελοποιείται ο κύκλος ζωής της δουλειάς, τον προαιρετικό μηχανισμό μεσεγγύησης και το μοντέλο εμπιστοσύνης πίσω από τις αξιολογήσεις."
 
 #: templates/jobs/job_detail.html
-#: templates/jobs/offer_form.html
 msgid "The work"
 msgstr "Η δουλειά"
 
@@ -3311,8 +3316,8 @@ msgstr "Οι δουλειές σου — XTISE"
 msgid "Your message"
 msgstr "Το μήνυμά σου"
 
+#: jobs/forms.py
 #: templates/jobs/offer_choose.html
-#: templates/jobs/offer_form.html
 msgid "Your message to them"
 msgstr "Το μήνυμά σου προς αυτόν"
 

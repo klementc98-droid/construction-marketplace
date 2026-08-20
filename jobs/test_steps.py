@@ -16,7 +16,7 @@ from __future__ import annotations
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
-from .forms import GigForm, StandingForm
+from .forms import GigForm, OfferForm, StandingForm
 from .tests import JobFactoryMixin
 
 
@@ -29,7 +29,7 @@ class StepCoverageTests(TestCase):
     the first sign of it would be a job posted without a price.
     """
 
-    forms = (GigForm, StandingForm)
+    forms = (GigForm, OfferForm, StandingForm)
 
     def test_every_visible_field_belongs_to_a_step(self):
         for form_class in self.forms:
@@ -251,3 +251,109 @@ class EditIsNotAWizardTests(JobFactoryMixin, TestCase):
         response = self.client.get(reverse("jobs:edit", args=[job.pk]))
         self.assertNotContains(response, "data-steps")
         self.assertNotContains(response, 'class="step"')
+
+
+class OfferAsksTheSameQuestionsTests(TestCase):
+    """Writing to one person is the posting form with a note on the end.
+
+    The value of that is entirely in it being recognisable: a client who has
+    posted a gig has answered these questions, in this order, on screens that
+    looked like this. Anything that lets the two drift is what these guard.
+    """
+
+    @override_settings(STRIPE_SECRET_KEY="sk_test_configured")
+    def test_the_questions_are_the_posting_forms_questions(self):
+        posting = [q for q, *_ in GigForm.STEPS]
+        offering = [q for q, *_ in OfferForm.STEPS]
+        self.assertEqual(offering[: len(posting)], posting[: len(posting)])
+
+    @override_settings(STRIPE_SECRET_KEY="sk_test_configured")
+    def test_and_they_are_asked_in_the_same_order(self):
+        shared = [
+            name
+            for name in GigForm.step_field_names()
+            if name in OfferForm().fields
+        ]
+        offering = [
+            name for name in OfferForm.step_field_names() if name in shared
+        ]
+        self.assertEqual(offering, shared)
+
+    @override_settings(STRIPE_SECRET_KEY="sk_test_configured")
+    def test_the_covering_note_is_the_last_question(self):
+        """Last because it is the one answer that depends on the others — what
+        you write changes once you know you are asking for three days."""
+        step = OfferForm().steps()[-1]
+        self.assertEqual([f.name for f in step["fields"]], ["note"])
+        self.assertTrue(step["is_last"])
+
+    def test_there_are_no_site_coordinates_to_fold_away(self):
+        """GigForm moves them onto its last step when escrow is not asked for.
+        This form has no such fields, and the last step here is the note."""
+        for step in OfferForm().steps():
+            with self.subTest(step=step["index"]):
+                self.assertEqual(step["folded"], [])
+
+
+class OfferRenderingTests(JobFactoryMixin, TestCase):
+    """The offer page, as it arrives in a browser."""
+
+    def setUp(self):
+        self.client.force_login(self.client_user)
+
+    def _page(self):
+        return self.client.get(
+            reverse("jobs:offer", args=[self.worker_profile.pk])
+        )
+
+    def test_the_form_asks_the_script_to_step_it(self):
+        self.assertContains(self._page(), "data-steps")
+
+    def test_every_step_is_in_the_page_already(self):
+        response = self._page()
+        for step in OfferForm().steps():
+            with self.subTest(step=step["index"]):
+                self.assertContains(response, 'data-step="%s"' % step["index"])
+
+    def test_the_questions_are_asked_in_words(self):
+        response = self._page()
+        self.assertContains(response, "What kind of work is it?")
+        self.assertContains(response, "Which days?")
+
+    def test_the_real_submit_is_always_there(self):
+        """Back and Next are the script's. This one has to work without it."""
+        response = self._page()
+        self.assertContains(response, "step-submit")
+        self.assertContains(response, "Send the offer")
+
+    def test_the_hidden_region_is_still_posted(self):
+        self.assertContains(self._page(), 'name="region"')
+
+    def test_who_it_is_for_stays_above_the_questions(self):
+        """The one thing on the page that is not an answer to anything."""
+        self.assertContains(self._page(), self.worker_user.short_name
+                            or str(self.worker_user))
+
+    def test_sending_it_still_takes_one_request(self):
+        """The whole point of rendering the steps rather than storing them."""
+        response = self.client.post(
+            reverse("jobs:offer", args=[self.worker_profile.pk]),
+            {
+                "new": "1",
+                "trade": self.electrical.pk,
+                "title": "Second fix",
+                "description": "A day of first-floor sockets.",
+                "experience_wanted": "none",
+                "region": self.region.pk,
+                "location": "Nea Smyrni",
+                "gig_dates": "2027-03-04",
+                "gig_hours": "8",
+                "fixed_pay": "80",
+                "use_escrow": "False",
+                "note": "Yours if you want it.",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            self.worker_profile.offers.count(), 1
+        )
