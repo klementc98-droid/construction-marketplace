@@ -268,7 +268,36 @@ def start_funding(job: Job, *, success_url: str, cancel_url: str) -> str:
     if open_already:
         return open_already
 
+    # The attempt is claimed before Stripe is called, not after — the ordering
+    # every other money path here follows, and the one this did not.
+    #
+    # It could not follow it while the key was *derived* from the counter,
+    # because claiming first would mean the caller that loses has no session to
+    # return: the winner has not been to Stripe yet. Writing the key down
+    # solves both at once. The loser reads the winner's key and sends the same
+    # one, so Stripe hands them the same session; and a caller that reaches
+    # Stripe and then dies leaves the key behind, so the next attempt reuses it
+    # rather than having to arrive at the same number by coincidence.
+    #
+    # Which is the difference between "the counter is not double-counted" and
+    # "there is never a second live payment object" — and it is the second one
+    # that matters, because the second object is a second hold on a real card.
     attempt = escrow.funding_attempts + 1
+    key = f"escrow:{escrow.pk}:attempt:{attempt}"
+    claimed = EscrowPayment.objects.filter(
+        pk=escrow.pk, funding_attempts=escrow.funding_attempts
+    ).update(
+        funding_attempts=attempt,
+        funding_key=key,
+        status=EscrowStatus.PENDING,
+        updated_at=timezone.now(),
+    )
+    if not claimed:
+        # Somebody claimed this attempt a moment ago. Use the key they wrote
+        # rather than one of our own: same key, same session, one hold.
+        escrow.refresh_from_db()
+        key = escrow.funding_key or key
+
     account = job.assigned_worker.stripe_account
     session_id, url = gateway.create_checkout_session(
         job_title=job.title,
@@ -278,19 +307,15 @@ def start_funding(job: Job, *, success_url: str, cancel_url: str) -> str:
         success_url=success_url,
         cancel_url=cancel_url,
         metadata={"job_id": str(job.pk), "escrow_id": str(escrow.pk)},
-        idempotency_key=f"escrow:{escrow.pk}:attempt:{attempt}",
+        idempotency_key=key,
     )
 
-    # Conditional on the attempt we read, so the loser of a race records
-    # nothing rather than counting the same attempt a second time. Both are
-    # holding the same session either way — that is what the key bought.
-    EscrowPayment.objects.filter(
-        pk=escrow.pk, funding_attempts=escrow.funding_attempts
-    ).update(
-        funding_attempts=attempt,
+    # Conditional on the key, so a write cannot land on an attempt that has
+    # since moved on — the session it names would not be the one this row is
+    # offering.
+    EscrowPayment.objects.filter(pk=escrow.pk, funding_key=key).update(
         checkout_session_id=session_id,
         checkout_url=url,
-        status=EscrowStatus.PENDING,
         updated_at=timezone.now(),
     )
     escrow.refresh_from_db()

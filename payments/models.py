@@ -182,6 +182,21 @@ class EscrowPayment(TimestampedModel):
     #: one. A counter is the smallest thing that says which of the two this is.
     funding_attempts = models.PositiveIntegerField(default=0)
 
+    #: The idempotency key the current attempt is using, written down rather
+    #: than derived.
+    #:
+    #: Both are the same string, so this looks redundant until the case it
+    #: exists for: a process that reaches Stripe and dies before recording
+    #: anything. Derived, the next caller has to arrive at the same number by
+    #: coincidence of reading the same counter. Recorded, it reads the key the
+    #: dead attempt was using and sends it — and Stripe hands back the session
+    #: that attempt created rather than opening a second one.
+    #:
+    #: It is also what lets the attempt be claimed *before* Stripe is called
+    #: instead of after: the caller that loses the claim reads the winner's key
+    #: instead of computing its own.
+    funding_key = models.CharField(max_length=120, blank=True, default="")
+
     authorized_at = models.DateTimeField(null=True, blank=True)
     released_at = models.DateTimeField(null=True, blank=True)
     refunded_at = models.DateTimeField(null=True, blank=True)
