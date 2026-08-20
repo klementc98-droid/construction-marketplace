@@ -912,6 +912,120 @@ class MultiDaySettlementTests(EscrowTestCase):
             )
 
 
+class ClaimBeforeStripeTests(EscrowTestCase):
+    """The attempt is claimed locally before the external call, like the rest.
+
+    Every other money path here claims first: nothing external happens until
+    the database has said who is doing it. Funding could not, while the
+    idempotency key was *derived* from the counter — claiming first would leave
+    the caller that loses with no session to hand back, because the winner has
+    not been to Stripe yet. Writing the key down is what allows both.
+    """
+
+    def setUp(self):
+        self.account = self.ready_account()
+        self.job = self.make_gig()
+
+    def fund(self):
+        return services.start_funding(
+            self.job, success_url="a", cancel_url="b"
+        )
+
+    @patch("payments.gateway.create_checkout_session", autospec=True)
+    def test_the_attempt_is_recorded_before_stripe_is_called(self, mock):
+        """Read from inside the call: by then the row already says so."""
+        seen = {}
+
+        def look(**kwargs):
+            row = EscrowPayment.objects.get(job=self.job)
+            seen["attempts"] = row.funding_attempts
+            seen["key"] = row.funding_key
+            return ("cs_1", "https://checkout/1")
+
+        mock.side_effect = look
+        self.fund()
+
+        self.assertEqual(seen["attempts"], 1)
+        self.assertEqual(seen["key"], mock.call_args.kwargs["idempotency_key"])
+
+    @patch("payments.gateway.create_checkout_session", autospec=True)
+    def test_a_caller_that_loses_the_claim_uses_the_key_that_won(self, mock):
+        """Same key, so Stripe hands both the same session — one hold."""
+        mock.return_value = ("cs_1", "https://checkout/1")
+        row = EscrowPayment.objects.create(
+            job=self.job,
+            worker=self.worker_profile,
+            amount=self.job.fixed_pay,
+            platform_fee=rules.platform_fee_for(self.job.fixed_pay),
+            worker_payout=rules.worker_payout_for(self.job.fixed_pay),
+        )
+        stale = EscrowPayment.objects.get(pk=row.pk)   # attempts still 0
+
+        # Somebody else claims attempt 1 in the gap between this request's read
+        # and its write. Handing the view the older read is what reproduces
+        # that gap; without it the function simply reads the new value and is
+        # not in a race at all.
+        EscrowPayment.objects.filter(pk=row.pk).update(
+            funding_attempts=1, funding_key=f"escrow:{row.pk}:attempt:1"
+        )
+
+        with patch.object(
+            EscrowPayment.objects, "get_or_create", return_value=(stale, False)
+        ):
+            self.fund()
+
+        self.assertEqual(
+            mock.call_args.kwargs["idempotency_key"],
+            f"escrow:{row.pk}:attempt:1",
+            "the loser must send the winner's key, not one of its own",
+        )
+
+    @patch("payments.gateway.retrieve_session", autospec=True)
+    @patch("payments.gateway.create_checkout_session", autospec=True)
+    def test_a_run_that_died_after_reaching_stripe_leaves_its_key_behind(
+        self, mock, live
+    ):
+        """The scenario an outside review raised, and the reason for the column.
+
+        Stripe created the session; the process died before recording it. The
+        next attempt must not open a second one — and derived keys made that a
+        coincidence of reading the same counter rather than a guarantee.
+        """
+        mock.side_effect = RuntimeError("died after Stripe answered")
+        with self.assertRaises(RuntimeError):
+            self.fund()
+
+        row = EscrowPayment.objects.get(job=self.job)
+        self.assertEqual(row.funding_key, f"escrow:{row.pk}:attempt:1")
+        self.assertEqual(row.checkout_session_id, "", "nothing was recorded")
+
+        # The retry finds no usable checkout and reuses the recorded key.
+        live.side_effect = gateway.ObjectMissing("never recorded")
+        mock.side_effect = None
+        mock.return_value = ("cs_from_stripe", "https://checkout/1")
+        self.fund()
+
+        self.assertEqual(
+            mock.call_args.kwargs["idempotency_key"],
+            f"escrow:{row.pk}:attempt:2",
+        )
+
+    @patch("payments.gateway.retrieve_session", autospec=True)
+    @patch("payments.gateway.create_checkout_session", autospec=True)
+    def test_a_genuinely_new_attempt_still_gets_its_own_key(self, mock, live):
+        mock.return_value = ("cs_1", "https://checkout/1")
+        self.fund()
+
+        live.return_value = {"status": "expired", "payment_status": "unpaid",
+                             "payment_intent": None}
+        mock.return_value = ("cs_2", "https://checkout/2")
+        self.fund()
+
+        row = EscrowPayment.objects.get(job=self.job)
+        self.assertEqual(row.funding_attempts, 2)
+        self.assertEqual(row.funding_key, f"escrow:{row.pk}:attempt:2")
+
+
 class ConnectAccountTests(EscrowTestCase):
     """Creating the worker's Stripe account, without leaving one behind.
 
