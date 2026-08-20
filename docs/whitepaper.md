@@ -1,4 +1,4 @@
-# Construction's Finest
+# XTISE
 
 **A way into the building trades, and a way for tradespeople to find hands — built around the day worked and the money for it rather than around the listing.**
 
@@ -8,7 +8,7 @@ Version 1 · 31 July 2026
 
 ## 1. Summary
 
-Construction's Finest is a two-sided marketplace connecting tradespeople who need
+XTISE is a two-sided marketplace connecting tradespeople who need
 labour with people who want to work — for a single dated shift, a run of days, or an
 ongoing position.
 

@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Construction's Finest — front-end behaviour
+   XTISE — front-end behaviour
    --------------------------------------------------------------------------
    Progressive enhancement only. Every feature here is an improvement on a page
    that already works without it: the feed paginates by link, the check-in form

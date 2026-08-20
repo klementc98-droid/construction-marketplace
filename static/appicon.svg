@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" role="img" aria-label="XTISE">
+  <!-- The same X at the size a home screen uses it, where there is room for the
+       detail the favicon cannot carry: a lap joint, where one member passes
+       behind the other. It is the convention an engineering drawing uses to say
+       which piece is in front, and it is what stops the mark reading as a
+       decorative cross. -->
+  <rect width="180" height="180" rx="40" fill="#0B0D10"/>
+  <path d="M40 40 L140 140" stroke="#5B8BFF" stroke-width="24" stroke-linecap="butt"/>
+  <path d="M140 40 L101 79" stroke="#2563FF" stroke-width="24" stroke-linecap="butt"/>
+  <path d="M79 101 L40 140" stroke="#2563FF" stroke-width="24" stroke-linecap="butt"/>
+</svg>

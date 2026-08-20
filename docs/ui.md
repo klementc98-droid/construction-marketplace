@@ -96,15 +96,45 @@ exists in the sprite and every seeded trade is mapped.
 
 ## Colour
 
-Tokens in `static/css/crew.css`, defined once on `:root` and re-stated for
-`:root[data-theme="luxe"]`. Never hardcode a colour in a component.
+XTISE is three colours: `#0B0D10` near-black, `#2563FF` electric blue, and
+`#F7F8FA` paper. Tokens in `static/css/crew.css`, defined once on `:root` and
+re-stated for `:root[data-theme="luxe"]`. Never hardcode a colour in a
+component.
 
-Gold is the money and the primary action. It is not the colour of "yes you can
-do this" — that is `--ok`, and the distinction is the point: the badge is an
-invitation, not a price.
+The blue is spent, not spread. It belongs to: the primary button, the state you
+are in, a selected filter, a progress bar, and the rate. Roughly 5–10% of any
+screen. Everything that is not a decision is black, grey or paper — and the
+moment a second thing on a screen is blue for a reason that is not one of
+those, the first thing stops meaning anything.
+
+That rule is also why figures are not blue. Every value in a stat row used to
+take the accent, which was fine when the accent was rare and put five saturated
+numbers in one box when it was not. Only `.stat--money` carries it now.
+
+Blue is not the colour of "yes you can do this" either — that is `--ok`, and
+the distinction is the point: the experience badge is a fact about the job, not
+a control, and dressing a fact as a control gives a card three things that look
+tappable and one that is.
 
 Three tones carry meaning and each is paired with a word and a shape, never
 with colour alone: `--ok` / `--warn` / `--err`, as `go` / `steady` / `stop`.
+
+No orange, no yellow, no hazard stripes. The construction in this brand comes
+from geometry and structure — the drafting grid behind the header, the hard
+edges, the weight of the type — not from the colour of a warning sign.
+
+## The wordmark
+
+XTISE, and the wordmark **is** the logo. There is no icon beside it and no
+monogram in front of it. It is real text — `.brand-x` for the X, `.brand-rest`
+for the tail — so it scales, survives a font failing to load, and reads as one
+word to a screen reader.
+
+The X is the brand's mark and works alone: it is the favicon, the home-screen
+icon, and what the header falls back to when a signed-in mobile bar runs out of
+room. It is two crossing members, which is the smallest complete structural
+drawing there is, and the reason the name was worth building around that
+letter.
 
 ## Mobile
 

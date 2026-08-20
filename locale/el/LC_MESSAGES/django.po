@@ -1,4 +1,4 @@
-# Translation catalogue for Construction's Finest.
+# Translation catalogue for XTISE.
 #
 # Regenerate with `python manage.py extractpo`, then compile with
 # `python manage.py compilepo`. Neither needs GNU gettext installed.
@@ -426,8 +426,8 @@ msgid "Already have the work posted?"
 msgstr "Έχεις ήδη ανεβάσει τη δουλειά;"
 
 #: templates/accounts/worker_detail.html
-msgid "Also hires on Construction's Finest —"
-msgstr "Προσλαμβάνει επίσης στο Construction's Finest —"
+msgid "Also hires on XTISE —"
+msgstr "Προσλαμβάνει επίσης στο XTISE —"
 
 #: jobs/models.py
 msgid "Anything they should know before saying yes."
@@ -729,30 +729,6 @@ msgstr "Επιβεβαίωσε και η δουλειά κλείνει. Δεν �
 msgid "Confirm it when you agree and the job is closed."
 msgstr "Επιβεβαίωσέ το όταν συμφωνείς και η δουλειά κλείνει."
 
-#: templates/notifications/email/_wrapper.txt
-msgid "Construction's Finest"
-msgstr ""
-
-#: templates/accounts/worker_detail.html
-msgid "Construction's Finest does not verify licence numbers. Check with your state board before hiring for regulated work."
-msgstr "Το Construction's Finest δεν επαληθεύει αριθμούς αδειών. Έλεγξε στην αρμόδια αρχή πριν προσλάβεις για ρυθμιζόμενη εργασία."
-
-#: templates/payments/escrow_detail.html
-msgid "Construction's Finest holds the money — neither side does. It goes to the worker once the day is signed off, or back to the client if the gig is called off before it starts."
-msgstr "Το Construction's Finest κρατά τα χρήματα — καμία από τις δύο πλευρές. Πηγαίνουν στον βοηθό μόλις εγκριθεί η ημέρα, ή πίσω στον μάστορα αν το μεροκάματο ακυρωθεί πριν ξεκινήσει."
-
-#: templates/core/about.html
-msgid "Construction's Finest is where a tradesperson finds a pair of hands. Most of the jobs here need no experience — somebody shows you on site, and you are paid for the days you work. One day, a few days, or a permanent place, with the money for a day held before anybody turns up."
-msgstr "Το Construction's Finest είναι εκεί που ένας μάστορας βρίσκει χέρια. Οι περισσότερες δουλειές εδώ δεν θέλουν εμπειρία — κάποιος σου δείχνει στο εργοτάξιο, και πληρώνεσαι για τις μέρες που δουλεύεις. Μία μέρα, λίγες μέρες ή μόνιμη θέση, με τα λεφτά της ημέρας κρατημένα πριν εμφανιστεί κανείς."
-
-#: templates/accounts/feed.html
-msgid "Construction's Finest — find work, hire crew"
-msgstr "Construction's Finest — βρες δουλειά, βρες συνεργείο"
-
-#: templates/base.html
-msgid "Construction's Finest, home"
-msgstr "Construction's Finest, αρχική"
-
 #: templates/accounts/select_role.html
 msgid "Continue"
 msgstr "Συνέχεια"
@@ -775,8 +751,8 @@ msgid "Counter again"
 msgstr "Νέα αντιπροσφορά"
 
 #: templates/jobs/counter_form.html
-msgid "Counter — Construction's Finest"
-msgstr "Αντιπροσφορά — Construction's Finest"
+msgid "Counter — XTISE"
+msgstr "Αντιπροσφορά — XTISE"
 
 #: templates/accounts/worker_edit.html
 msgid "Current résumé"
@@ -902,8 +878,8 @@ msgid "Edit client profile"
 msgstr "Επεξεργασία προφίλ μάστορα"
 
 #: templates/accounts/client_edit.html
-msgid "Edit client profile — Construction's Finest"
-msgstr "Επεξεργασία προφίλ μάστορα — Construction's Finest"
+msgid "Edit client profile — XTISE"
+msgstr "Επεξεργασία προφίλ μάστορα — XTISE"
 
 #: templates/accounts/client_detail.html
 msgid "Edit hiring profile"
@@ -1100,8 +1076,8 @@ msgid "Getting paid"
 msgstr "Πώς πληρώνεσαι"
 
 #: templates/payments/payouts.html
-msgid "Getting paid — Construction's Finest"
-msgstr "Πώς πληρώνεσαι — Construction's Finest"
+msgid "Getting paid — XTISE"
+msgstr "Πώς πληρώνεσαι — XTISE"
 
 #: templates/accounts/_feed_items.html
 #: templates/jobs/job_detail.html
@@ -1206,8 +1182,8 @@ msgid "How it works"
 msgstr "Πώς λειτουργεί"
 
 #: templates/core/about.html
-msgid "How it works — Construction's Finest"
-msgstr "Πώς λειτουργεί — Construction's Finest"
+msgid "How it works — XTISE"
+msgstr "Πώς λειτουργεί — XTISE"
 
 #: templates/accounts/feed.html
 msgid "How it works&nbsp;→"
@@ -1226,8 +1202,8 @@ msgid "How the terms were agreed"
 msgstr "Πώς συμφωνήθηκαν οι όροι"
 
 #: templates/accounts/select_role.html
-msgid "How will you use Construction's Finest? Pick both if you do both — plenty of people do."
-msgstr "Πώς θα χρησιμοποιήσεις το Construction's Finest; Διάλεξε και τα δύο αν κάνεις και τα δύο — πολλοί το κάνουν."
+msgid "How will you use XTISE? Pick both if you do both — plenty of people do."
+msgstr "Πώς θα χρησιμοποιήσεις το XTISE; Διάλεξε και τα δύο αν κάνεις και τα δύο — πολλοί το κάνουν."
 
 #: accounts/forms.py
 msgid "How will you use the platform?"
@@ -1435,8 +1411,8 @@ msgid "Messages"
 msgstr "Μηνύματα"
 
 #: templates/messaging/inbox.html
-msgid "Messages — Construction's Finest"
-msgstr "Μηνύματα — Construction's Finest"
+msgid "Messages — XTISE"
+msgstr "Μηνύματα — XTISE"
 
 #: templates/base.html
 msgid "Mine"
@@ -2085,8 +2061,8 @@ msgid "Post a job"
 msgstr "Ανέβασε αγγελία"
 
 #: templates/jobs/job_post_choose.html
-msgid "Post a job — Construction's Finest"
-msgstr "Ανέβασε αγγελία — Construction's Finest"
+msgid "Post a job — XTISE"
+msgstr "Ανέβασε αγγελία — XTISE"
 
 #: templates/jobs/job_form.html
 msgid "Post a position"
@@ -2336,8 +2312,8 @@ msgid "Self-reported"
 msgstr "Δηλωμένο από τον ίδιο"
 
 #: templates/accounts/worker_edit.html
-msgid "Self-reported. Construction's Finest does not verify licence numbers yet, and never shows them to clients as verified."
-msgstr "Δηλωμένο από τον ίδιο. Το Construction's Finest δεν επαληθεύει ακόμη αριθμούς αδειών, και ποτέ δεν τους εμφανίζει στους μάστορες ως επαληθευμένους."
+msgid "Self-reported. XTISE does not verify licence numbers yet, and never shows them to clients as verified."
+msgstr "Δηλωμένο από τον ίδιο. Το XTISE δεν επαληθεύει ακόμη αριθμούς αδειών, και ποτέ δεν τους εμφανίζει στους μάστορες ως επαληθευμένους."
 
 #: templates/assistant/_widget.html
 #: templates/messaging/thread.html
@@ -2601,8 +2577,8 @@ msgid "The line people see on the board — a few words, not the whole job."
 msgstr "Η γραμμή που βλέπουν στον πίνακα — λίγες λέξεις, όχι όλη η δουλειά."
 
 #: templates/core/whitepaper.html
-msgid "The model behind Construction's Finest: how escrow works, why job and payment state are one machine, and the deliberate limits of v1."
-msgstr "Το μοντέλο πίσω από το Construction's Finest: πώς λειτουργεί η μεσεγγύηση, γιατί η κατάσταση της δουλειάς και της πληρωμής είναι μία μηχανή, και τα σκόπιμα όρια της v1."
+msgid "The model behind XTISE: how escrow works, why job and payment state are one machine, and the deliberate limits of v1."
+msgstr "Το μοντέλο πίσω από το XTISE: πώς λειτουργεί η μεσεγγύηση, γιατί η κατάσταση της δουλειάς και της πληρωμής είναι μία μηχανή, και τα σκόπιμα όρια της v1."
 
 #: templates/notifications/email/escrow_funded.txt
 msgid "The money for %(title)s is now held by the platform."
@@ -2944,8 +2920,8 @@ msgid "Welcome"
 msgstr "Καλώς ήρθες"
 
 #: templates/accounts/select_role.html
-msgid "Welcome — Construction's Finest"
-msgstr "Καλώς ήρθες — Construction's Finest"
+msgid "Welcome — XTISE"
+msgstr "Καλώς ήρθες — XTISE"
 
 #: core/models.py
 msgid "Welder"
@@ -3046,8 +3022,8 @@ msgid "Whitepaper"
 msgstr "Λευκή βίβλος"
 
 #: templates/core/whitepaper.html
-msgid "Whitepaper — Construction's Finest"
-msgstr "Λευκή βίβλος — Construction's Finest"
+msgid "Whitepaper — XTISE"
+msgstr "Λευκή βίβλος — XTISE"
 
 #: jobs/forms.py
 msgid "Who can do this?"
@@ -3118,7 +3094,7 @@ msgid "Worker profile"
 msgstr "Προφίλ βοηθό"
 
 #: templates/accounts/worker_edit.html
-msgid "Worker profile — Construction's Finest"
+msgid "Worker profile — XTISE"
 msgstr ""
 
 #: jobs/models.py
@@ -3144,6 +3120,30 @@ msgstr "Βγαίνει"
 #: templates/jobs/offer_choose.html
 msgid "Write them a new job instead."
 msgstr "Γράψ’ τους καινούργια δουλειά."
+
+#: templates/notifications/email/_wrapper.txt
+msgid "XTISE"
+msgstr ""
+
+#: templates/accounts/worker_detail.html
+msgid "XTISE does not verify licence numbers. Check with your state board before hiring for regulated work."
+msgstr "Το XTISE δεν επαληθεύει αριθμούς αδειών. Έλεγξε στην αρμόδια αρχή πριν προσλάβεις για ρυθμιζόμενη εργασία."
+
+#: templates/payments/escrow_detail.html
+msgid "XTISE holds the money — neither side does. It goes to the worker once the day is signed off, or back to the client if the gig is called off before it starts."
+msgstr "Το XTISE κρατά τα χρήματα — καμία από τις δύο πλευρές. Πηγαίνουν στον βοηθό μόλις εγκριθεί η ημέρα, ή πίσω στον μάστορα αν το μεροκάματο ακυρωθεί πριν ξεκινήσει."
+
+#: templates/core/about.html
+msgid "XTISE is where a tradesperson finds a pair of hands. Most of the jobs here need no experience — somebody shows you on site, and you are paid for the days you work. One day, a few days, or a permanent place, with the money for a day held before anybody turns up."
+msgstr "Το XTISE είναι εκεί που ένας μάστορας βρίσκει χέρια. Οι περισσότερες δουλειές εδώ δεν θέλουν εμπειρία — κάποιος σου δείχνει στο εργοτάξιο, και πληρώνεσαι για τις μέρες που δουλεύεις. Μία μέρα, λίγες μέρες ή μόνιμη θέση, με τα λεφτά της ημέρας κρατημένα πριν εμφανιστεί κανείς."
+
+#: templates/accounts/feed.html
+msgid "XTISE — find work, hire crew"
+msgstr "XTISE — βρες δουλειά, βρες συνεργείο"
+
+#: templates/base.html
+msgid "XTISE, home"
+msgstr "XTISE, αρχική"
 
 #: templates/payments/payouts.html
 msgid "Yes"
@@ -3271,8 +3271,8 @@ msgid "You:"
 msgstr "Εσύ:"
 
 #: templates/accounts/dashboard.html
-msgid "Your account — Construction's Finest"
-msgstr "Ο λογαριασμός σου — Construction's Finest"
+msgid "Your account — XTISE"
+msgstr "Ο λογαριασμός σου — XTISE"
 
 #: templates/jobs/job_detail.html
 msgid "Your application"
@@ -3283,8 +3283,8 @@ msgid "Your details"
 msgstr "Τα στοιχεία σου"
 
 #: templates/accounts/details.html
-msgid "Your details — Construction's Finest"
-msgstr "Τα στοιχεία σου — Construction's Finest"
+msgid "Your details — XTISE"
+msgstr "Τα στοιχεία σου — XTISE"
 
 #: templates/accounts/details.html
 msgid "Your email comes from Google and can't be changed here. Your phone is only shown to people you're actively working with on a job."
@@ -3296,8 +3296,8 @@ msgid "Your jobs"
 msgstr "Οι δουλειές σου"
 
 #: templates/jobs/mine.html
-msgid "Your jobs — Construction's Finest"
-msgstr "Οι δουλειές σου — Construction's Finest"
+msgid "Your jobs — XTISE"
+msgstr "Οι δουλειές σου — XTISE"
 
 #: templates/assistant/_widget.html
 msgid "Your message"

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load account_extras i18n %}
-{% block title %}{{ profile.user }} — Construction's Finest{% endblock %}
+{% block title %}{{ profile.user }} — XTISE{% endblock %}
 
 {% block content %}
   {% url 'jobs:worker_list' as workers_url %}
@@ -52,7 +52,7 @@
     {% endcomment %}
     {% if profile.user.is_client %}
       <p class="note" style="margin-top:14px">
-        {% translate "Also hires on Construction's Finest —" %}
+        {% translate "Also hires on XTISE —" %}
         <a href="{% url 'accounts:client_detail' profile.user.client_profile.pk %}">{% translate "see their hiring profile" %}</a>.
       </p>
     {% endif %}
@@ -189,7 +189,7 @@
         </p>
       {% endfor %}
       <p class="note">
-        {% translate "Construction's Finest does not verify licence numbers. Check with your state board before hiring for regulated work." %}
+        {% translate "XTISE does not verify licence numbers. Check with your state board before hiring for regulated work." %}
       </p>
     </div>
   {% endif %}

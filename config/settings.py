@@ -28,6 +28,14 @@ SECRET_KEY = os.getenv(
     "DJANGO_SECRET_KEY", "dev-only-insecure-key-change-before-deploying"
 )
 DEBUG = _env_bool("DJANGO_DEBUG", True)
+#: The production domain, and the only place it is written down. Templates build
+#: their own absolute URLs from the request — see the Open Graph block in
+#: base.html — so nothing but this file and an email have to know it.
+#:
+#: Overridable because a staging host is a real thing and a hardcoded domain is
+#: how staging ends up sending people to production.
+SITE_DOMAIN = os.getenv("SITE_DOMAIN", "xtise.gr").strip().lower()
+
 ALLOWED_HOSTS = [h for h in os.getenv("DJANGO_ALLOWED_HOSTS", "*").split(",") if h]
 
 # Tunnelling the dev server — ngrok, to open the site on a real phone — puts an
@@ -52,6 +60,57 @@ if TUNNEL_HOST:
     CSRF_TRUSTED_ORIGINS = [f"https://{TUNNEL_HOST}"]
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     USE_X_FORWARDED_HOST = True
+
+
+# ---------------------------------------------------------------------------
+# Production
+# ---------------------------------------------------------------------------
+# Keyed on DEBUG being off rather than on a separate settings module, which is
+# how the two get to disagree: a production-only file is a file nobody runs
+# until the day it matters. Everything below is inert on a developer's machine
+# and is what the live site needs to be true.
+#
+# The host list stops defaulting to "*" as well. A permissive ALLOWED_HOSTS on
+# a public site is how a request arrives with somebody else's Host header and
+# leaves with a password-reset link pointing at their domain.
+
+if not DEBUG:
+    if ALLOWED_HOSTS == ["*"]:
+        ALLOWED_HOSTS = [SITE_DOMAIN, f"www.{SITE_DOMAIN}"]
+
+    # Django checks Origin against this for every HTTPS POST, and a permissive
+    # ALLOWED_HOSTS does not cover it. Built from the hosts rather than written
+    # out, so the two lists cannot drift.
+    CSRF_TRUSTED_ORIGINS = [
+        f"https://{host.lstrip('.')}"
+        for host in ALLOWED_HOSTS
+        if host not in ("*", "localhost", "127.0.0.1")
+    ]
+
+    # TLS terminates at the proxy and HTTP is forwarded on, which is what tells
+    # Django to build https:// URLs — including the OAuth callback, which Google
+    # rejects if the scheme is wrong.
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SECURE_SSL_REDIRECT = _env_bool("DJANGO_SSL_REDIRECT", True)
+
+    # A year, with subdomains, and preload-ready. Set deliberately: HSTS is not
+    # revocable in any useful sense — a browser that has seen this header will
+    # refuse plain HTTP for the duration whatever the server later says — so
+    # DJANGO_HSTS_SECONDS exists to start it short on the first deploy.
+    SECURE_HSTS_SECONDS = int(os.getenv("DJANGO_HSTS_SECONDS", str(60 * 60 * 24 * 365)))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    # Lax rather than Strict: the OAuth callback is a cross-site GET landing
+    # back here, and Strict would drop the session cookie on exactly that hop.
+    SESSION_COOKIE_SAMESITE = "Lax"
+    CSRF_COOKIE_SAMESITE = "Lax"
+
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
+    X_FRAME_OPTIONS = "DENY"
 
 
 # ---------------------------------------------------------------------------
@@ -304,13 +363,20 @@ EMAIL_USE_TLS = _env_bool("EMAIL_USE_TLS", True)
 EMAIL_TIMEOUT = int(os.getenv("EMAIL_TIMEOUT", "20"))
 
 DEFAULT_FROM_EMAIL = os.getenv(
-    "DEFAULT_FROM_EMAIL", "Construction's Finest <no-reply@localhost>"
+    "DEFAULT_FROM_EMAIL", f"XTISE <no-reply@{SITE_DOMAIN}>"
 )
 
 #: Where links in an email point. An email is read outside the browser session
-#: that caused it, so a relative URL is useless — and this is the only place
-#: the app has to know its own public address.
-SITE_URL = os.getenv("SITE_URL", "http://127.0.0.1:8000").rstrip("/")
+#: that caused it, so a relative URL is useless — and this is the only place at
+#: runtime where the app has to know its own public address.
+#:
+#: Defaults to the dev server while DEBUG is on and to the production domain
+#: otherwise, so a deploy that forgets to set it sends working links rather
+#: than links to 127.0.0.1.
+SITE_URL = os.getenv(
+    "SITE_URL",
+    "http://127.0.0.1:8000" if DEBUG else f"https://{SITE_DOMAIN}",
+).rstrip("/")
 
 
 # ---------------------------------------------------------------------------

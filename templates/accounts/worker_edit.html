@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load account_extras i18n %}
-{% block title %}{% translate "Worker profile — Construction's Finest" %}{% endblock %}
+{% block title %}{% translate "Worker profile — XTISE" %}{% endblock %}
 
 {% block content %}
   <h1>{% if stepped %}{% translate "Set up your profile" %}{% else %}{% translate "Worker profile" %}{% endif %}</h1>
@@ -72,7 +72,7 @@
                        placeholder="{% translate "Licence number" %}">
               {% endfor %}
               <p class="note">
-                {% translate "Self-reported. Construction's Finest does not verify licence numbers yet, and never shows them to clients as verified." %}
+                {% translate "Self-reported. XTISE does not verify licence numbers yet, and never shows them to clients as verified." %}
               </p>
             </details>
           {% endif %}

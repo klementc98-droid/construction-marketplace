@@ -167,7 +167,7 @@ class Command(BaseCommand):
                 header = existing.get("", "")
 
                 lines = [
-                    "# Translation catalogue for Construction's Finest.",
+                    "# Translation catalogue for XTISE.",
                     "#",
                     "# Regenerate with `python manage.py extractpo`, then compile with",
                     "# `python manage.py compilepo`. Neither needs GNU gettext installed.",

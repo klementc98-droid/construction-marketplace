@@ -8,10 +8,33 @@
    A single value leaves a strip of cream above a dark page on mobile Safari
    and Chrome, which is the one place the seam is impossible to miss.
 {% endcomment %}
-<meta name="theme-color" content="#f5f5f2" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#050505" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f7f8fa" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0b0d10" media="(prefers-color-scheme: dark)">
 <meta name="description" content="{% block description %}{% translate "Tradespeople looking for helpers. No experience needed — you learn on site and you are paid for the days you work." %}{% endblock %}">
-<title>{% block title %}Construction's Finest{% endblock %}</title>
+<title>{% block title %}XTISE{% endblock %}</title>
+
+{% comment %} What a pasted link turns into in a chat. Most of this app's traffic will
+   arrive as a job sent to somebody by their cousin, so the card that link
+   unfurls into is a real surface and not an afterthought.
+
+   Every URL here is built from the request rather than written down, so the
+   same templates serve localhost, a phone tunnel and xtise.gr without knowing
+   which of the three they are on — see SITE_URL in settings for the one place
+   that does have to know, and why it is only needed for email.
+
+   og:image is a PNG. Every platform that renders one of these refuses SVG, and
+   a link that previews as a grey box is worse than one with no image at all.
+{% endcomment %}
+<meta property="og:site_name" content="XTISE">
+<meta property="og:type" content="website">
+<meta property="og:title" content="{% block og_title %}XTISE{% endblock %}">
+<meta property="og:description" content="{% translate "Tradespeople looking for helpers. No experience needed — you learn on site and you are paid for the days you work." %}">
+<meta property="og:url" content="{{ request.build_absolute_uri }}">
+<meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{% static 'og.png' %}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="{{ LANGUAGE_CODE }}">
+<meta name="twitter:card" content="summary_large_image">
 
 {% comment %}
 Theme, resolved before the first paint. This has to be inline and blocking:
@@ -48,6 +71,8 @@ correct answer anyway.
 {% endcomment %}
 <link rel="stylesheet" href="{% static 'css/crew.css' %}?v={{ asset_v }}">
 <link rel="icon" href="{% static 'favicon.svg' %}?v={{ asset_v }}" type="image/svg+xml">
+{# The same X with room for the lap joint, for a home-screen shortcut. #}
+<link rel="apple-touch-icon" href="{% static 'appicon.svg' %}?v={{ asset_v }}">
 <script src="{% static 'js/crew.js' %}?v={{ asset_v }}" defer></script>
 {% block head %}{% endblock %}
 </head>
@@ -164,27 +189,16 @@ correct answer anyway.
 {% endcomment %}
 <header class="top{% if user.is_authenticated %} signed-in{% endif %}">
   <div class="wrap">
-    <a class="brand" href="{% url 'accounts:home' %}" aria-label="{% translate "Construction's Finest, home" %}">
-      {% comment %} Two angled bars — a roofline. Small enough to read at 20px. The
-         roof takes the heat gradient; the ground line under it stays neutral so
-         the mark still has a light and a dark half at 20px, which is what stops
-         it collapsing into an orange smudge.
-      {% endcomment %}
-      <svg width="22" height="22" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <defs>
-          {# The --heat-bright ramp, restated as SVG stops. #}
-          <linearGradient id="brand-heat" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stop-color="var(--accent-3)"/>
-            <stop offset=".3" stop-color="var(--accent-2)"/>
-            <stop offset=".66" stop-color="var(--accent)"/>
-            <stop offset="1" stop-color="var(--brick)"/>
-          </linearGradient>
-        </defs>
-        <path d="M2 12.5 10 3l8 9.5" stroke="url(#brand-heat)" stroke-width="2.8"
-              stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M6 17h8" stroke="var(--dim)" stroke-width="2.8" stroke-linecap="round"/>
-      </svg>
-      <span class="brand-word">Construction's Finest</span>
+    {% comment %} The wordmark is the logo. There is no mark beside it and no monogram
+       in front of it — what stood here was a drawn roofline plus a name, and a
+       wordmark that needs a picture to be recognised is not yet a wordmark.
+
+       The X is a span rather than a glyph in an image, so the name is one piece
+       of selectable, translatable, screen-readable text that survives a font
+       failing to load. It is styled in .brand-x, where the reasoning lives.
+    {% endcomment %}
+    <a class="brand" href="{% url 'accounts:home' %}" aria-label="{% translate "XTISE, home" %}">
+      <span class="brand-word"><span class="brand-x">X</span><span class="brand-rest">TISE</span></span>
     </a>
 
     {% comment %} No "Home" link here: the brand to the left of this bar already goes there,
@@ -292,7 +306,7 @@ correct answer anyway.
 <footer class="foot">
   <div class="wrap">
     {% block footer %}
-      <span class="foot-brand">Construction's Finest</span>
+      <span class="foot-brand">XTISE</span>
       <a href="{% url 'jobs:list' %}">{% translate "Find work" %}</a>
       <a href="{% url 'jobs:worker_list' %}">{% translate "Find workers" %}</a>
       <a href="{% url 'core:about' %}"

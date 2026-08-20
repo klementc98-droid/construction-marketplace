@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Construction's Finest — the assistant widget
+   XTISE — the assistant widget
    --------------------------------------------------------------------------
    Same posture as crew.js: no framework, no build step, opt-in from markup.
    Nothing here is load-bearing. If this file fails to parse, the launcher does

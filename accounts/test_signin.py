@@ -84,7 +84,7 @@ class LoginPageTests(TestCase):
         """The tell that it is ours: allauth's layout has no stylesheet and a
         "Menu:" list where the header should be."""
         response = self.client.get(reverse("account_login"))
-        self.assertContains(response, "Construction's Finest")
+        self.assertContains(response, "XTISE")
         self.assertNotContains(response, "<strong>Menu:</strong>")
 
     def test_it_says_what_google_hands_over(self):

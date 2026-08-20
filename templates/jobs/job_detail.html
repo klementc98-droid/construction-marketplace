@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load i18n money_extras %}
-{% block title %}{{ job.title }} — Construction's Finest{% endblock %}
+{% block title %}{{ job.title }} — XTISE{% endblock %}
 {% block description %}{{ job.description|truncatewords:24 }}{% endblock %}
 
 {% block content %}
@@ -177,7 +177,10 @@
 
   <div class="card">
     <div class="stat-row">
-      <div class="stat">
+      {% comment %} stat--money, because the accent is spent on the rate and not on
+         every figure in the row — see the .stat--money rule.
+      {% endcomment %}
+      <div class="stat stat--money">
         {% comment %} "Total pay" is the total of one day. On a booking that label is a
            lie the size of the booking — €50 beside a job the reader can see runs
            for a week. The figure is right and stays; only the word changes.
