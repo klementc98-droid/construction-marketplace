@@ -6,7 +6,6 @@
   <h1>{% translate "Worker profile" %}</h1>
   <p class="lede">{% translate "This is what clients see when they search for your trade." %}</p>
 
-  {% include "assistant/_form_offer.html" with form_key="worker_profile" %}
 
   <form method="post" enctype="multipart/form-data">
     {% csrf_token %}

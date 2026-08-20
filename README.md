@@ -54,11 +54,16 @@ each day is its own row, because each day carries its own escrow, sign-off and
 expiry, and Tuesday going to dispute must not freeze Wednesday's money. That
 split is bookkeeping the reader never meets.
 
-**An in-app assistant.** Optional. It answers questions about how the platform
-works from the platform's own live configuration, and it can fill in a form by
-asking one question at a time with tappable answers. It never writes to the
-database — it opens the real form with the answers filled in and the person
-presses save.
+**An in-app assistant.** Optional, and deliberately narrow: it answers
+questions about how the platform works and does nothing else. Its grounding is
+the platform's own live configuration plus the whitepaper, read from the file
+it is published from, so a fee change or an edited argument reaches it without
+anybody restating it. It is handed no tools, so "it cannot act on your behalf"
+is a fact about the request rather than a rule the model is asked to keep.
+
+It used to be able to fill a form in by chat as well. That went when posting
+and profiles became one question per screen: a conversation collecting the same
+values was a slower route to a form you had to look at anyway.
 
 ---
 
@@ -251,7 +256,7 @@ transaction. It is not written yet.
 python manage.py test
 ```
 
-Around 780 tests, no network calls — Stripe and the assistant are both stubbed.
+Around 750 tests, no network calls — Stripe and the assistant are both stubbed.
 
 Stubbing the payment gateway is what makes the suite runnable without keys, and
 it hides exactly one thing: a mock accepts any arguments, so a service calling
@@ -284,8 +289,9 @@ leaves behind and happens the same way every run. Two simultaneous fundings,
 two deliveries of one webhook, a release meeting a dispute, a booking whose
 third day fails after the first two have been captured.
 The interesting assistant tests are the ones where the stubbed model misbehaves
-on purpose: declaring a form finished halfway through, claiming values it never
-heard, or taking an instruction out of a user's message.
+on purpose — taking an instruction out of a user's message, or returning
+nothing at all — and the one that checks it is handed no tools, which is what
+makes the rest of that moot.
 
 ---
 
@@ -296,14 +302,16 @@ A few conventions worth knowing before changing anything:
 - **Comments explain *why*, not *what*.** Most of them are load-bearing history
   — a note saying a step was removed and why is what stops it being helpfully
   reintroduced.
-- **One source of truth per fact.** The assistant's schema is derived from the
-  real Django forms; its answer buttons come from the same fields; its knowledge
-  of fees is read from `business_rules`. Nothing about a form is written down
-  twice, so a field added in one place appears everywhere it should.
-- **The server is the authority.** The assistant's conversation state, the branch
-  it is in, and whether a form is complete are all decided server-side. The model
-  is never trusted with anything that matters, because it is not trustworthy with
-  anything that matters.
+- **One source of truth per fact.** The assistant reads fees from
+  `business_rules`, the lifecycle from the state machine, the experience levels
+  from the field's own choices, and the product argument from `docs/whitepaper.md`.
+  The posting flow's steps are declared on the form class, not in the template.
+  Nothing is written down twice, so a change in one place shows up everywhere it
+  should — and nothing quietly keeps quoting last year's number.
+- **The server is the authority.** The model is never trusted with anything that
+  matters, because it is not trustworthy with anything that matters. The
+  strongest form of that is not a rule in a prompt: the assistant is handed no
+  tools and its endpoint writes nothing.
 - **Money is `Decimal`.** Never `float`. A float fee eventually produces a payout
   off by a cent, and cents here belong to real people.
 

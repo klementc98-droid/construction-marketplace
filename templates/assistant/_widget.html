@@ -1,20 +1,25 @@
 {% load i18n %}{% comment %}
-The assistant. One widget, one branch point.
+The assistant. One thing: questions about how the app works.
 
 Rendered once in base.html for signed-in users when a key is configured. The
 whole thing is inert until pressed — assistant.js does nothing on load beyond
-binding the launcher, so a page that nobody asks for help on pays nothing for
-this being here.
+binding the launcher, so a page nobody asks for help on pays nothing for this
+being here.
 
-The two choices below are the only place the branch is decided. Whichever
-button is pressed is sent to the server and held there for the rest of the
-conversation; nothing the user later types can move between them.
+There used to be a choice here: help me fill in a form, or answer a question.
+The form half is gone. Posting a job and writing a profile now ask one question
+per screen on the form itself, where an answer is typed into the box it belongs
+to and can be seen beside the others — a chat that collects the same values was
+a slower route to a screen you had to look at anyway.
+
+So the panel opens straight into the conversation. A menu with one item on it
+is a menu that exists to be got past.
 {% endcomment %}
 <div class="asst" data-assistant hidden>
   <div class="asst-head">
     <div>
       <strong class="asst-title">{% translate "Assistant" %}</strong>
-      <span class="asst-sub" data-asst-sub>{% translate "How can I help?" %}</span>
+      <span class="asst-sub" data-asst-sub>{% translate "Questions about the app" %}</span>
     </div>
     <button class="icon-btn asst-x" type="button" data-asst-close
             aria-label="{% translate "Close assistant" %}">
@@ -25,26 +30,6 @@ conversation; nothing the user later types can move between them.
     </button>
   </div>
 
-  {# Step 1 — the branch point. #}
-  <div class="asst-body" data-asst-choose>
-    <p class="asst-lede">{% translate "What do you need?" %}</p>
-
-    <button class="asst-pick" type="button" data-asst-branch="form">
-      <span class="asst-pick-t">{% translate "Help me fill out a form" %}</span>
-      <span class="asst-pick-d">{% translate "I'll ask you a few questions and fill it in for you." %}</span>
-    </button>
-
-    <div class="asst-forms" data-asst-forms hidden>
-      <p class="asst-lede">{% translate "Which one?" %}</p>
-    </div>
-
-    <button class="asst-pick" type="button" data-asst-branch="qa">
-      <span class="asst-pick-t">{% translate "I have a question about the app" %}</span>
-      <span class="asst-pick-d">{% translate "How you get paid, check-ins, ratings, where things are." %}</span>
-    </button>
-  </div>
-
-  {# Step 2 — the conversation. Same panel, same component. #}
   <div class="asst-body asst-chat" data-asst-chat hidden>
     <div class="asst-log" data-asst-log role="log" aria-live="polite"></div>
   </div>
@@ -62,7 +47,7 @@ conversation; nothing the user later types can move between them.
   <form class="asst-foot" data-asst-form data-no-guard hidden>
     <label class="sr-only" for="asst-input">{% translate "Your message" %}</label>
     <input class="asst-input" id="asst-input" type="text" autocomplete="off"
-           data-asst-input placeholder="{% translate "Type your answer…" %}" maxlength="1500">
+           data-asst-input placeholder="{% translate "Ask about the app…" %}" maxlength="1500">
     <button class="btn asst-send" type="submit" data-asst-send aria-label="{% translate "Send" %}">
       <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor"
            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">

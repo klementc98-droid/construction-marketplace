@@ -494,13 +494,17 @@ msgstr "Εγκρίνει σε"
 msgid "Are you looking for a full-time job?"
 msgstr "Ψάχνεις δουλειά πλήρους απασχόλησης;"
 
+#: templates/assistant/_widget.html
+msgid "Ask about the app…"
+msgstr "Ρώτα για την εφαρμογή…"
+
 #: templates/jobs/job_detail.html
 msgid "Ask for different terms"
 msgstr "Ζήτα διαφορετικούς όρους"
 
 #: assistant/views.py
-msgid "Ask me anything about how this app works — how you get paid, when money is released, check-ins, ratings, or where to find something."
-msgstr "Ρώτησέ με οτιδήποτε για το πώς λειτουργεί η εφαρμογή — πώς πληρώνεσαι, πότε αποδεσμεύονται τα χρήματα, τα check-in, οι αξιολογήσεις ή πού βρίσκεται κάτι."
+msgid "Ask me anything about how this app works — how you get paid, when money is released, check-ins, ratings, who can take a job with no experience, or where to find something."
+msgstr "Ρώτα με ό,τι θες για το πώς δουλεύει η εφαρμογή — πώς πληρώνεσαι, πότε αποδεσμεύονται τα λεφτά, το check-in, τις αξιολογήσεις, ποιος μπορεί να πιάσει μια δουλειά χωρίς εμπειρία, ή πού θα βρεις κάτι."
 
 #: templates/jobs/job_detail.html
 msgid "Assigned to"
@@ -602,6 +606,10 @@ msgstr "Αντίο"
 #: templates/payments/escrow_detail.html
 msgid "Call it off and release the hold"
 msgstr "Ακύρωσέ το και αποδέσμευσε την κράτηση"
+
+#: assistant/options.py
+msgid "Can I work here with no experience?"
+msgstr "Μπορώ να δουλέψω εδώ χωρίς εμπειρία;"
 
 #: templates/jobs/job_apply.html
 msgid "Can you tell me a bit more about the day?"
@@ -977,10 +985,6 @@ msgstr "Απέτυχε"
 msgid "Fields marked"
 msgstr "Τα πεδία με σήμανση"
 
-#: templates/assistant/_form_offer.html
-msgid "Fill it in by chat"
-msgstr "Συμπλήρωσέ το με συνομιλία"
-
 #: templates/jobs/_filters.html
 msgid "Filters"
 msgstr "Φίλτρα"
@@ -1136,10 +1140,6 @@ msgstr "Γεια"
 msgid "Help"
 msgstr "Βοήθεια"
 
-#: templates/assistant/_widget.html
-msgid "Help me fill out a form"
-msgstr "Βοήθησέ με να συμπληρώσω μια φόρμα"
-
 #: templates/accounts/client_detail.html
 msgid "Hiring right now"
 msgstr "Προσλαμβάνει τώρα"
@@ -1175,10 +1175,6 @@ msgstr "Ώρες εργασίας"
 msgid "How a tradesperson finds a helper here, and how somebody with no experience gets their first day on a site."
 msgstr "Πώς ένας μάστορας βρίσκει βοηθό εδώ, και πώς κάποιος χωρίς εμπειρία πιάνει την πρώτη του μέρα σε εργοτάξιο."
 
-#: templates/assistant/_widget.html
-msgid "How can I help?"
-msgstr "Πώς μπορώ να βοηθήσω;"
-
 #: jobs/forms.py
 #: templates/jobs/job_detail.html
 msgid "How did it go?"
@@ -1190,10 +1186,6 @@ msgstr ""
 
 #: assistant/options.py
 msgid "How do I post a job?"
-msgstr ""
-
-#: assistant/options.py
-msgid "How do ratings work?"
 msgstr ""
 
 #: assistant/options.py
@@ -1245,25 +1237,9 @@ msgstr "Πώς θα χρησιμοποιήσεις την πλατφόρμα;"
 msgid "How you appear to everyone else on the platform."
 msgstr "Έτσι εμφανίζεσαι σε όλους τους άλλους στην πλατφόρμα."
 
-#: templates/assistant/_widget.html
-msgid "How you get paid, check-ins, ratings, where things are."
-msgstr "Πώς πληρώνεσαι, check-in, αξιολογήσεις, πού βρίσκεται τι."
-
-#: templates/assistant/_widget.html
-msgid "I have a question about the app"
-msgstr "Έχω μια ερώτηση για την εφαρμογή"
-
 #: templates/accounts/_paths.html
 msgid "I need a hand on site"
 msgstr "Ψάχνω βοηθό"
-
-#: templates/assistant/_form_offer.html
-msgid "I'll ask one thing at a time and fill this in for you. You'll see the finished form here before anything is saved."
-msgstr "Θα ρωτάω ένα πράγμα κάθε φορά και θα το συμπληρώνω για σένα. Θα δεις την ολοκληρωμένη φόρμα εδώ πριν αποθηκευτεί οτιδήποτε."
-
-#: templates/assistant/_widget.html
-msgid "I'll ask you a few questions and fill it in for you."
-msgstr "Θα σου κάνω μερικές ερωτήσεις και θα τη συμπληρώσω για σένα."
 
 #: templates/jobs/job_apply.html
 msgid "I'm free that day and I can be there."
@@ -1580,7 +1556,6 @@ msgstr "Επόμενο"
 msgid "Next month"
 msgstr "Επόμενος μήνας"
 
-#: assistant/options.py
 #: templates/payments/payouts.html
 msgid "No"
 msgstr "Όχι"
@@ -2209,6 +2184,10 @@ msgstr "Ζήτα αριθμό άδειας στα προφίλ βοηθών αυ
 msgid "Put different terms up"
 msgstr "Πρότεινε διαφορετικούς όρους"
 
+#: templates/assistant/_widget.html
+msgid "Questions about the app"
+msgstr "Ερωτήσεις για την εφαρμογή"
+
 #: templates/core/whitepaper.html
 msgid "Questions this doesn't answer? The"
 msgstr "Ερωτήσεις που δεν απαντώνται εδώ; Η"
@@ -2234,10 +2213,6 @@ msgstr "Αμοιβή κατόπιν αιτήματος"
 #: templates/jobs/mine.html
 msgid "Rate these"
 msgstr "Αξιολόγησε αυτές"
-
-#: templates/assistant/_form_offer.html
-msgid "Rather just answer a few questions?"
-msgstr "Προτιμάς απλώς να απαντήσεις μερικές ερωτήσεις;"
 
 #: templates/accounts/_worker_card.html
 #: templates/accounts/worker_detail.html
@@ -2305,10 +2280,6 @@ msgstr "Επιστράφηκε στον μάστορα"
 #: templates/accounts/_reviews.html
 msgid "Reviews"
 msgstr "Αξιολογήσεις"
-
-#: assistant/views.py
-msgid "Right — let's do %(noun)s together. I'll ask one thing at a time, and you can answer however you like. Nothing gets saved until you've seen the finished form and pressed save."
-msgstr "Ωραία — ας κάνουμε %(noun)s μαζί. Θα ρωτάω ένα πράγμα κάθε φορά και μπορείς να απαντάς όπως θέλεις. Τίποτα δεν αποθηκεύεται μέχρι να δεις την ολοκληρωμένη φόρμα και να πατήσεις αποθήκευση."
 
 #: core/models.py
 msgid "Roofer"
@@ -2451,10 +2422,6 @@ msgstr "Γεωγραφικό μήκος εργοταξίου (προαιρετι
 msgid "Skilled"
 msgstr "Έμπειρος"
 
-#: assistant/options.py
-msgid "Skip"
-msgstr ""
-
 #: templates/base.html
 msgid "Skip to content"
 msgstr "Μετάβαση στο περιεχόμενο"
@@ -2496,8 +2463,8 @@ msgid "Something's wrong with this"
 msgstr "Κάτι δεν πάει καλά με αυτό"
 
 #: assistant/views.py
-msgid "Sorry — I can't reach the assistant right now. You can still fill the form in yourself, everything works as normal."
-msgstr "Συγγνώμη — δεν μπορώ να συνδεθώ με τον βοηθό αυτή τη στιγμή. Μπορείς να συμπληρώσεις τη φόρμα μόνος σου, όλα λειτουργούν κανονικά."
+msgid "Sorry — I can't reach the assistant right now. Everything else in the app works as normal, and How it works has the same answers."
+msgstr "Συγγνώμη — δεν μπορώ να φτάσω τον βοηθό αυτή τη στιγμή. Όλα τα άλλα στην εφαρμογή δουλεύουν κανονικά, και η σελίδα «Πώς λειτουργεί» έχει τις ίδιες απαντήσεις."
 
 #: assistant/views.py
 msgid "Sorry, I didn't catch that — could you say it another way?"
@@ -2575,10 +2542,6 @@ msgstr "Αυτές είναι %(count)s ημέρες — το όριο είνα�
 #: assistant/views.py
 msgid "That's a lot of messages in one go — give it a few minutes and try again."
 msgstr "Αυτά είναι πολλά μηνύματα μαζί — δώσε λίγα λεπτά και ξαναδοκίμασε."
-
-#: assistant/views.py
-msgid "That's everything I need. Open the form below — it's filled in with your answers. Change anything that isn't right by clicking straight into it, then press save."
-msgstr "Αυτά ήταν όλα. Άνοιξε τη φόρμα παρακάτω — είναι συμπληρωμένη με τις απαντήσεις σου. Άλλαξε ό,τι δεν είναι σωστό πατώντας πάνω του και μετά πάτησε αποθήκευση."
 
 #: templates/accounts/_feed_items.html
 msgid "That's everything for now."
@@ -2799,12 +2762,10 @@ msgstr "Οι συνομιλίες ανοίγουν μόλις ένας βοηθ�
 msgid "Title, description, or area"
 msgstr "Τίτλος, περιγραφή ή περιοχή"
 
-#: assistant/options.py
 #: jobs/models.py
 msgid "Today"
 msgstr "Σήμερα"
 
-#: assistant/options.py
 #: jobs/models.py
 msgid "Tomorrow"
 msgstr "Αύριο"
@@ -2881,10 +2842,6 @@ msgstr "Τύπος"
 #: jobs/forms.py
 msgid "Type of position"
 msgstr "Τύπος θέσης"
-
-#: templates/assistant/_widget.html
-msgid "Type your answer…"
-msgstr "Γράψε την απάντησή σου…"
 
 #: templates/worklog/workspace.html
 msgid "Under review"
@@ -2994,10 +2951,6 @@ msgstr "Τι ψάχνεις αυτή τη στιγμή;"
 msgid "What are you posting?"
 msgstr "Τι ανεβάζεις;"
 
-#: templates/assistant/_widget.html
-msgid "What do you need?"
-msgstr "Τι χρειάζεσαι;"
-
 #: jobs/forms.py
 msgid "What does it pay?"
 msgstr "Τι πληρώνει;"
@@ -3055,10 +3008,6 @@ msgstr "Ποιες ημέρες;"
 #: templates/jobs/offer_choose.html
 msgid "Which job?"
 msgstr "Ποια δουλειά;"
-
-#: templates/assistant/_widget.html
-msgid "Which one?"
-msgstr "Ποια;"
 
 #: templates/base.html
 msgid "Whitepaper"
@@ -3160,7 +3109,6 @@ msgstr "Βγαίνει"
 msgid "Write them a new job instead."
 msgstr "Γράψ’ τους καινούργια δουλειά."
 
-#: assistant/options.py
 #: templates/payments/payouts.html
 msgid "Yes"
 msgstr "Ναι"

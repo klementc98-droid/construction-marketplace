@@ -14,7 +14,6 @@
      just typing into the one you came to fix.
   {% endcomment %}
   {% if not job %}
-    {% include "assistant/_form_offer.html" with form_key=job_type %}
   {% endif %}
 
   <form method="post" class="card{% if not job %} stepform{% endif %}"

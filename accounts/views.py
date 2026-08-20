@@ -10,7 +10,6 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
-from assistant.conversation import take_handoff
 from config import business_rules as rules
 from core.models import Region, Trade
 from core.state_machine import JobState
@@ -196,18 +195,7 @@ def worker_edit(request):
             messages.success(request, "Profile saved.")
             return redirect("accounts:worker_detail", pk=profile.pk)
     else:
-        # Arriving from the chat assistant: the same form, pre-filled with what
-        # was confirmed in the conversation. It is still an ordinary unbound
-        # form — nothing has been written, corrections happen by typing into
-        # the fields, and saving goes through the usual validation.
-        prefill = take_handoff(request, "worker_profile")
-        if prefill:
-            messages.info(
-                request,
-                "Here's what we filled in together. Check it over, change "
-                "anything that isn't right, then save.",
-            )
-        form = WorkerProfileForm(instance=profile, initial=prefill or None)
+        form = WorkerProfileForm(instance=profile)
 
     return render(
         request,

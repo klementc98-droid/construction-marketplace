@@ -16,7 +16,6 @@ from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 from notifications.models import Kind
 from notifications.services import audience_for, booking_key, notify
-from assistant.conversation import take_handoff
 from core.models import Region
 from core.state_machine import Actor, JobState, assert_transition, claim
 from ..forms import (
@@ -166,17 +165,7 @@ def job_post(request, job_type: str):
             )
             return redirect("jobs:mine")
     else:
-        # Arriving from the chat assistant. Still an ordinary unbound form:
-        # nothing is written yet, corrections are made by typing into the
-        # fields, and posting runs the same validation as any other post.
-        prefill = take_handoff(request, job_type)
-        if prefill:
-            messages.info(
-                request,
-                "Here's what we filled in together. Check it over, change "
-                "anything that isn't right, then post it.",
-            )
-        form = form_class(initial=prefill or None)
+        form = form_class()
 
     return render(
         request,

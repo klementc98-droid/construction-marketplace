@@ -4181,49 +4181,6 @@ footer.foot .foot-brand { color: var(--fg-2); font-weight: 700; }
 .asst-x { margin-left: auto; }
 
 .asst-body { padding: 16px; overflow-y: auto; }
-.asst-lede { margin: 0 0 10px; color: var(--dim); font-size: 13px; }
-
-/* The branch point. Two full-width targets, description included — the choice
-   decides the whole conversation, so it is worth two lines each rather than a
-   pair of terse buttons someone has to guess between. */
-.asst-pick {
-  display: block;
-  width: 100%;
-  margin-bottom: 10px;
-  padding: 13px 15px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  background: var(--panel);
-  color: var(--fg);
-  font-family: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition: border-color var(--t-base) var(--ease),
-              background var(--t-base) var(--ease);
-}
-.asst-pick:hover { border-color: var(--accent-ink); background: var(--accent-soft); }
-.asst-pick:focus-visible { outline: none; box-shadow: var(--ring); }
-.asst-pick-t { display: block; font-size: 14.5px; font-weight: 620; }
-.asst-pick-d { display: block; margin-top: 3px; color: var(--dim); font-size: 12.5px; line-height: 1.5; }
-
-.asst-forms { margin: 0 0 10px; padding: 12px 14px; border-radius: var(--r-md); background: var(--panel-2); }
-.asst-form-pick {
-  display: block;
-  width: 100%;
-  margin-top: 6px;
-  padding: 9px 12px;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--r-sm);
-  background: var(--panel);
-  color: var(--fg);
-  font-family: inherit;
-  font-size: 13.5px;
-  font-weight: 560;
-  text-align: left;
-  cursor: pointer;
-}
-.asst-form-pick:hover { border-color: var(--accent-ink); color: var(--accent-ink); }
-.asst-form-pick:focus-visible { outline: none; box-shadow: var(--ring); }
 
 /* ==========================================================================
    Negotiation
@@ -4287,32 +4244,6 @@ footer.foot .foot-brand { color: var(--fg-2); font-weight: 700; }
 
 .terms-now h2 { margin-top: 0; }
 
-
-/* The offer that sits above a form. Tinted rather than plain-carded so it reads
-   as an aside to the form and not as the form's first question — somebody who
-   wants to type should be able to skip past it without parsing it. */
-.chat-offer {
-  display: flex;
-  align-items: center;
-  gap: 13px;
-  margin-bottom: 16px;
-  padding: 14px 16px;
-  border: 1px solid color-mix(in srgb, var(--accent) 26%, var(--line));
-  border-radius: var(--r-md);
-  background: var(--accent-soft);
-}
-.chat-offer-i { width: 21px; height: 21px; flex: none; color: var(--accent-ink); }
-.chat-offer-b { flex: 1; min-width: 0; }
-.chat-offer-b strong { display: block; color: var(--fg); font-size: 14.5px; font-weight: 640; }
-.chat-offer-b span { display: block; margin-top: 3px; color: var(--dim); font-size: 12.5px; line-height: 1.55; }
-.chat-offer-go { flex: none; width: auto; min-height: 40px; }
-
-@media (max-width: 559px) {
-  .chat-offer { flex-wrap: wrap; }
-  .chat-offer-i { display: none; }
-  .chat-offer-go { width: 100%; }
-}
-
 .asst-chat { flex: 1; min-height: 190px; }
 .asst-log { display: flex; flex-direction: column; gap: 9px; }
 
@@ -4373,17 +4304,6 @@ footer.foot .foot-brand { color: var(--fg-2); font-weight: 700; }
 
 .asst-opt:active { transform: scale(.96); }
 .asst-opt:focus-visible { outline: none; box-shadow: var(--ring); }
-
-/* The handoff into the prefilled form. Full width and set apart from the
-   bubbles: it is the one thing left to do in the panel, and on a phone it has
-   to be an unmissable target rather than a link inside a sentence. */
-.asst-handoff {
-  align-self: stretch;
-  justify-content: center;
-  margin-top: 5px;
-  text-align: center;
-  text-decoration: none;
-}
 
 /* Three dots while the model thinks. Decoration on a state that is also
    expressed by the disabled input, so the reduced-motion rule can kill it. */
