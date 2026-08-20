@@ -161,6 +161,11 @@ clickjacking and referrer headers all come on together. That block is keyed on
 `DEBUG` rather than living in a separate settings module, because a
 production-only file is a file nobody runs until the day it matters.
 
+**[docs/deploy.md](docs/deploy.md)** is the runbook: one VPS, Docker, nginx and
+Postgres, from a bare Ubuntu box to a working site — including the three
+consoles that have to be told about the domain (Google, Stripe, Brevo) and the
+two settings that are cheap now and expensive later.
+
 HSTS is not revocable in any useful sense — a browser that has seen the header
 refuses plain HTTP for its duration whatever the server later says — so
 `DJANGO_HSTS_SECONDS` exists to start it short on the first deploy.

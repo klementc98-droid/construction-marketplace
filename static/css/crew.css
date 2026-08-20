@@ -1302,6 +1302,12 @@ input[type=date]:hover::-webkit-calendar-picker-indicator { opacity: 1; }
    this draws its own. A data URI cannot read `currentColor` or a custom
    property, so the chevron is stated twice — once per theme — rather than
    left as a hardcoded grey that goes invisible against the dark panel. */
+/* The chevron is a data: URI, so its colour cannot be a token — it is baked
+   into the image. Both values below are the theme's own --dim, written out by
+   hand, and they have to be changed by hand when that changes. They were still
+   the warm brown of the palette before this one, which the token sweep could
+   not reach and nothing would have caught: a slightly wrong grey on a select
+   arrow is invisible until you put the two themes side by side. */
 select {
   appearance: none;
   -webkit-appearance: none;
@@ -1309,15 +1315,15 @@ select {
   background-repeat: no-repeat;
   background-position: right 13px center;
   background-size: 11px 7px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5l5-5' fill='none' stroke='%237d6a57' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5l5-5' fill='none' stroke='%235a6270' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   cursor: pointer;
 }
 :root[data-theme="luxe"] select {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5l5-5' fill='none' stroke='%23a3907c' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5l5-5' fill='none' stroke='%2398a1b0' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) select {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5l5-5' fill='none' stroke='%23a3907c' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5l5-5' fill='none' stroke='%2398a1b0' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   }
 }
 /* Multi-selects list their options; no chevron applies. */

@@ -143,6 +143,15 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # Directly after security and before everything else, which is where
+    # WhiteNoise has to sit: it answers static requests itself and returns
+    # without waking sessions, locale or auth for a stylesheet.
+    #
+    # Serving static from the app rather than from nginx is a deliberate
+    # trade. nginx would be marginally faster; it would also mean a static file
+    # can 404 because a volume was not mounted or a path drifted, which is a
+    # failure that looks like a broken site and reads like a CSS bug.
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     # Between session and common, which is where Django requires it: it reads
     # the language out of the session (set by the switcher in the header) and
@@ -214,6 +223,32 @@ else:
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
             "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
+
+
+# ---------------------------------------------------------------------------
+# Cache
+# ---------------------------------------------------------------------------
+# The assistant's rate limit is counted here, and counted with `add` then
+# `incr` so that checking and counting are one operation. That only holds if
+# every process shares the store: Django's default is per-process memory, so
+# under gunicorn with four workers one caller quietly gets four allowances.
+#
+# The database rather than Redis, and that is a considered choice for an app
+# this size. It is one table on a Postgres that already exists, backed up with
+# everything else, with no fourth service to run out of memory at 3am. The cost
+# is a round trip per check, on a path that already talks to the database.
+#
+# `createcachetable` is idempotent and runs on every deploy — see the
+# entrypoint. Local memory stays the default in development, where there is one
+# process and no table.
+
+if os.getenv("POSTGRES_DB"):
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+            "LOCATION": "app_cache",
         }
     }
 
@@ -410,6 +445,25 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "static"] if (BASE_DIR / "static").exists() else []
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# Hashed filenames and a gzip/brotli copy of each, built by collectstatic.
+#
+# The hash is what lets these be cached for a year, which matters here more
+# than usual: the stylesheet is one 4,000-line file that every page loads. The
+# ?v= stamp in the templates stays anyway — it costs nothing and it is what
+# makes a file correct in development, where this storage is not used.
+#
+# Manifest storage fails the build if a file references one that is missing.
+# That is the point of choosing it: better a deploy that stops than a site
+# that silently loses an asset.
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"
+        if not DEBUG
+        else "django.contrib.staticfiles.storage.StaticFilesStorage"
+    },
+}
 
 # Local disk in development. Deployed environments should swap in object
 # storage — CVs and portfolio photos are user uploads and must not live on an

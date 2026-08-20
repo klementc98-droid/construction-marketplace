@@ -10,6 +10,18 @@ openai==2.52.0
 # this is only what turns it into a page.
 markdown==3.10.3
 
+# --- serving it ------------------------------------------------------------
+# Only used in production; a runserver needs none of them, and pinning them
+# here rather than in a second file keeps one list to audit.
+#
+# gunicorn: the WSGI server. whitenoise: static files, served by the app itself
+# rather than by nginx, so a static file cannot 404 because a volume was not
+# mounted — nginx still fronts the whole thing for TLS. psycopg: the driver the
+# Postgres branch in settings has always assumed and never had.
+gunicorn==23.0.0
+whitenoise==6.11.0
+psycopg[binary]==3.2.12
+
 # Pulled in by the above; pinned so a fresh install matches this one.
 annotated-types==0.8.0
 anyio==4.14.2

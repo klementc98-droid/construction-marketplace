@@ -1,22 +1,34 @@
-"""Run the scheduled commands on a loop, for a machine with no cron.
+"""Run the scheduled commands on a loop.
 
-Four things in this app happen because time passed rather than because
-somebody pressed a button, and each has its own command. In a deployment they
-belong in cron. On a development box — particularly a Windows one — there is
-no cron, and the result is the failure this exists to prevent: notifications
-are written correctly by every request, the table fills up, and not one email
-is ever sent, because the thing that sends them is a command nobody ran.
+Several things in this app happen because time passed rather than because
+somebody pressed a button, and each has its own command. On a development box
+— particularly a Windows one — there is no cron, and the result is the failure
+this exists to prevent: notifications are written correctly by every request,
+the table fills up, and not one email is ever sent, because the thing that
+sends them is a command nobody ran.
 
     python manage.py run_timers          # loop until Ctrl-C
     python manage.py run_timers --once   # one pass of each, then exit
 
-Leave it running in its own terminal beside ``runserver``. It is a development
-convenience and nothing more: one process, no supervision, no persistence of
-when it last ran. Real deployments should still use cron, which survives this
-process being closed and does not lose its schedule when the laptop sleeps.
+In development, leave it running in its own terminal beside ``runserver``.
 
+In production it is the scheduler — the `ticker` service in docker-compose.yml
+is this command and nothing else. That is a promotion from what this file used
+to say, and the reason it is defensible is supervision: the container restarts
+on exit, so the failure this had as a bare process (somebody closes the
+terminal and email silently stops) is the one thing Docker is reliably good at.
 Every command it calls is idempotent, so a missed tick costs nothing but the
 delay and a doubled one does nothing at all.
+
+What it is still not is a job queue. It is one process running the commands in
+sequence, so a command that hangs holds up everything behind it — worth knowing
+before adding a slow one to SCHEDULE, and worth remembering when email is late
+and reconciliation is the thing that stopped.
+
+It also keeps no record of when it last ran. A restart begins the cycle again
+rather than catching up, which is safe here precisely because the commands are
+idempotent and time-based rather than tick-based: `send_notifications` sends
+whatever is queued, not whatever was queued since the last tick.
 """
 
 from __future__ import annotations
