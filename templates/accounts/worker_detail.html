@@ -21,7 +21,15 @@
         <p class="facts">
           <span>{{ profile.service_area|default:profile.region.name }}</span>
           <span class="sep">·</span>
-          <span>{% blocktranslate count years=profile.years_experience %}{{ years }} yr in the trade{% plural %}{{ years }} yrs in the trade{% endblocktranslate %}</span>
+          {% comment %} Zero is a sentence, not a number. "0 yrs in the trade" on the profile
+             of somebody this board exists to bring in contradicts the promise on
+             its own front page.
+          {% endcomment %}
+          {% if profile.years_experience %}
+            <span>{% blocktranslate count years=profile.years_experience %}{{ years }} yr in the trade{% plural %}{{ years }} yrs in the trade{% endblocktranslate %}</span>
+          {% else %}
+            <span>{% translate "New to the trade — here to learn" %}</span>
+          {% endif %}
           {% if profile.user.age %}
             <span class="sep">·</span><span>{{ profile.user.age }}</span>
           {% endif %}

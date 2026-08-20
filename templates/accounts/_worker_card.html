@@ -70,7 +70,12 @@ ranking, not information.
         <div class="v {% if not worker.years_experience %}new{% endif %}">
           {% if worker.years_experience %}
             {% blocktranslate count years=worker.years_experience %}{{ years }} yr{% plural %}{{ years }} yrs{% endblocktranslate %}
-          {% else %}{% translate "Not stated" %}{% endif %}
+          {% comment %} Not "Not stated", which reads as an omission — a blank where an
+             answer should be. On a board whose promise is that experience is not
+             required, the commonest profile has none, and it is a starting
+             point rather than a gap in the form.
+          {% endcomment %}
+          {% else %}{% translate "Starting out" %}{% endif %}
         </div>
       </div>
       <div class="stat stat--jobs">
