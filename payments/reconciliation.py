@@ -40,6 +40,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 
+from django.db import models
 from django.utils import timezone
 
 from config import business_rules as rules
@@ -75,6 +76,7 @@ class Report:
     accounts_adopted: list = field(default_factory=list)
     states_repaired: list = field(default_factory=list)
     checkouts_abandoned: list = field(default_factory=list)
+    failures_reversed: list = field(default_factory=list)
     unreachable: list = field(default_factory=list)
 
     @property
@@ -86,6 +88,7 @@ class Report:
             + len(self.accounts_adopted)
             + len(self.states_repaired)
             + len(self.checkouts_abandoned)
+            + len(self.failures_reversed)
         )
 
     def lines(self) -> list[str]:
@@ -100,6 +103,10 @@ class Report:
             )
         for worker_id, account_id in self.accounts_adopted:
             out.append(f"  worker {worker_id}: adopted lost account {account_id}")
+        for escrow_id, status in self.failures_reversed:
+            out.append(
+                f"  escrow {escrow_id}: read FAILED while Stripe was {status} — reversed"
+            )
         for escrow_id in self.checkouts_abandoned:
             out.append(f"  escrow {escrow_id}: checkout expired unpaid — recorded")
         for job_id, was, now in self.states_repaired:
@@ -132,9 +139,18 @@ def _record_capture(escrow: EscrowPayment, settled) -> bool:
 
 
 def _escrows_to_check():
+    """Rows whose local status could be behind, or wrong.
+
+    FAILED belongs here and was missing, which is what made a mistaken failure
+    permanent. A row marked failed while Stripe still holds the money is
+    exactly the case a safety net exists for — and it was the one status the
+    net did not look at. Only those carrying an intent id: a checkout that
+    failed before an intent existed has nothing to ask about.
+    """
     return (
         EscrowPayment.objects.filter(
-            status__in=(EscrowStatus.AUTHORIZED, EscrowStatus.PENDING)
+            models.Q(status__in=(EscrowStatus.AUTHORIZED, EscrowStatus.PENDING))
+            | models.Q(status=EscrowStatus.FAILED, payment_intent_id__gt="")
         )
         .select_related("job", "worker__user")
         .order_by("pk")
@@ -172,6 +188,10 @@ def reconcile(*, release_dead_holds: bool = True, dry_run: bool = False) -> Repo
             continue
 
         status = intent.get("status")
+
+        if escrow.status == EscrowStatus.FAILED:
+            _reverse_mistaken_failure(escrow, status, intent, report, dry_run=dry_run)
+            continue
 
         if status == "succeeded":
             settled = intent.get("amount_received") or escrow.amount
@@ -284,6 +304,68 @@ def _settled_jobs_left_behind(report: Report, *, dry_run: bool) -> None:
             was = escrow.job.state
             if _match_job_to(escrow, state):
                 report.states_repaired.append((escrow.job_id, was, state))
+
+
+#: PaymentIntent statuses in which Stripe is still holding the money. A local
+#: row reading FAILED against any of these is a row that lost an argument with
+#: an out-of-order event.
+HELD_AT_STRIPE = ("requires_capture", "requires_confirmation", "processing")
+
+
+def _reverse_mistaken_failure(
+    escrow: EscrowPayment, status: str, intent: dict, report: Report, *, dry_run: bool
+) -> None:
+    """A row marked failed over money that exists.
+
+    The failure that used to be unrecoverable: ``payment_failed`` for a
+    superseded attempt arriving after the attempt that worked. The write is
+    guarded at the source now, but this is the net under it — for rows written
+    before that guard, and for whatever else produces the same shape.
+
+    Stripe is the authority, as everywhere here. If it still holds the money
+    the row goes back to AUTHORIZED; if it has taken it, the row skips
+    straight to what actually happened.
+    """
+    if status not in HELD_AT_STRIPE and status != "succeeded":
+        return
+
+    if dry_run:
+        report.failures_reversed.append((escrow.pk, status))
+        return
+
+    if status == "succeeded":
+        settled = intent.get("amount_received") or escrow.amount
+        moved = claim(
+            EscrowPayment,
+            escrow.pk,
+            field="status",
+            expect=EscrowStatus.FAILED,
+            to=EscrowStatus.RELEASED,
+            captured_amount=settled,
+            captured_fee=rules.platform_fee_for(settled),
+            captured_payout=rules.worker_payout_for(settled),
+            released_at=timezone.now(),
+        )
+        if moved:
+            _match_job_to(escrow, JobState.PAID_OUT)
+    else:
+        moved = claim(
+            EscrowPayment,
+            escrow.pk,
+            field="status",
+            expect=EscrowStatus.FAILED,
+            to=EscrowStatus.AUTHORIZED,
+            authorized_at=escrow.authorized_at or timezone.now(),
+            last_error="",
+        )
+        if moved:
+            _match_job_to(escrow, JobState.ESCROW_HELD)
+
+    if moved:
+        logger.warning(
+            "escrow %s read FAILED while Stripe was %s — reversed", escrow.pk, status
+        )
+        report.failures_reversed.append((escrow.pk, status))
 
 
 def _reconcile_pending(

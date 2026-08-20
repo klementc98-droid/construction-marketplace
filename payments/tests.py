@@ -23,7 +23,7 @@ from core.models import Region, Trade
 from core.state_machine import Actor, IllegalTransition, JobState
 from jobs.models import Job, JobType
 
-from . import gateway, services
+from . import gateway, reconciliation, services
 from .models import EscrowPayment, EscrowStatus, StripeAccount, WebhookEvent
 
 User = get_user_model()
@@ -1016,6 +1016,190 @@ class ConnectAccountTests(EscrowTestCase):
 
         self.assertEqual(account.account_id, "acct_existing")
         mock.assert_not_called()
+
+
+class OutOfOrderEventTests(EscrowTestCase):
+    """Stripe does not promise its events arrive in the order they happened.
+
+    Which makes one of them able to destroy money that exists: a PaymentIntent
+    that fails one attempt and succeeds on the next produces both a
+    payment_failed and an amount_capturable_updated, and nothing says which
+    lands first. Written unconditionally, the late failure took an AUTHORIZED
+    row to FAILED with the hold sitting live at Stripe — and nothing could
+    reach it afterwards, because release refuses anything but AUTHORIZED and
+    reconciliation did not look at FAILED rows at all.
+    """
+
+    def setUp(self):
+        self.ready_account()
+        self.job = self.make_gig()
+        self.escrow = EscrowPayment.objects.create(
+            job=self.job,
+            worker=self.worker_profile,
+            amount=Decimal("90"),
+            platform_fee=Decimal("10.80"),
+            worker_payout=Decimal("79.20"),
+        )
+
+    def test_a_late_failure_cannot_unfund_a_held_payment(self):
+        services.mark_authorized(self.escrow, "pi_second_attempt")
+
+        services.mark_failed(self.escrow, "The first attempt was declined.")
+
+        self.escrow.refresh_from_db()
+        self.assertEqual(self.escrow.status, EscrowStatus.AUTHORIZED)
+
+    def test_nor_reopen_a_payment_already_released(self):
+        EscrowPayment.objects.filter(pk=self.escrow.pk).update(
+            status=EscrowStatus.RELEASED
+        )
+        self.escrow.refresh_from_db()
+
+        services.mark_failed(self.escrow, "stale")
+
+        self.escrow.refresh_from_db()
+        self.assertEqual(self.escrow.status, EscrowStatus.RELEASED)
+
+    def test_a_failure_on_a_row_still_waiting_is_recorded(self):
+        """The ordinary case still has to work."""
+        services.mark_failed(self.escrow, "Card declined.")
+
+        self.escrow.refresh_from_db()
+        self.assertEqual(self.escrow.status, EscrowStatus.FAILED)
+        self.assertIn("declined", self.escrow.last_error)
+
+    def test_the_capturable_event_can_still_arrive_after_a_failure(self):
+        """Failure first, success second: the row has to be able to recover."""
+        services.mark_failed(self.escrow, "First attempt declined.")
+
+        services.mark_authorized(self.escrow, "pi_second_attempt")
+
+        self.escrow.refresh_from_db()
+        self.assertEqual(self.escrow.status, EscrowStatus.AUTHORIZED)
+
+
+class MistakenFailureTests(EscrowTestCase):
+    """The net under it, for rows written before the guard existed."""
+
+    def setUp(self):
+        self.ready_account()
+        self.job = self.make_gig(state=JobState.ESCROW_HELD)
+        self.escrow = EscrowPayment.objects.create(
+            job=self.job,
+            worker=self.worker_profile,
+            amount=Decimal("90"),
+            platform_fee=Decimal("10.80"),
+            worker_payout=Decimal("79.20"),
+            status=EscrowStatus.FAILED,
+            payment_intent_id="pi_actually_held",
+            last_error="payment_failed arrived late",
+        )
+
+    @patch("payments.gateway.retrieve_payment_intent", autospec=True)
+    def test_a_row_marked_failed_over_live_money_is_put_back(self, intent):
+        intent.return_value = {
+            "id": "pi_actually_held",
+            "status": "requires_capture",
+            "amount_received": Decimal("0"),
+        }
+
+        with self.assertLogs("payments.reconciliation", level="WARNING"):
+            report = reconciliation.reconcile()
+
+        self.escrow.refresh_from_db()
+        self.assertEqual(self.escrow.status, EscrowStatus.AUTHORIZED)
+        self.assertEqual(len(report.failures_reversed), 1)
+
+    @patch("payments.gateway.retrieve_payment_intent", autospec=True)
+    def test_and_one_whose_money_was_taken_skips_to_released(self, intent):
+        intent.return_value = {
+            "id": "pi_actually_held",
+            "status": "succeeded",
+            "amount_received": Decimal("90.00"),
+        }
+
+        with self.assertLogs("payments.reconciliation", level="WARNING"):
+            reconciliation.reconcile()
+
+        self.escrow.refresh_from_db()
+        self.assertEqual(self.escrow.status, EscrowStatus.RELEASED)
+        self.assertEqual(self.escrow.captured_payout, Decimal("79.20"))
+
+    @patch("payments.gateway.retrieve_payment_intent", autospec=True)
+    def test_a_genuine_failure_is_left_alone(self, intent):
+        intent.return_value = {
+            "id": "pi_actually_held",
+            "status": "requires_payment_method",
+            "amount_received": Decimal("0"),
+        }
+
+        report = reconciliation.reconcile()
+
+        self.escrow.refresh_from_db()
+        self.assertEqual(self.escrow.status, EscrowStatus.FAILED)
+        self.assertEqual(len(report.failures_reversed), 0)
+
+
+class AccountFlagOrderingTests(EscrowTestCase):
+    """The same problem, quieter: flags that decide whether work can be funded.
+
+    An older account.updated arriving after a newer one used to overwrite it,
+    so a worker who had just been enabled could read as disabled again — locked
+    out of work by the order two HTTP requests happened to arrive in.
+    """
+
+    def setUp(self):
+        self.account = self.ready_account()
+
+    def event(self, *, created, charges_enabled):
+        return {
+            "id": f"evt_acct_{created}",
+            "type": "account.updated",
+            "created": created,
+            "data": {
+                "object": {
+                    "id": self.account.account_id,
+                    "details_submitted": True,
+                    "charges_enabled": charges_enabled,
+                    "payouts_enabled": charges_enabled,
+                }
+            },
+        }
+
+    def post(self, event):
+        with patch(
+            "payments.gateway.construct_event", return_value=event, autospec=True
+        ):
+            return self.client.post(
+                reverse("payments:webhook"),
+                data=b"{}",
+                content_type="application/json",
+                HTTP_STRIPE_SIGNATURE="t=1,v1=fake",
+            )
+
+    def test_a_newer_snapshot_is_applied(self):
+        self.post(self.event(created=2_000, charges_enabled=True))
+
+        self.account.refresh_from_db()
+        self.assertTrue(self.account.charges_enabled)
+
+    def test_an_older_snapshot_arriving_late_is_ignored(self):
+        self.post(self.event(created=2_000, charges_enabled=True))
+        self.post(self.event(created=1_000, charges_enabled=False))
+
+        self.account.refresh_from_db()
+        self.assertTrue(
+            self.account.charges_enabled,
+            "an older event must not undo a newer one",
+        )
+
+    def test_a_later_disable_still_applies(self):
+        """Ordering, not stickiness: a genuinely newer 'no' must land."""
+        self.post(self.event(created=1_000, charges_enabled=True))
+        self.post(self.event(created=3_000, charges_enabled=False))
+
+        self.account.refresh_from_db()
+        self.assertFalse(self.account.charges_enabled)
 
 
 class WebhookLeaseTests(EscrowTestCase):

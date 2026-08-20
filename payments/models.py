@@ -54,6 +54,14 @@ class StripeAccount(TimestampedModel):
     charges_enabled = models.BooleanField(default=False)
     payouts_enabled = models.BooleanField(default=False)
 
+    #: When the snapshot these flags came from was made — Stripe's own
+    #: timestamp, not ours. Webhooks are not delivered in the order the events
+    #: happened, so without this an older `account.updated` overwrites a newer
+    #: one and a worker who has just been enabled reads as disabled again. The
+    #: flags decide whether a job can be funded at all, so that is a worker
+    #: locked out of work by the order two HTTP requests happened to arrive in.
+    flags_synced_at = models.DateTimeField(null=True, blank=True)
+
     class Meta:
         ordering = ("-created_at",)
         constraints = [
