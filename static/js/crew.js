@@ -875,6 +875,40 @@
 
 
   /* ======================================================================
+     Openers
+     ----------------------------------------------------------------------
+     Buttons that write the first line of an application into the box beside
+     them. Nothing is submitted and nothing is chosen: the text lands in the
+     field, the cursor lands after it, and what gets sent is whatever the
+     reader leaves there.
+
+     Hidden in the markup and shown here, because without this file they would
+     be four buttons that do nothing - worse than not offering them at all.
+     ====================================================================== */
+
+  function initOpeners() {
+    $$("[data-openers]").forEach(function (group) {
+      var form = group.closest("form");
+      var box = form && $("textarea", form);
+      if (!box) return;
+
+      $$("[data-opener]", group).forEach(function (button) {
+        on(button, "click", function () {
+          var line = button.textContent.trim();
+          /* Appended, not replaced. Tapping a second opener while something is
+             already written must not throw away what was typed. */
+          box.value = box.value.trim() ? box.value.trim() + " " + line : line;
+          box.focus();
+          box.setSelectionRange(box.value.length, box.value.length);
+        });
+      });
+
+      group.hidden = false;
+    });
+  }
+
+
+  /* ======================================================================
      Boot
      ====================================================================== */
 
@@ -888,6 +922,7 @@
     initConfirms();
     initDateLists();
     initSteps();
+    initOpeners();
   }
 
   if (doc.readyState === "loading") on(doc, "DOMContentLoaded", boot);

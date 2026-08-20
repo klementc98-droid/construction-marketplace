@@ -647,15 +647,31 @@ class CounterForm(forms.ModelForm):
 
 
 class ApplicationForm(forms.ModelForm):
+    """One optional note. There is no CV here and there never was.
+
+    The wording is the whole of it. "What makes you right for this one?" is a
+    reasonable question to ask a tradesperson and an impossible one to ask
+    somebody who has never held a trowel — which is most of the people this
+    board is for. They read it as proof they are not qualified and they close
+    the tab, and the client never learns anyone wanted the day.
+
+    So the field asks for a note and says it is optional in its own label,
+    where somebody scanning the page will actually read it.
+    """
+
     class Meta:
         model = Application
         fields = ["message"]
-        labels = {"message": "Message to the client"}
+        labels = {"message": _("Add a note (optional)")}
+        # The model's own help text is the sentence this form exists to stop
+        # asking. Cleared here rather than on the model: what to call a field
+        # is a question about this screen, and the column is shared.
+        help_texts = {"message": ""}
         widgets = {
             "message": forms.Textarea(
                 attrs={
-                    "rows": 5,
-                    "placeholder": _("Optional — what makes you right for this one?"),
+                    "rows": 4,
+                    "placeholder": _("Anything you want them to know. Or nothing."),
                 }
             )
         }

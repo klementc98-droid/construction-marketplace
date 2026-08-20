@@ -2578,6 +2578,61 @@ a.job-row:hover .jobcard-title { color: var(--accent-ink); }
 }
 
 /* --------------------------------------------------------------------------
+   Apply - templates/jobs/job_apply.html
+   --------------------------------------------------------------------------
+   The reassurance is a panel rather than a paragraph, because it is the thing
+   on this page that has to be read. Everything under it is optional, and a
+   sentence set like the rest of the small print gets skipped by exactly the
+   reader who needs it.
+   ------------------------------------------------------------------------ */
+.apply-lead {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  margin-bottom: 18px;
+  padding: 13px 15px;
+  border: 1px solid color-mix(in srgb, var(--ok) 34%, var(--line));
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--ok) 7%, transparent);
+}
+.apply-ico { width: 20px; height: 20px; margin-top: 2px; color: var(--ok); }
+
+.openers { margin-bottom: 14px; }
+.openers-t {
+  margin: 0 0 8px;
+  color: var(--dim);
+  font-size: 12px;
+  font-weight: 620;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+.openers-row { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Wrapping, not scrolling, and not truncated. These are sentences the reader
+   is about to put their name to - one has to be able to read the whole of one
+   before tapping it. */
+.opener {
+  padding: 9px 13px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--panel);
+  color: var(--fg-2);
+  font: inherit;
+  font-size: 13.5px;
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--t-base) var(--ease),
+              background var(--t-base) var(--ease);
+}
+.opener:hover {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+  background: var(--accent-soft);
+  color: var(--fg);
+}
+.opener:active { transform: scale(.985); }
+
+/* --------------------------------------------------------------------------
    StepForm and StepProgress - templates/jobs/job_form.html
    --------------------------------------------------------------------------
    The fieldsets are a plain form until the script marks the form .is-stepped.

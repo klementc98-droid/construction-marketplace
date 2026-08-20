@@ -438,6 +438,10 @@ msgstr "Κάτι που πρέπει να ξέρει;"
 msgid "Anything to add? (optional)"
 msgstr "Κάτι να προσθέσεις; (προαιρετικό)"
 
+#: jobs/forms.py
+msgid "Anything you want them to know. Or nothing."
+msgstr "Ό,τι θέλεις να ξέρουν. Ή τίποτα."
+
 #: templates/jobs/job_applicants.html
 #: templates/jobs/job_detail.html
 msgid "Applicants"
@@ -598,6 +602,10 @@ msgstr "Αντίο"
 #: templates/payments/escrow_detail.html
 msgid "Call it off and release the hold"
 msgstr "Ακύρωσέ το και αποδέσμευσε την κράτηση"
+
+#: templates/jobs/job_apply.html
+msgid "Can you tell me a bit more about the day?"
+msgstr "Μπορείς να μου πεις λίγα παραπάνω για τη μέρα;"
 
 #: templates/jobs/counter_form.html
 #: templates/jobs/job_form.html
@@ -1256,13 +1264,25 @@ msgstr "Θα ρωτάω ένα πράγμα κάθε φορά και θα το �
 msgid "I'll ask you a few questions and fill it in for you."
 msgstr "Θα σου κάνω μερικές ερωτήσεις και θα τη συμπληρώσω για σένα."
 
+#: templates/jobs/job_apply.html
+msgid "I'm free that day and I can be there."
+msgstr "Εκείνη τη μέρα δεν έχω τίποτα και μπορώ να έρθω."
+
 #: templates/accounts/_paths.html
 msgid "I'm looking for work"
 msgstr "Ψάχνω δουλειά"
 
+#: templates/jobs/job_apply.html
+msgid "I'm new to it, but I turn up and I learn fast."
+msgstr "Δεν το έχω ξανακάνει, αλλά έρχομαι στην ώρα μου και μαθαίνω γρήγορα."
+
 #: templates/worklog/workspace.html
 msgid "I've arrived"
 msgstr "Έφτασα"
+
+#: templates/jobs/job_apply.html
+msgid "I've done this kind of work before."
+msgstr "Έχω ξανακάνει τέτοια δουλειά."
 
 #: templates/core/about.html
 msgid "If a client adds site coordinates, a check-in records how far away it looked. It is a note on the record, never a condition of checking in — GPS on a building site is unreliable, and a worker who is genuinely there must never be locked out by their handset."
@@ -1833,6 +1853,10 @@ msgstr "Μία ημερομηνία, μία τιμή. Διάλεξε παρακ�
 msgid "One day of a %(n)s-day booking, %(first)s to %(last)s. %(pay)s per day — %(total)s and %(hours)s hours in all. Each day is agreed and signed off on its own."
 msgstr "Μία ημέρα από κράτηση %(n)s ημερών, %(first)s έως %(last)s. %(pay)s ανά ημέρα — %(total)s και %(hours)s ώρες συνολικά. Κάθε ημέρα συμφωνείται και εγκρίνεται ξεχωριστά."
 
+#: templates/jobs/job_apply.html
+msgid "One tap. There is nothing to write."
+msgstr "Ένα πάτημα. Δεν χρειάζεται να γράψεις τίποτα."
+
 #: jobs/models.py
 msgid "One-day gig"
 msgstr "Μεροκάματο μίας ημέρας"
@@ -1917,10 +1941,6 @@ msgstr "Προαιρετικό βιογραφικό σε PDF."
 msgid "Optional PDF."
 msgstr "Προαιρετικό PDF."
 
-#: jobs/forms.py
-msgid "Optional — what makes you right for this one?"
-msgstr "Προαιρετικό — τι σε κάνει κατάλληλο γι' αυτή;"
-
 #: templates/core/about.html
 msgid "Optional, and off unless the client picks it when posting. This is what happens when they do."
 msgstr "Προαιρετική, και ανενεργή εκτός αν τη διαλέξει ο μάστορας κατά τη δημοσίευση. Να τι γίνεται όταν τη διαλέξει."
@@ -1932,6 +1952,10 @@ msgstr "Προαιρετικό. Συμπλήρωσε μόνο όσα αφορο�
 #: jobs/models.py
 msgid "Optional. What makes you right for this one?"
 msgstr "Προαιρετικό. Τι σε κάνει κατάλληλο γι' αυτή;"
+
+#: templates/jobs/job_apply.html
+msgid "Or start with:"
+msgstr "Ή ξεκίνα με:"
 
 #: jobs/forms.py
 msgid "Paid by"
@@ -2567,8 +2591,8 @@ msgid "The client hasn't funded this gig yet."
 msgstr "Ο μάστορας δεν έχει χρηματοδοτήσει ακόμη αυτό το μεροκάματο."
 
 #: templates/jobs/job_apply.html
-msgid "The client sees your worker profile with this — your trades, rate, experience and reviews. Nothing else is sent."
-msgstr "Ο μάστορας βλέπει μαζί με αυτό το προφίλ σου ως βοηθό — ειδικότητες, αμοιβή, εμπειρία και κριτικές. Τίποτα άλλο δεν αποστέλλεται."
+msgid "The client sees your profile with this — your trades, your rate, the days you're free and any ratings. Nothing else is sent."
+msgstr "Ο μάστορας βλέπει το προφίλ σου μαζί με αυτό — τις τέχνες σου, την τιμή σου, τις μέρες που είσαι διαθέσιμος και όποιες αξιολογήσεις έχεις. Τίποτα άλλο δεν στέλνεται."
 
 #: templates/worklog/workspace.html
 msgid "The day ended early"

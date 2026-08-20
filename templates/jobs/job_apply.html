@@ -4,12 +4,53 @@
 
 {% block content %}
   <h1>{% if existing %}{% translate "Update your application" %}{% else %}{% translate "Apply" %}{% endif %}</h1>
+
+  {% comment %} The job, restated. Somebody arriving here has usually opened three cards
+     and applied from the third, and "which one was this?" is a question the
+     page can answer for free.
+  {% endcomment %}
   <p class="lede">{{ job.title }} · {{ job.pay_display }}</p>
 
   <form method="post" class="card">
     {% csrf_token %}
-    {% include "_required_note.html" %}
     {{ form.non_field_errors }}
+
+    {% comment %} Said before the box, not after it. The one field on this page is
+       optional and always has been, but a blank textarea labelled "what makes
+       you right for this one?" is a writing task — and it is exactly the
+       question the person this app is for cannot answer. They read it as proof
+       they are not qualified and they close the tab.
+
+       So the page opens by saying there is nothing to write, and the box comes
+       after, described as a note rather than as a case to be made.
+    {% endcomment %}
+    <div class="apply-lead">
+      <svg class="apply-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check"/></svg>
+      <div>
+        <p class="flush"><strong>{% translate "One tap. There is nothing to write." %}</strong></p>
+        <p class="note flush">
+          {% translate "The client sees your profile with this — your trades, your rate, the days you're free and any ratings. Nothing else is sent." %}
+        </p>
+      </div>
+    </div>
+
+    {% comment %} Openers, as buttons. Somebody who does want to say something is usually
+       stuck on the first sentence rather than on the whole message, and tapping
+       one leaves them editing a line instead of facing an empty box.
+
+       Hidden until the script wires them up: without it they would be buttons
+       that do nothing, which is worse than not offering them.
+    {% endcomment %}
+    <div class="openers" data-openers hidden>
+      <p class="openers-t">{% translate "Or start with:" %}</p>
+      <div class="openers-row">
+        <button class="opener" type="button" data-opener>{% translate "I'm free that day and I can be there." %}</button>
+        <button class="opener" type="button" data-opener>{% translate "I've done this kind of work before." %}</button>
+        <button class="opener" type="button" data-opener>{% translate "I'm new to it, but I turn up and I learn fast." %}</button>
+        <button class="opener" type="button" data-opener>{% translate "Can you tell me a bit more about the day?" %}</button>
+      </div>
+    </div>
+
     {% for field in form %}{% include "_field.html" %}{% endfor %}
 
     {% if job.is_gig %}
@@ -19,9 +60,6 @@
       </p>
     {% endif %}
 
-    <p class="note">
-      {% translate "The client sees your worker profile with this — your trades, rate, experience and reviews. Nothing else is sent." %}
-    </p>
     <div class="btn-row" style="margin-top:16px">
       <button class="btn" type="submit"
               data-busy-label="Sending…">{% if existing %}{% translate "Save" %}{% else %}{% translate "Send application" %}{% endif %}</button>
