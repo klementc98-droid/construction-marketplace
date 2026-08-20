@@ -214,8 +214,24 @@ class WebhookEvent(models.Model):
     received_at = models.DateTimeField(auto_now_add=True)
     payload_summary = models.CharField(max_length=500, blank=True)
 
+    #: When the work finished. Null means somebody is still doing it — and that
+    #: distinction is the difference between this row being a receipt and being
+    #: a lease.
+    #:
+    #: Without it, a duplicate delivery arriving mid-flight had one answer
+    #: available: 200, meaning "already handled". If the run it collided with
+    #: then failed, that 200 had already told Stripe the event was delivered
+    #: and no retry was coming. The event was lost — the opposite failure from
+    #: the one this table exists to prevent, and the quieter one.
+    handled_at = models.DateTimeField(null=True, blank=True, db_index=True)
+
     class Meta:
         ordering = ("-received_at",)
 
+    @property
+    def is_handled(self) -> bool:
+        return self.handled_at is not None
+
     def __str__(self) -> str:
-        return f"{self.event_type} {self.event_id}"
+        state = "handled" if self.is_handled else "in flight"
+        return f"{self.event_type} {self.event_id} ({state})"

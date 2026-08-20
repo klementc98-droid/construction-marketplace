@@ -1018,6 +1018,125 @@ class ConnectAccountTests(EscrowTestCase):
         mock.assert_not_called()
 
 
+class WebhookLeaseTests(EscrowTestCase):
+    """A duplicate delivery must not answer for a run still in progress.
+
+    The claim stopped two deliveries doing the work twice, and introduced the
+    opposite failure: the duplicate answered 200, meaning "already handled",
+    while the run it collided with was still going. If that run then failed, it
+    released its claim — but Stripe had already been told the event was
+    delivered, so no retry was coming and the event was simply lost. Nothing
+    reads as wrong afterwards, which is what makes it the worse of the two.
+    """
+
+    def setUp(self):
+        self.ready_account()
+        self.job = self.make_gig()
+        self.escrow = EscrowPayment.objects.create(
+            job=self.job,
+            worker=self.worker_profile,
+            amount=Decimal("90"),
+            platform_fee=Decimal("10.80"),
+            worker_payout=Decimal("79.20"),
+        )
+
+    def event(self, event_id="evt_lease"):
+        return {
+            "id": event_id,
+            "type": "checkout.session.completed",
+            "data": {
+                "object": {
+                    "metadata": {"escrow_id": str(self.escrow.pk)},
+                    "payment_intent": "pi_leased",
+                }
+            },
+        }
+
+    def post(self, event):
+        with patch(
+            "payments.gateway.construct_event", return_value=event, autospec=True
+        ):
+            return self.client.post(
+                reverse("payments:webhook"),
+                data=b"{}",
+                content_type="application/json",
+                HTTP_STRIPE_SIGNATURE="t=1,v1=fake",
+            )
+
+    def test_a_duplicate_arriving_mid_flight_is_told_to_come_back(self):
+        """409, not 200: nobody here can promise the first run will finish."""
+        WebhookEvent.objects.create(
+            event_id="evt_lease", event_type="checkout.session.completed"
+        )
+
+        response = self.post(self.event())
+
+        self.assertEqual(response.status_code, 409)
+
+    def test_a_duplicate_after_the_work_finished_is_told_it_is_done(self):
+        WebhookEvent.objects.create(
+            event_id="evt_lease",
+            event_type="checkout.session.completed",
+            handled_at=timezone.now(),
+        )
+
+        response = self.post(self.event())
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_the_row_is_only_a_receipt_once_the_work_is_done(self):
+        seen = {}
+
+        def spy(escrow, intent):
+            seen["handled"] = WebhookEvent.objects.get(pk="evt_lease").handled_at
+            return escrow
+
+        with patch("payments.services.mark_authorized", side_effect=spy):
+            self.post(self.event())
+
+        self.assertIsNone(seen["handled"], "still a lease while the work runs")
+        self.assertIsNotNone(WebhookEvent.objects.get(pk="evt_lease").handled_at)
+
+    def test_an_abandoned_claim_is_taken_over_after_the_lease(self):
+        """A process can die without releasing anything, and then every retry
+        would meet 409 for ever."""
+        from payments.views import WEBHOOK_LEASE
+
+        stale = timezone.now() - WEBHOOK_LEASE - timedelta(minutes=1)
+        WebhookEvent.objects.create(
+            event_id="evt_lease", event_type="checkout.session.completed"
+        )
+        WebhookEvent.objects.filter(pk="evt_lease").update(received_at=stale)
+
+        response = self.post(self.event())
+
+        self.assertEqual(response.status_code, 200)
+        self.escrow.refresh_from_db()
+        self.assertEqual(self.escrow.status, EscrowStatus.AUTHORIZED)
+
+    def test_a_failed_run_still_releases_its_claim(self):
+        with patch(
+            "payments.services.mark_authorized", side_effect=RuntimeError("boom")
+        ):
+            response = self.post(self.event())
+
+        self.assertEqual(response.status_code, 500)
+        self.assertFalse(WebhookEvent.objects.filter(pk="evt_lease").exists())
+
+    def test_but_it_cannot_release_a_claim_that_was_already_handled(self):
+        """The delete is conditional, so a failing latecomer cannot erase the
+        receipt of a run that succeeded."""
+        WebhookEvent.objects.create(
+            event_id="evt_lease",
+            event_type="checkout.session.completed",
+            handled_at=timezone.now(),
+        )
+
+        self.post(self.event())
+
+        self.assertTrue(WebhookEvent.objects.filter(pk="evt_lease").exists())
+
+
 class WebhookClaimTests(EscrowTestCase):
     """The event id is claimed before the work, not recorded after it.
 

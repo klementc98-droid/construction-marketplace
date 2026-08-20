@@ -43,7 +43,7 @@ from dataclasses import dataclass, field
 from django.utils import timezone
 
 from config import business_rules as rules
-from core.state_machine import JobState, claim
+from core.state_machine import Actor, JobState, can_transition, claim
 from jobs.models import Job
 
 from . import gateway
@@ -73,6 +73,7 @@ class Report:
     cancellations_recorded: list = field(default_factory=list)
     holds_released: list = field(default_factory=list)
     accounts_adopted: list = field(default_factory=list)
+    states_repaired: list = field(default_factory=list)
     unreachable: list = field(default_factory=list)
 
     @property
@@ -82,6 +83,7 @@ class Report:
             + len(self.cancellations_recorded)
             + len(self.holds_released)
             + len(self.accounts_adopted)
+            + len(self.states_repaired)
         )
 
     def lines(self) -> list[str]:
@@ -96,6 +98,8 @@ class Report:
             )
         for worker_id, account_id in self.accounts_adopted:
             out.append(f"  worker {worker_id}: adopted lost account {account_id}")
+        for job_id, was, now in self.states_repaired:
+            out.append(f"  job {job_id}: payment had settled — {was} moved to {now}")
         for what, why in self.unreachable:
             out.append(f"  {what}: could not be checked ({why})")
         if not self.repaired and not self.unreachable:
@@ -172,12 +176,7 @@ def reconcile(*, release_dead_holds: bool = True, dry_run: bool = False) -> Repo
                 continue
             if _record_capture(escrow, settled):
                 report.captured_recorded.append((escrow.pk, settled))
-                claim(
-                    Job,
-                    escrow.job_id,
-                    expect=escrow.job.state,
-                    to=JobState.PAID_OUT,
-                )
+                _match_job_to(escrow, JobState.PAID_OUT)
             continue
 
         if status == "canceled":
@@ -193,6 +192,11 @@ def reconcile(*, release_dead_holds: bool = True, dry_run: bool = False) -> Repo
                 refunded_at=timezone.now(),
             ):
                 report.cancellations_recorded.append(escrow.pk)
+                # And the job, which was the half being left behind. A payment
+                # record reading refunded over a job still reading escrow_held
+                # is the same disagreement this module exists to end, produced
+                # by the module itself.
+                _match_job_to(escrow, JobState.REFUNDED)
             continue
 
         # Still held. The only question left is whether it should be.
@@ -202,8 +206,80 @@ def reconcile(*, release_dead_holds: bool = True, dry_run: bool = False) -> Repo
             else:
                 _release_dead_hold(escrow, report)
 
+    _settled_jobs_left_behind(report, dry_run=dry_run)
     _reconcile_accounts(report, dry_run=dry_run)
     return report
+
+
+def _match_job_to(escrow: EscrowPayment, state: str) -> bool:
+    """Move the job to match what the payment now says, if that move is legal.
+
+    Legality is asked of the state machine rather than assumed, because this
+    runs over rows in states nobody planned for — that is the point of it — and
+    forcing a job from cancelled to paid_out because Stripe captured something
+    would be repairing a disagreement by inventing a worse one.
+
+    Asked of every actor rather than of one, and that needs saying plainly.
+    This is not the reconciler granting itself authority: it never originates a
+    move. Every one it makes is a move somebody already made — a client who
+    cancelled after funding, an admin who resolved a dispute, a timer that
+    released a lapsed approval window — and whose only surviving evidence is at
+    Stripe. Which of them it was is exactly what has been lost, so naming one
+    would be inventing the answer: no single actor even covers the two cases
+    here, since completed → paid_out is the client's or the timer's and
+    disputed → paid_out is an admin's alone.
+    
+    What survives is the guarantee that matters. The move still has to be one
+    the lifecycle permits *somebody* to make, so this can never put a job
+    somewhere no actor could have put it — it can only fail to name which.
+    """
+    job = Job.objects.filter(pk=escrow.job_id).first()
+    if job is None or job.state == state:
+        return False
+    if not any(
+        can_transition(job.state, state, actor)
+        for actor in (Actor.SYSTEM, Actor.CLIENT, Actor.ADMIN, Actor.WORKER)
+    ):
+        logger.warning(
+            "escrow %s is %s but job %s cannot move from %s to %s",
+            escrow.pk,
+            escrow.status,
+            job.pk,
+            job.state,
+            state,
+        )
+        return False
+    return claim(Job, job.pk, expect=job.state, to=state)
+
+
+def _settled_jobs_left_behind(report: Report, *, dry_run: bool) -> None:
+    """Payments that finished while their job did not follow.
+
+    The gap a reconciler is most likely to leave, because it is the one it
+    creates: the escrow is claimed first and the job second, and a lost race on
+    the second used to end there — the row was no longer AUTHORIZED, so no
+    later pass would look at it again. A payment record and a job disagreeing
+    for good, inside the pass whose whole job is to stop that.
+
+    Cheap to check and exact: the escrow says what the job should say.
+    """
+    wanted = {
+        EscrowStatus.RELEASED: JobState.PAID_OUT,
+        EscrowStatus.REFUNDED: JobState.REFUNDED,
+    }
+    for status, state in wanted.items():
+        behind = (
+            EscrowPayment.objects.filter(status=status)
+            .exclude(job__state=state)
+            .select_related("job")
+        )
+        for escrow in behind:
+            if dry_run:
+                report.states_repaired.append((escrow.job_id, escrow.job.state, state))
+                continue
+            was = escrow.job.state
+            if _match_job_to(escrow, state):
+                report.states_repaired.append((escrow.job_id, was, state))
 
 
 def _reconcile_pending(
