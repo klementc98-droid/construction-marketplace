@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load i18n %}
-{% block title %}{% translate "Find work" %} — Construction's Finest{% endblock %}
+{% block title %}{% translate "Find work" %} — XTISE{% endblock %}
 
 {% block content %}
   <h1>{% translate "Find work" %}</h1>
@@ -12,6 +12,7 @@
   </p>
 
   {% include "jobs/_filters.html" %}
+  {% include "jobs/_experience_chips.html" %}
 
   {% for job in jobs %}
     {% include "jobs/_job_row.html" %}
@@ -23,11 +24,33 @@
     <div class="card empty">
       <svg class="empty-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-jobs"/></svg>
       {% if request.GET %}
-        <p><strong>{% translate "No open work matches these filters." %}</strong></p>
-        <p class="muted">
-          {% translate "Try clearing the trade, or search a wider area — gigs are posted for a single day and the board turns over fast." %}
-        </p>
-        <a class="btn secondary" href="{% url 'jobs:list' %}">{% translate "Clear filters" %}</a>
+        {% comment %} Two empty boards, two different pieces of advice. Somebody who
+           tapped a chip has narrowed by the one thing that decides whether they
+           can take the work at all, and "try clearing the trade" is useless to
+           them — the useful move is the chip next to the one they are on.
+
+           Offered as a link to that filtered board rather than as "clear
+           everything": the search term and the trade they chose are probably
+           still what they want.
+        {% endcomment %}
+        {% if request.GET.experience %}
+          <p><strong>{% translate "Nothing open at that level right now." %}</strong></p>
+          <p class="muted">
+            {% translate "The board turns over fast — most days are posted a few days ahead. Try another level, or come back tomorrow." %}
+          </p>
+          <div class="btn-row">
+            {% if request.GET.experience != "none" %}
+              <a class="btn" href="{% querystring experience='none' %}">{% translate "Show jobs needing no experience" %}</a>
+            {% endif %}
+            <a class="btn secondary" href="{% querystring experience=None %}">{% translate "Show every level" %}</a>
+          </div>
+        {% else %}
+          <p><strong>{% translate "No open work matches these filters." %}</strong></p>
+          <p class="muted">
+            {% translate "Try clearing the trade, or search a wider area — gigs are posted for a single day and the board turns over fast." %}
+          </p>
+          <a class="btn secondary" href="{% url 'jobs:list' %}">{% translate "Clear filters" %}</a>
+        {% endif %}
       {% else %}
         <p><strong>{% translate "Nothing on the board right now." %}</strong></p>
         <p class="muted">

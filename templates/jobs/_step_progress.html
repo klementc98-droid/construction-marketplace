@@ -1,0 +1,26 @@
+{% load i18n %}{% comment %}
+StepProgress — where you are in a sequence of questions.
+
+Two things, both needed. The bar answers "how much longer" at a glance, which
+is what decides whether somebody starts at all. The words answer it precisely,
+which is what stops the bar being read as a loading spinner.
+
+It renders hidden and the script shows it, because with no script the whole
+form is on one screen: a progress bar on a page with no steps is a lie about a
+sequence that is not happening.
+
+The sentence is handed to the script as a pattern with {n} and {of} in it,
+rather than rebuilt from pieces in JavaScript. "Step 1 of 6" is one sentence in
+one catalogue entry, and a language that words it differently — or puts the
+numbers elsewhere — still gets to say it its own way.
+{% endcomment %}
+{% blocktranslate asvar step_pattern with n="{n}" of="{of}" %}Step {{ n }} of {{ of }}{% endblocktranslate %}
+<div class="steps-progress" data-step-progress hidden>
+  <div class="steps-bar" role="presentation">
+    <span class="steps-fill" data-step-fill></span>
+  </div>
+  <p class="steps-count" data-step-count data-step-pattern="{{ step_pattern }}"
+     aria-live="polite">
+    {% blocktranslate with n=1 of=total %}Step {{ n }} of {{ of }}{% endblocktranslate %}
+  </p>
+</div>

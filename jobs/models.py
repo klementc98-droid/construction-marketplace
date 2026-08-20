@@ -18,6 +18,7 @@ discouraged.
 
 from __future__ import annotations
 
+from datetime import date
 from decimal import Decimal
 
 from django.conf import settings
@@ -98,18 +99,20 @@ class JobQuerySet(models.QuerySet):
     def for_trade(self, trade_slug: str | None):
         return self.filter(trade__slug=trade_slug) if trade_slug else self
 
-    def open_to_beginners(self, wanted: bool = True):
-        """Jobs somebody with no trade behind them can actually take.
+    def for_experience(self, level: str | None):
+        """Jobs asking for exactly this much of the person taking them.
 
         The one filter on this board that changes who applies rather than what
         they see. Somebody deciding whether this app is for them is asking
         exactly this question, and it should take one tap to answer.
+
+        Exact match rather than "this level and below". The chip says *No
+        experience needed*, so it has to mean the jobs that say that — a filter
+        that quietly widens is a filter nobody can predict, and the reader
+        would be left wondering why a job wanting three years is in the
+        beginners list.
         """
-        if not wanted:
-            return self
-        return self.filter(
-            experience_wanted__in=(ExperienceWanted.NONE, ExperienceWanted.SOME)
-        )
+        return self.filter(experience_wanted=level) if level in ExperienceWanted.values else self
 
     def for_type(self, job_type: str | None):
         return self.filter(job_type=job_type) if job_type in JobType.values else self
@@ -635,6 +638,45 @@ class Job(TimestampedModel):
         """
         return self.state in (JobState.PAID_OUT, JobState.CLOSED)
 
+    #: Which of the eight trade icons stands for this job, by trade slug. The
+    #: mapping is here rather than in a template because a template that has to
+    #: know the slugs is a template nobody can add a trade to.
+    TRADE_ICONS = {
+        "general-labor": "i-hardhat",
+        "electrician": "i-bolt",
+        "plumber": "i-wrench",
+        "hvac": "i-wrench",
+        "carpenter": "i-saw",
+        "drywall-framing": "i-saw",
+        "mason-concrete": "i-brick",
+        "roofer": "i-brick",
+        "painter": "i-roller",
+        "welder": "i-hammer",
+        "landscaping-excavation": "i-trade",
+        "heavy-equipment-operator": "i-trade",
+    }
+
+    @property
+    def trade_icon(self) -> str:
+        """Falls back rather than disappearing: a new trade gets the generic
+        mark, not a hole where the icon should be."""
+        return self.TRADE_ICONS.get(self.trade.slug, "i-trade")
+
+    @property
+    def experience_tone(self) -> str:
+        """go / steady / stop, for the badge that decides whether somebody
+        reads the rest of the card.
+
+        Three levels rather than a yes/no, because "some experience helps" is
+        the honest middle and collapsing it either way loses the jobs most
+        people can actually take.
+        """
+        return {
+            ExperienceWanted.NONE: "go",
+            ExperienceWanted.SOME: "steady",
+            ExperienceWanted.SKILLED: "stop",
+        }.get(self.experience_wanted, "steady")
+
     @property
     def teaches_on_the_job(self) -> bool:
         """Would somebody with nothing behind them be welcome here?
@@ -1067,7 +1109,18 @@ class Counter(TimestampedModel):
         validators=[MinValueValidator(Decimal("1"))],
         help_text=_("Total for the day."),
     )
-    gig_date = models.DateField(null=True, blank=True)
+    #: The days being proposed, as ISO strings, oldest first. NULL means the
+    #: counter does not touch the days at all — the same as every other field
+    #: here, which names only what it wants changed.
+    #:
+    #: A list rather than a date, because an offer can be a week and the
+    #: commonest real answer to a week is "all of it except Wednesday". With
+    #: one date the only ways to say that were to decline the whole booking or
+    #: to counter with a single different day and lose the other four.
+    #:
+    #: Stored as strings rather than dates because JSON has no date type; read
+    #: through :attr:`proposed_days`, which is what everything else should use.
+    gig_dates = models.JSONField(null=True, blank=True)
     gig_hours = models.DecimalField(
         max_digits=4,
         decimal_places=1,
@@ -1157,6 +1210,35 @@ class Counter(TimestampedModel):
             hours = (job.gig_hours or Decimal("0")).normalize()
             rows.append((_("Hours"), f"{hours}", f"{self.gig_hours.normalize()}"))
         return rows
+
+    @property
+    def proposed_days(self) -> list:
+        """The days this counter puts on the table, as dates. Empty if none."""
+        return [date.fromisoformat(d) for d in (self.gig_dates or [])]
+
+    @property
+    def days_display(self) -> str:
+        """The proposed days as a person would say them: "19, 20 and 25 Aug".
+
+        Built here rather than joined in a template, because the last separator
+        is a word and words are translated — the same reason describe_dates
+        exists, which is what this defers to.
+        """
+        from .services import describe_dates
+
+        return describe_dates(self.proposed_days)
+
+    @property
+    def gig_date(self):
+        """The first proposed day, or None.
+
+        Kept as a property so the places that legitimately want one day — the
+        terms panel, the notification sentence, writing the day onto the job
+        row this counter hangs off — read the same name they always did, while
+        there is still exactly one stored representation of the answer.
+        """
+        days = self.proposed_days
+        return days[0] if days else None
 
     def apply_to(self, job: "Job") -> list[str]:
         """Write the agreed terms onto the job. Returns the fields changed.

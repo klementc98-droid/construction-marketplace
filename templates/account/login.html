@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% load i18n %}{% comment %}
+Signing in, when somebody arrives here rather than going straight to Google.
+
+The header and the tab bar link directly to Google — Google is the only way in,
+so an intermediate page offering one button is a click that exists to be got
+past. This page is for the other routes: a link that needed signing in first, a
+typed URL, a flow that came back.
+
+It carries `next` through, so somebody sent here from a job lands back on that
+job rather than on the home page wondering what they were doing.
+{% endcomment %}
+{% block title %}{% translate "Sign in" %} — XTISE{% endblock %}
+
+{% block content %}
+  <div class="signin">
+    <h1>{% translate "Sign in" %}</h1>
+    <p class="lede">
+      {% translate "One account, whichever side of a job you are on. Free to browse either way." %}
+    </p>
+
+    <div class="card">
+      <a class="btn signin-go"
+         href="{% url 'google_login' %}?process=login{% if redirect_field_value %}&amp;{{ redirect_field_name }}={{ redirect_field_value|urlencode }}{% endif %}">
+        <svg viewBox="0 0 24 24" aria-hidden="true" width="18" height="18">
+          <path fill="currentColor" d="M21.6 12.23c0-.7-.06-1.37-.18-2.02H12v3.82h5.38a4.6 4.6 0 0 1-2 3.02v2.5h3.23c1.89-1.74 2.98-4.3 2.98-7.32Z" opacity=".9"/>
+          <path fill="currentColor" d="M12 22c2.7 0 4.96-.9 6.61-2.43l-3.22-2.5c-.9.6-2.05.95-3.39.95-2.6 0-4.81-1.76-5.6-4.13H3.08v2.59A10 10 0 0 0 12 22Z" opacity=".75"/>
+          <path fill="currentColor" d="M6.4 13.89a6 6 0 0 1 0-3.83V7.47H3.08a10 10 0 0 0 0 9.01l3.32-2.59Z" opacity=".6"/>
+          <path fill="currentColor" d="M12 5.94c1.47 0 2.79.5 3.83 1.5l2.86-2.86C16.95 2.98 14.7 2 12 2a10 10 0 0 0-8.92 5.47l3.32 2.59C7.2 7.7 9.4 5.94 12 5.94Z" opacity=".85"/>
+        </svg>
+        {% translate "Continue with Google" %}
+      </a>
+
+      <p class="note">
+        {% translate "We use Google so there is no password to lose on a site. We get your name, your email and your picture — nothing else." %}
+      </p>
+    </div>
+
+    <p class="hero-more">
+      <a href="{% url 'jobs:list' %}">{% translate "Or look at the board first&nbsp;→" %}</a>
+    </p>
+  </div>
+{% endblock %}

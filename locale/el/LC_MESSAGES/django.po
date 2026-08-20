@@ -1,4 +1,4 @@
-# Translation catalogue for Construction's Finest.
+# Translation catalogue for XTISE.
 #
 # Regenerate with `python manage.py extractpo`, then compile with
 # `python manage.py compilepo`. Neither needs GNU gettext installed.
@@ -221,7 +221,6 @@ msgstr[0] "%(years)s χρόνος στο επάγγελμα"
 msgstr[1] "%(years)s χρόνια στο επάγγελμα"
 
 #: templates/_field.html
-#: templates/accounts/worker_edit.html
 msgid "(required)"
 msgstr "(υποχρεωτικό)"
 
@@ -323,10 +322,6 @@ msgstr "Μόνιμη θέση"
 msgid "About"
 msgstr "Σχετικά"
 
-#: templates/accounts/worker_edit.html
-msgid "About you"
-msgstr "Για σένα"
-
 #: core/state_machine.py
 #: jobs/models.py
 msgid "Accepted"
@@ -364,6 +359,10 @@ msgstr "Πρόσθεσε φωτογραφία"
 msgid "Add a photo. Profiles with one get picked noticeably more often."
 msgstr "Πρόσθεσε φωτογραφία. Τα προφίλ που έχουν επιλέγονται αισθητά πιο συχνά."
 
+#: templates/accounts/worker_edit.html
+msgid "Add a résumé (optional)"
+msgstr "Πρόσθεσε βιογραφικό (προαιρετικό)"
+
 #: core/dates.py
 msgid "Add or remove days"
 msgstr "Πρόσθεσε ή αφαίρεσε ημέρες"
@@ -371,6 +370,10 @@ msgstr "Πρόσθεσε ή αφαίρεσε ημέρες"
 #: templates/accounts/worker_edit.html
 msgid "Add photo"
 msgstr "Προσθήκη φωτογραφίας"
+
+#: templates/jobs/job_form.html
+msgid "Add site coordinates (optional)"
+msgstr "Συντεταγμένες εργοταξίου (προαιρετικό)"
 
 #: templates/accounts/dashboard.html
 msgid "Add your name and a photo — clients skip profiles they can't put a face to."
@@ -396,6 +399,10 @@ msgstr "Συμφωνήστε μεταξύ σας"
 msgid "Agreed"
 msgstr "Συμφωνήθηκε"
 
+#: jobs/forms.py
+msgid "All"
+msgstr "Όλα"
+
 #: templates/messaging/thread.html
 msgid "All messages"
 msgstr "Όλα τα μηνύματα"
@@ -410,13 +417,17 @@ msgstr "Όλες οι ειδικότητες"
 msgid "Already booked"
 msgstr "Ήδη κλεισμένες"
 
+#: jobs/forms.py
+msgid "Already booked on %(days)s. Untick those."
+msgstr "Ήδη κλεισμένος στις %(days)s. Ξετσέκαρέ τες."
+
 #: templates/jobs/offer_form.html
 msgid "Already have the work posted?"
 msgstr "Έχεις ήδη ανεβάσει τη δουλειά;"
 
 #: templates/accounts/worker_detail.html
-msgid "Also hires on Construction's Finest —"
-msgstr "Προσλαμβάνει επίσης στο Construction's Finest —"
+msgid "Also hires on XTISE —"
+msgstr "Προσλαμβάνει επίσης στο XTISE —"
 
 #: jobs/models.py
 msgid "Anything they should know before saying yes."
@@ -429,6 +440,14 @@ msgstr "Κάτι που πρέπει να ξέρει;"
 #: jobs/forms.py
 msgid "Anything to add? (optional)"
 msgstr "Κάτι να προσθέσεις; (προαιρετικό)"
+
+#: jobs/forms.py
+msgid "Anything you want them to know. Or nothing."
+msgstr "Ό,τι θέλεις να ξέρουν. Ή τίποτα."
+
+#: accounts/forms.py
+msgid "Anything you want them to know?"
+msgstr "Θες να ξέρουν κάτι άλλο;"
 
 #: templates/jobs/job_applicants.html
 #: templates/jobs/job_detail.html
@@ -450,6 +469,7 @@ msgstr "Έγινε αίτηση και για τις %(count)s ημέρες."
 #: templates/accounts/_feed_items.html
 #: templates/jobs/_filters.html
 #: templates/jobs/job_apply.html
+#: templates/jobs/job_detail.html
 msgid "Apply"
 msgstr "Εφαρμογή"
 
@@ -481,13 +501,17 @@ msgstr "Εγκρίνει σε"
 msgid "Are you looking for a full-time job?"
 msgstr "Ψάχνεις δουλειά πλήρους απασχόλησης;"
 
+#: templates/assistant/_widget.html
+msgid "Ask about the app…"
+msgstr "Ρώτα για την εφαρμογή…"
+
 #: templates/jobs/job_detail.html
 msgid "Ask for different terms"
 msgstr "Ζήτα διαφορετικούς όρους"
 
 #: assistant/views.py
-msgid "Ask me anything about how this app works — how you get paid, when money is released, check-ins, ratings, or where to find something."
-msgstr "Ρώτησέ με οτιδήποτε για το πώς λειτουργεί η εφαρμογή — πώς πληρώνεσαι, πότε αποδεσμεύονται τα χρήματα, τα check-in, οι αξιολογήσεις ή πού βρίσκεται κάτι."
+msgid "Ask me anything about how this app works — how you get paid, when money is released, check-ins, ratings, who can take a job with no experience, or where to find something."
+msgstr "Ρώτα με ό,τι θες για το πώς δουλεύει η εφαρμογή — πώς πληρώνεσαι, πότε αποδεσμεύονται τα λεφτά, το check-in, τις αξιολογήσεις, ποιος μπορεί να πιάσει μια δουλειά χωρίς εμπειρία, ή πού θα βρεις κάτι."
 
 #: templates/jobs/job_detail.html
 msgid "Assigned to"
@@ -496,10 +520,6 @@ msgstr "Ανατέθηκε σε"
 #: templates/assistant/_widget.html
 msgid "Assistant"
 msgstr "Βοηθός"
-
-#: templates/accounts/worker_edit.html
-msgid "Availability"
-msgstr "Διαθεσιμότητα"
 
 #: templates/jobs/job_applicants.html
 msgid "Availability not stated"
@@ -526,7 +546,9 @@ msgid "Awaiting review"
 msgstr "Αναμονή εξέτασης"
 
 #: templates/accounts/details.html
+#: templates/accounts/worker_edit.html
 #: templates/jobs/job_apply.html
+#: templates/jobs/job_form.html
 #: templates/messaging/start_direct.html
 msgid "Back"
 msgstr "Πίσω"
@@ -588,6 +610,14 @@ msgstr "Αντίο"
 #: templates/payments/escrow_detail.html
 msgid "Call it off and release the hold"
 msgstr "Ακύρωσέ το και αποδέσμευσε την κράτηση"
+
+#: assistant/options.py
+msgid "Can I work here with no experience?"
+msgstr "Μπορώ να δουλέψω εδώ χωρίς εμπειρία;"
+
+#: templates/jobs/job_apply.html
+msgid "Can you tell me a bit more about the day?"
+msgstr "Μπορείς να μου πεις λίγα παραπάνω για τη μέρα;"
 
 #: templates/jobs/counter_form.html
 #: templates/jobs/job_form.html
@@ -699,34 +729,11 @@ msgstr "Επιβεβαίωσε και η δουλειά κλείνει. Δεν �
 msgid "Confirm it when you agree and the job is closed."
 msgstr "Επιβεβαίωσέ το όταν συμφωνείς και η δουλειά κλείνει."
 
-#: templates/notifications/email/_wrapper.txt
-msgid "Construction's Finest"
-msgstr ""
-
-#: templates/accounts/worker_detail.html
-msgid "Construction's Finest does not verify licence numbers. Check with your state board before hiring for regulated work."
-msgstr "Το Construction's Finest δεν επαληθεύει αριθμούς αδειών. Έλεγξε στην αρμόδια αρχή πριν προσλάβεις για ρυθμιζόμενη εργασία."
-
-#: templates/payments/escrow_detail.html
-msgid "Construction's Finest holds the money — neither side does. It goes to the worker once the day is signed off, or back to the client if the gig is called off before it starts."
-msgstr "Το Construction's Finest κρατά τα χρήματα — καμία από τις δύο πλευρές. Πηγαίνουν στον βοηθό μόλις εγκριθεί η ημέρα, ή πίσω στον μάστορα αν το μεροκάματο ακυρωθεί πριν ξεκινήσει."
-
-#: templates/core/about.html
-msgid "Construction's Finest is where a tradesperson finds a pair of hands. Most of the jobs here need no experience — somebody shows you on site, and you are paid for the days you work. One day, a few days, or a permanent place, with the money for a day held before anybody turns up."
-msgstr "Το Construction's Finest είναι εκεί που ένας μάστορας βρίσκει χέρια. Οι περισσότερες δουλειές εδώ δεν θέλουν εμπειρία — κάποιος σου δείχνει στο εργοτάξιο, και πληρώνεσαι για τις μέρες που δουλεύεις. Μία μέρα, λίγες μέρες ή μόνιμη θέση, με τα λεφτά της ημέρας κρατημένα πριν εμφανιστεί κανείς."
-
-#: templates/accounts/feed.html
-msgid "Construction's Finest — find work, hire crew"
-msgstr "Construction's Finest — βρες δουλειά, βρες συνεργείο"
-
-#: templates/base.html
-msgid "Construction's Finest, home"
-msgstr "Construction's Finest, αρχική"
-
 #: templates/accounts/select_role.html
 msgid "Continue"
 msgstr "Συνέχεια"
 
+#: templates/account/login.html
 #: templates/accounts/feed.html
 msgid "Continue with Google"
 msgstr "Συνέχεια με Google"
@@ -744,16 +751,14 @@ msgid "Counter again"
 msgstr "Νέα αντιπροσφορά"
 
 #: templates/jobs/counter_form.html
-msgid "Counter — Construction's Finest"
-msgstr "Αντιπροσφορά — Construction's Finest"
+msgid "Counter — XTISE"
+msgstr "Αντιπροσφορά — XTISE"
 
 #: templates/accounts/worker_edit.html
 msgid "Current résumé"
 msgstr "Τρέχον βιογραφικό"
 
-#: jobs/forms.py
 #: jobs/models.py
-#: templates/jobs/counter_form.html
 #: templates/jobs/job_detail.html
 msgid "Date"
 msgstr "Ημερομηνία"
@@ -769,6 +774,12 @@ msgstr "Η ημερομηνία πέρασε"
 #: templates/jobs/job_detail.html
 msgid "Dates"
 msgstr "Ημερομηνίες"
+
+#: templates/jobs/counter_form.html
+msgid "Day"
+msgid_plural "Days"
+msgstr[0] "Μέρα"
+msgstr[1] "Μέρες"
 
 #: templates/notifications/email/tomorrow.txt
 msgid "Day %(day_number)s of %(n)s on this booking."
@@ -867,8 +878,8 @@ msgid "Edit client profile"
 msgstr "Επεξεργασία προφίλ μάστορα"
 
 #: templates/accounts/client_edit.html
-msgid "Edit client profile — Construction's Finest"
-msgstr "Επεξεργασία προφίλ μάστορα — Construction's Finest"
+msgid "Edit client profile — XTISE"
+msgstr "Επεξεργασία προφίλ μάστορα — XTISE"
 
 #: templates/accounts/client_detail.html
 msgid "Edit hiring profile"
@@ -894,10 +905,6 @@ msgstr "Επεξεργασία επαγγελματικού προφίλ"
 #: templates/accounts/dashboard.html
 msgid "Edit worker profile"
 msgstr "Επεξεργασία προφίλ βοηθό"
-
-#: templates/accounts/worker_edit.html
-msgid "Edit worker profile — Construction's Finest"
-msgstr "Επεξεργασία προφίλ βοηθό — Construction's Finest"
 
 #: templates/accounts/dashboard.html
 msgid "Edit your details"
@@ -936,9 +943,15 @@ msgstr ""
 msgid "Expected length of the day."
 msgstr "Αναμενόμενη διάρκεια της ημέρας."
 
+#: jobs/forms.py
 #: templates/accounts/_worker_card.html
+#: templates/jobs/_experience_chips.html
 msgid "Experience"
 msgstr "Εμπειρία"
+
+#: templates/jobs/_experience_badge.html
+msgid "Experienced"
+msgstr "Θέλει έμπειρο"
 
 #: core/state_machine.py
 msgid "Expired"
@@ -951,10 +964,6 @@ msgstr "Απέτυχε"
 #: templates/_required_note.html
 msgid "Fields marked"
 msgstr "Τα πεδία με σήμανση"
-
-#: templates/assistant/_form_offer.html
-msgid "Fill it in by chat"
-msgstr "Συμπλήρωσέ το με συνομιλία"
 
 #: templates/jobs/_filters.html
 msgid "Filters"
@@ -1045,10 +1054,6 @@ msgstr "Οι θέσεις πλήρους απασχόλησης ανεβαίνο
 msgid "Full-time roles are posted as standing positions, not day gigs. You can still take gigs either way."
 msgstr "Οι θέσεις πλήρους απασχόλησης ανεβαίνουν ως μόνιμες θέσεις, όχι ως μεροκάματα. Μπορείς να παίρνεις μεροκάματα έτσι κι αλλιώς."
 
-#: templates/accounts/worker_edit.html
-msgid "Full-time work"
-msgstr "Εργασία πλήρους απασχόλησης"
-
 #: templates/payments/escrow_detail.html
 msgid "Fund this gig"
 msgstr "Χρηματοδότησε αυτό το μεροκάματο"
@@ -1071,11 +1076,10 @@ msgid "Getting paid"
 msgstr "Πώς πληρώνεσαι"
 
 #: templates/payments/payouts.html
-msgid "Getting paid — Construction's Finest"
-msgstr "Πώς πληρώνεσαι — Construction's Finest"
+msgid "Getting paid — XTISE"
+msgstr "Πώς πληρώνεσαι — XTISE"
 
 #: templates/accounts/_feed_items.html
-#: templates/jobs/_job_row.html
 #: templates/jobs/job_detail.html
 #: templates/jobs/job_post_choose.html
 #: templates/jobs/offer_choose.html
@@ -1112,10 +1116,6 @@ msgstr "Γεια"
 msgid "Help"
 msgstr "Βοήθεια"
 
-#: templates/assistant/_widget.html
-msgid "Help me fill out a form"
-msgstr "Βοήθησέ με να συμπληρώσω μια φόρμα"
-
 #: templates/accounts/client_detail.html
 msgid "Hiring right now"
 msgstr "Προσλαμβάνει τώρα"
@@ -1151,10 +1151,6 @@ msgstr "Ώρες εργασίας"
 msgid "How a tradesperson finds a helper here, and how somebody with no experience gets their first day on a site."
 msgstr "Πώς ένας μάστορας βρίσκει βοηθό εδώ, και πώς κάποιος χωρίς εμπειρία πιάνει την πρώτη του μέρα σε εργοτάξιο."
 
-#: templates/assistant/_widget.html
-msgid "How can I help?"
-msgstr "Πώς μπορώ να βοηθήσω;"
-
 #: jobs/forms.py
 #: templates/jobs/job_detail.html
 msgid "How did it go?"
@@ -1169,12 +1165,12 @@ msgid "How do I post a job?"
 msgstr ""
 
 #: assistant/options.py
-msgid "How do ratings work?"
-msgstr ""
-
-#: assistant/options.py
 msgid "How does check-in work?"
 msgstr ""
+
+#: jobs/forms.py
+msgid "How is it paid?"
+msgstr "Πώς πληρώνεται;"
 
 #: jobs/forms.py
 msgid "How is this paid?"
@@ -1186,20 +1182,28 @@ msgid "How it works"
 msgstr "Πώς λειτουργεί"
 
 #: templates/core/about.html
-msgid "How it works — Construction's Finest"
-msgstr "Πώς λειτουργεί — Construction's Finest"
+msgid "How it works — XTISE"
+msgstr "Πώς λειτουργεί — XTISE"
 
 #: templates/accounts/feed.html
 msgid "How it works&nbsp;→"
 msgstr "Πώς λειτουργεί&nbsp;→"
+
+#: jobs/forms.py
+msgid "How long is it for?"
+msgstr "Για πόσο καιρό είναι;"
+
+#: jobs/forms.py
+msgid "How long, and how much?"
+msgstr "Πόσες ώρες, και πόσα;"
 
 #: templates/jobs/_negotiation.html
 msgid "How the terms were agreed"
 msgstr "Πώς συμφωνήθηκαν οι όροι"
 
 #: templates/accounts/select_role.html
-msgid "How will you use Construction's Finest? Pick both if you do both — plenty of people do."
-msgstr "Πώς θα χρησιμοποιήσεις το Construction's Finest; Διάλεξε και τα δύο αν κάνεις και τα δύο — πολλοί το κάνουν."
+msgid "How will you use XTISE? Pick both if you do both — plenty of people do."
+msgstr "Πώς θα χρησιμοποιήσεις το XTISE; Διάλεξε και τα δύο αν κάνεις και τα δύο — πολλοί το κάνουν."
 
 #: accounts/forms.py
 msgid "How will you use the platform?"
@@ -1209,25 +1213,29 @@ msgstr "Πώς θα χρησιμοποιήσεις την πλατφόρμα;"
 msgid "How you appear to everyone else on the platform."
 msgstr "Έτσι εμφανίζεσαι σε όλους τους άλλους στην πλατφόρμα."
 
-#: templates/assistant/_widget.html
-msgid "How you get paid, check-ins, ratings, where things are."
-msgstr "Πώς πληρώνεσαι, check-in, αξιολογήσεις, πού βρίσκεται τι."
+#: templates/accounts/_paths.html
+msgid "I need a hand on site"
+msgstr "Ψάχνω βοηθό"
 
-#: templates/assistant/_widget.html
-msgid "I have a question about the app"
-msgstr "Έχω μια ερώτηση για την εφαρμογή"
+#: templates/jobs/job_apply.html
+msgid "I'm free that day and I can be there."
+msgstr "Εκείνη τη μέρα δεν έχω τίποτα και μπορώ να έρθω."
 
-#: templates/assistant/_form_offer.html
-msgid "I'll ask one thing at a time and fill this in for you. You'll see the finished form here before anything is saved."
-msgstr "Θα ρωτάω ένα πράγμα κάθε φορά και θα το συμπληρώνω για σένα. Θα δεις την ολοκληρωμένη φόρμα εδώ πριν αποθηκευτεί οτιδήποτε."
+#: templates/accounts/_paths.html
+msgid "I'm looking for work"
+msgstr "Ψάχνω δουλειά"
 
-#: templates/assistant/_widget.html
-msgid "I'll ask you a few questions and fill it in for you."
-msgstr "Θα σου κάνω μερικές ερωτήσεις και θα τη συμπληρώσω για σένα."
+#: templates/jobs/job_apply.html
+msgid "I'm new to it, but I turn up and I learn fast."
+msgstr "Δεν το έχω ξανακάνει, αλλά έρχομαι στην ώρα μου και μαθαίνω γρήγορα."
 
 #: templates/worklog/workspace.html
 msgid "I've arrived"
 msgstr "Έφτασα"
+
+#: templates/jobs/job_apply.html
+msgid "I've done this kind of work before."
+msgstr "Έχω ξανακάνει τέτοια δουλειά."
 
 #: templates/core/about.html
 msgid "If a client adds site coordinates, a check-in records how far away it looked. It is a note on the record, never a condition of checking in — GPS on a building site is unreliable, and a worker who is genuinely there must never be locked out by their handset."
@@ -1303,6 +1311,10 @@ msgstr "Ολοκληρωμένες δουλειές"
 msgid "Jobs done"
 msgstr "Δουλειές που έγιναν"
 
+#: templates/accounts/_paths.html
+msgid "Jobs you can take with no experience — you learn on site."
+msgstr "Δουλειές που μπορείς να πιάσεις χωρίς εμπειρία — μαθαίνεις στο εργοτάξιο."
+
 #: templates/accounts/worker_detail.html
 msgid "Joined %(since)s"
 msgstr "Μέλος από %(since)s"
@@ -1336,10 +1348,6 @@ msgstr "Άφησέ το κενό αν είναι μία ενιαία τιμή."
 msgid "Leave blank if you're hiring as an individual."
 msgstr "Άφησέ το κενό αν προσλαμβάνεις ως ιδιώτης."
 
-#: templates/accounts/worker_edit.html
-msgid "Leave the second box empty for a single flat rate."
-msgstr "Άφησε το δεύτερο πεδίο κενό για μία ενιαία τιμή."
-
 #: templates/jobs/review_form.html
 msgid "Leave this rating"
 msgstr "Άφησε αυτή την αξιολόγηση"
@@ -1349,8 +1357,8 @@ msgid "Licence number"
 msgstr "Αριθμός άδειας"
 
 #: templates/accounts/worker_edit.html
-msgid "Licence numbers"
-msgstr "Αριθμοί αδειών"
+msgid "Licence numbers (optional)"
+msgstr "Αριθμοί άδειας (προαιρετικό)"
 
 #: templates/accounts/worker_detail.html
 msgid "Licences"
@@ -1403,8 +1411,8 @@ msgid "Messages"
 msgstr "Μηνύματα"
 
 #: templates/messaging/inbox.html
-msgid "Messages — Construction's Finest"
-msgstr "Μηνύματα — Construction's Finest"
+msgid "Messages — XTISE"
+msgstr "Μηνύματα — XTISE"
 
 #: templates/base.html
 msgid "Mine"
@@ -1511,6 +1519,8 @@ msgstr "Νέα δουλειά στην ειδικότητά σου"
 msgid "New work posted: %(job)s"
 msgstr "Νέα δουλειά: %(job)s"
 
+#: templates/accounts/worker_edit.html
+#: templates/jobs/job_form.html
 #: templates/worklog/workspace.html
 msgid "Next"
 msgstr "Επόμενο"
@@ -1519,7 +1529,6 @@ msgstr "Επόμενο"
 msgid "Next month"
 msgstr "Επόμενος μήνας"
 
-#: assistant/options.py
 #: templates/payments/payouts.html
 msgid "No"
 msgstr "Όχι"
@@ -1545,7 +1554,10 @@ msgid "No days picked yet."
 msgstr "Δεν έχεις διαλέξει ημέρες ακόμη."
 
 #: jobs/forms.py
-#: templates/jobs/_job_row.html
+msgid "No experience"
+msgstr "Χωρίς εμπειρία"
+
+#: templates/jobs/_experience_badge.html
 msgid "No experience needed"
 msgstr "Δεν χρειάζεται εμπειρία"
 
@@ -1682,6 +1694,14 @@ msgid "Nothing is charged by sending this. How it is paid is the choice above, a
 msgstr "Δεν χρεώνεται τίποτα με την αποστολή. Ο τρόπος πληρωμής είναι η επιλογή παραπάνω, και μένει μεταξύ σας εκτός αν διαλέξετε μεσεγγύηση."
 
 #: templates/jobs/offer_form.html
+msgid "Nothing is charged by sending this. You and the worker settle the day between you."
+msgstr "Δεν χρεώνεται τίποτα με την αποστολή. Εσύ και ο βοηθός τα βρίσκετε μεταξύ σας για τη μέρα."
+
+#: templates/jobs/job_form.html
+msgid "Nothing is charged here, now or later. You and the worker settle the day between you — the platform keeps the record, not the money."
+msgstr "Δεν χρεώνεται τίποτα εδώ, ούτε τώρα ούτε μετά. Εσύ και ο βοηθός τα βρίσκετε μεταξύ σας για τη μέρα — η πλατφόρμα κρατάει το αρχείο, όχι τα λεφτά."
+
+#: templates/jobs/offer_form.html
 msgid "Nothing is charged now or later — you and the worker settle this between you."
 msgstr "Δεν χρεώνεται τίποτα τώρα ούτε αργότερα — εσύ και ο βοηθός το τακτοποιείτε μεταξύ σας."
 
@@ -1700,6 +1720,10 @@ msgstr "Από εδώ και πέρα τίποτα δεν προχωράει μ�
 #: templates/jobs/job_list.html
 msgid "Nothing on the board right now."
 msgstr "Τίποτα στον πίνακα αυτή τη στιγμή."
+
+#: templates/jobs/job_list.html
+msgid "Nothing open at that level right now."
+msgstr "Τίποτα ανοιχτό σε αυτό το επίπεδο αυτή τη στιγμή."
 
 #: templates/accounts/client_detail.html
 msgid "Nothing open at the moment. Their track record below still tells you what they're like to work for."
@@ -1782,6 +1806,10 @@ msgstr "Στο τραπέζι τώρα"
 msgid "Once the job is finished you can each leave a rating."
 msgstr "Μόλις ολοκληρωθεί η δουλειά μπορείτε να αφήσετε αξιολόγηση."
 
+#: templates/account/login.html
+msgid "One account, whichever side of a job you are on. Free to browse either way."
+msgstr "Ένας λογαριασμός, από όποια πλευρά της δουλειάς κι αν είσαι. Και από τις δύο, το ψάξιμο είναι δωρεάν."
+
 #: templates/jobs/job_form.html
 msgid "One date, one price. You choose below how it is paid."
 msgstr "Μία ημερομηνία, μία τιμή. Διάλεξε παρακάτω πώς πληρώνεται."
@@ -1789,6 +1817,10 @@ msgstr "Μία ημερομηνία, μία τιμή. Διάλεξε παρακ�
 #: templates/jobs/job_detail.html
 msgid "One day of a %(n)s-day booking, %(first)s to %(last)s. %(pay)s per day — %(total)s and %(hours)s hours in all. Each day is agreed and signed off on its own."
 msgstr "Μία ημέρα από κράτηση %(n)s ημερών, %(first)s έως %(last)s. %(pay)s ανά ημέρα — %(total)s και %(hours)s ώρες συνολικά. Κάθε ημέρα συμφωνείται και εγκρίνεται ξεχωριστά."
+
+#: templates/jobs/job_apply.html
+msgid "One tap. There is nothing to write."
+msgstr "Ένα πάτημα. Δεν χρειάζεται να γράψεις τίποτα."
 
 #: jobs/models.py
 msgid "One-day gig"
@@ -1809,6 +1841,10 @@ msgstr "Συνεχής ή πιο μακροχρόνια εργασία με ωρ
 #: templates/jobs/job_form.html
 msgid "Ongoing work at a rate. Workers apply and you pick."
 msgstr "Συνεχής εργασία με αμοιβή. Οι βοηθοί κάνουν αίτηση και εσύ διαλέγεις."
+
+#: templates/accounts/worker_edit.html
+msgid "Only for the trades you ticked above, and only if you have one. Nothing here needs a licence."
+msgstr "Μόνο για τις τέχνες που τσέκαρες πιο πάνω, και μόνο αν έχεις. Τίποτα εδώ δεν θέλει άδεια."
 
 #: accounts/forms.py
 msgid "Only shown to people you're working with on a job."
@@ -1870,25 +1906,21 @@ msgstr "Ανοιχτός σε συνεχή εργασία"
 msgid "Optional PDF résumé."
 msgstr "Προαιρετικό βιογραφικό σε PDF."
 
-#: templates/accounts/worker_edit.html
-msgid "Optional PDF."
-msgstr "Προαιρετικό PDF."
-
-#: jobs/forms.py
-msgid "Optional — what makes you right for this one?"
-msgstr "Προαιρετικό — τι σε κάνει κατάλληλο γι' αυτή;"
-
 #: templates/core/about.html
 msgid "Optional, and off unless the client picks it when posting. This is what happens when they do."
 msgstr "Προαιρετική, και ανενεργή εκτός αν τη διαλέξει ο μάστορας κατά τη δημοσίευση. Να τι γίνεται όταν τη διαλέξει."
 
-#: templates/accounts/worker_edit.html
-msgid "Optional. Only fill in the ones for trades you selected above."
-msgstr "Προαιρετικό. Συμπλήρωσε μόνο όσα αφορούν τις ειδικότητες που επέλεξες παραπάνω."
-
 #: jobs/models.py
 msgid "Optional. What makes you right for this one?"
 msgstr "Προαιρετικό. Τι σε κάνει κατάλληλο γι' αυτή;"
+
+#: templates/account/login.html
+msgid "Or look at the board first&nbsp;→"
+msgstr "Ή δες πρώτα τον πίνακα&nbsp;→"
+
+#: templates/jobs/job_apply.html
+msgid "Or start with:"
+msgstr "Ή ξεκίνα με:"
 
 #: jobs/forms.py
 msgid "Paid by"
@@ -1953,6 +1985,10 @@ msgstr "Οι πληρωμές δεν έχουν ενεργοποιηθεί ακ�
 msgid "Payouts enabled"
 msgstr "Οι πληρωμές ενεργοποιήθηκαν"
 
+#: templates/accounts/_paths.html
+msgid "People free to work, with their trade, rate and days."
+msgstr "Άνθρωποι διαθέσιμοι για δουλειά, με την τέχνη, την τιμή και τις μέρες τους."
+
 #: accounts/models.py
 msgid "Per day"
 msgstr "Ανά ημέρα"
@@ -1976,6 +2012,10 @@ msgstr "Φωτογραφίες προηγούμενων δουλειών"
 #: core/dates.py
 msgid "Pick a day"
 msgstr "Διάλεξε ημέρα"
+
+#: jobs/forms.py
+msgid "Pick a trade"
+msgstr "Διάλεξε τέχνη"
 
 #: jobs/forms.py
 msgid "Pick at least one day."
@@ -2029,8 +2069,8 @@ msgid "Post a job"
 msgstr "Ανέβασε αγγελία"
 
 #: templates/jobs/job_post_choose.html
-msgid "Post a job — Construction's Finest"
-msgstr "Ανέβασε αγγελία — Construction's Finest"
+msgid "Post a job — XTISE"
+msgstr "Ανέβασε αγγελία — XTISE"
 
 #: templates/jobs/job_form.html
 msgid "Post a position"
@@ -2076,6 +2116,10 @@ msgstr "Δημοσιεύτηκε από σένα"
 msgid "Posted. Workers can see it now."
 msgstr "Δημοσιεύτηκε. Οι βοηθοί μπορούν να τη δουν τώρα."
 
+#: templates/jobs/job_form.html
+msgid "Posting…"
+msgstr "Ανεβαίνει…"
+
 #: templates/jobs/job_applicants.html
 msgid "Posts with a clear title and a real rate get picked up fastest — and you don't have to wait. Find someone in this trade and offer it to them by name."
 msgstr "Οι αγγελίες με σαφή τίτλο και πραγματική αμοιβή βρίσκουν άνθρωπο πιο γρήγορα — και δεν χρειάζεται να περιμένεις. Βρες κάποιον σε αυτή την ειδικότητα και πρόσφερέ του τη δουλειά ονομαστικά."
@@ -2117,6 +2161,10 @@ msgstr "Ζήτα αριθμό άδειας στα προφίλ βοηθών αυ
 msgid "Put different terms up"
 msgstr "Πρότεινε διαφορετικούς όρους"
 
+#: templates/assistant/_widget.html
+msgid "Questions about the app"
+msgstr "Ερωτήσεις για την εφαρμογή"
+
 #: templates/core/whitepaper.html
 msgid "Questions this doesn't answer? The"
 msgstr "Ερωτήσεις που δεν απαντώνται εδώ; Η"
@@ -2124,7 +2172,6 @@ msgstr "Ερωτήσεις που δεν απαντώνται εδώ; Η"
 #: accounts/forms.py
 #: jobs/forms.py
 #: templates/accounts/worker_detail.html
-#: templates/accounts/worker_edit.html
 #: templates/jobs/job_applicants.html
 #: templates/jobs/job_detail.html
 msgid "Rate"
@@ -2142,10 +2189,6 @@ msgstr "Αμοιβή κατόπιν αιτήματος"
 #: templates/jobs/mine.html
 msgid "Rate these"
 msgstr "Αξιολόγησε αυτές"
-
-#: templates/assistant/_form_offer.html
-msgid "Rather just answer a few questions?"
-msgstr "Προτιμάς απλώς να απαντήσεις μερικές ερωτήσεις;"
 
 #: templates/accounts/_worker_card.html
 #: templates/accounts/worker_detail.html
@@ -2214,17 +2257,9 @@ msgstr "Επιστράφηκε στον μάστορα"
 msgid "Reviews"
 msgstr "Αξιολογήσεις"
 
-#: assistant/views.py
-msgid "Right — let's do %(noun)s together. I'll ask one thing at a time, and you can answer however you like. Nothing gets saved until you've seen the finished form and pressed save."
-msgstr "Ωραία — ας κάνουμε %(noun)s μαζί. Θα ρωτάω ένα πράγμα κάθε φορά και μπορείς να απαντάς όπως θέλεις. Τίποτα δεν αποθηκεύεται μέχρι να δεις την ολοκληρωμένη φόρμα και να πατήσεις αποθήκευση."
-
 #: core/models.py
 msgid "Roofer"
 msgstr "Στεγαστής"
-
-#: templates/accounts/worker_edit.html
-msgid "Résumé"
-msgstr "Βιογραφικό"
 
 #: accounts/forms.py
 msgid "Résumé (PDF, optional)"
@@ -2242,12 +2277,18 @@ msgstr "Αποθήκευση αλλαγών"
 msgid "Save details"
 msgstr "Αποθήκευση στοιχείων"
 
+#: templates/accounts/worker_edit.html
+msgid "Save my profile"
+msgstr "Αποθήκευσε το προφίλ μου"
+
 #: templates/accounts/client_edit.html
 #: templates/accounts/worker_edit.html
 msgid "Save profile"
 msgstr "Αποθήκευση προφίλ"
 
+#: templates/accounts/worker_edit.html
 #: templates/jobs/job_detail.html
+#: templates/jobs/job_form.html
 #: templates/jobs/review_form.html
 #: templates/worklog/workspace.html
 msgid "Saving…"
@@ -2279,8 +2320,8 @@ msgid "Self-reported"
 msgstr "Δηλωμένο από τον ίδιο"
 
 #: templates/accounts/worker_edit.html
-msgid "Self-reported. Construction's Finest does not verify licence numbers yet, and never shows them to clients as verified."
-msgstr "Δηλωμένο από τον ίδιο. Το Construction's Finest δεν επαληθεύει ακόμη αριθμούς αδειών, και ποτέ δεν τους εμφανίζει στους μάστορες ως επαληθευμένους."
+msgid "Self-reported. XTISE does not verify licence numbers yet, and never shows them to clients as verified."
+msgstr "Δηλωμένο από τον ίδιο. Το XTISE δεν επαληθεύει ακόμη αριθμούς αδειών, και ποτέ δεν τους εμφανίζει στους μάστορες ως επαληθευμένους."
 
 #: templates/assistant/_widget.html
 #: templates/messaging/thread.html
@@ -2313,6 +2354,18 @@ msgstr "Στέλνεται ως το πρώτο σου μήνυμα σε μια 
 msgid "Set up payouts"
 msgstr "Ρύθμισε τις πληρωμές"
 
+#: templates/accounts/worker_edit.html
+msgid "Set up your profile"
+msgstr "Φτιάξε το προφίλ σου"
+
+#: templates/jobs/job_list.html
+msgid "Show every level"
+msgstr "Δείξε όλα τα επίπεδα"
+
+#: templates/jobs/job_list.html
+msgid "Show jobs needing no experience"
+msgstr "Δείξε δουλειές χωρίς εμπειρία"
+
 #: accounts/models.py
 msgid "Shown at the top of your profile. Change it as often as you like."
 msgstr "Εμφανίζεται στην κορυφή του προφίλ σου. Άλλαξέ το όσο συχνά θέλεις."
@@ -2321,6 +2374,7 @@ msgstr "Εμφανίζεται στην κορυφή του προφίλ σου.
 msgid "Shown under your name — e.g. “Framing and finish carpentry, own tools”."
 msgstr "Εμφανίζεται κάτω από το όνομά σου — π.χ. «Σκελετοί και φινίρισμα, δικά μου εργαλεία»."
 
+#: templates/account/login.html
 #: templates/base.html
 msgid "Sign in"
 msgstr "Σύνδεση"
@@ -2345,13 +2399,25 @@ msgstr "Γεωγραφικό πλάτος εργοταξίου (προαιρετ
 msgid "Site longitude (optional)"
 msgstr "Γεωγραφικό μήκος εργοταξίου (προαιρετικό)"
 
-#: assistant/options.py
-msgid "Skip"
-msgstr ""
+#: templates/accounts/worker_edit.html
+msgid "Six short questions. Nothing here needs experience, a licence or a CV."
+msgstr "Έξι σύντομες ερωτήσεις. Τίποτα εδώ δεν θέλει εμπειρία, άδεια ή βιογραφικό."
+
+#: jobs/forms.py
+msgid "Skilled"
+msgstr "Έμπειρος"
 
 #: templates/base.html
 msgid "Skip to content"
 msgstr "Μετάβαση στο περιεχόμενο"
+
+#: jobs/forms.py
+msgid "Some experience"
+msgstr "Κάποια εμπειρία"
+
+#: templates/jobs/_experience_badge.html
+msgid "Some experience helps"
+msgstr "Βοηθάει λίγη εμπειρία"
 
 #: jobs/models.py
 msgid "Some experience helps, not essential"
@@ -2382,8 +2448,8 @@ msgid "Something's wrong with this"
 msgstr "Κάτι δεν πάει καλά με αυτό"
 
 #: assistant/views.py
-msgid "Sorry — I can't reach the assistant right now. You can still fill the form in yourself, everything works as normal."
-msgstr "Συγγνώμη — δεν μπορώ να συνδεθώ με τον βοηθό αυτή τη στιγμή. Μπορείς να συμπληρώσεις τη φόρμα μόνος σου, όλα λειτουργούν κανονικά."
+msgid "Sorry — I can't reach the assistant right now. Everything else in the app works as normal, and How it works has the same answers."
+msgstr "Συγγνώμη — δεν μπορώ να φτάσω τον βοηθό αυτή τη στιγμή. Όλα τα άλλα στην εφαρμογή δουλεύουν κανονικά, και η σελίδα «Πώς λειτουργεί» έχει τις ίδιες απαντήσεις."
 
 #: assistant/views.py
 msgid "Sorry, I didn't catch that — could you say it another way?"
@@ -2414,6 +2480,10 @@ msgstr "Ξεκινάω τώρα"
 msgid "Status"
 msgstr "Κατάσταση"
 
+#: templates/jobs/_step_progress.html
+msgid "Step %(n)s of %(of)s"
+msgstr "Βήμα %(n)s από %(of)s"
+
 #: templates/payments/payouts.html
 msgid "Stripe still needs something from you. Clients can't fund a gig with you on it until this is finished."
 msgstr "Το Stripe χρειάζεται ακόμη κάτι από σένα. Οι μάστορες δεν μπορούν να χρηματοδοτήσουν μεροκάματο με εσένα μέχρι να ολοκληρωθεί αυτό."
@@ -2429,6 +2499,10 @@ msgstr "Σύστημα"
 #: templates/worklog/workspace.html
 msgid "Tap this when you arrive. It starts the clock and tells the client you're there."
 msgstr "Πάτα το μόλις φτάσεις. Ξεκινά το χρονόμετρο και ειδοποιεί τον μάστορα ότι είσαι εκεί."
+
+#: jobs/forms.py
+msgid "Tell them about it"
+msgstr "Πες τους για τη δουλειά"
 
 #: jobs/models.py
 msgid "Temporary / short term"
@@ -2447,16 +2521,16 @@ msgid "That job isn't open to offer any more — it may have been taken or alrea
 msgstr "Αυτή η δουλειά δεν είναι πλέον διαθέσιμη — μπορεί να κλείστηκε ή να στάλθηκε ήδη σε κάποιον."
 
 #: jobs/forms.py
+msgid "That's %(count)s days — %(limit)s at a time is the limit. Agree these and talk about the rest separately."
+msgstr "Αυτές είναι %(count)s μέρες — το όριο είναι %(limit)s τη φορά. Συμφωνήστε αυτές και τα υπόλοιπα κουβεντιάστε τα ξεχωριστά."
+
+#: jobs/forms.py
 msgid "That's %(count)s days — %(limit)s at a time is the limit. Post these and write the rest as a second batch."
 msgstr "Αυτές είναι %(count)s ημέρες — το όριο είναι %(limit)s κάθε φορά. Δημοσίευσε αυτές και γράψε τις υπόλοιπες σε δεύτερη παρτίδα."
 
 #: assistant/views.py
 msgid "That's a lot of messages in one go — give it a few minutes and try again."
 msgstr "Αυτά είναι πολλά μηνύματα μαζί — δώσε λίγα λεπτά και ξαναδοκίμασε."
-
-#: assistant/views.py
-msgid "That's everything I need. Open the form below — it's filled in with your answers. Change anything that isn't right by clicking straight into it, then press save."
-msgstr "Αυτά ήταν όλα. Άνοιξε τη φόρμα παρακάτω — είναι συμπληρωμένη με τις απαντήσεις σου. Άλλαξε ό,τι δεν είναι σωστό πατώντας πάνω του και μετά πάτησε αποθήκευση."
 
 #: templates/accounts/_feed_items.html
 msgid "That's everything for now."
@@ -2465,6 +2539,10 @@ msgstr "Αυτά για την ώρα."
 #: templates/core/about.html
 msgid "The board is public and readable without an account. Find a job, send a message with your application, and the client picks from everyone who put their hand up."
 msgstr "Ο πίνακας είναι δημόσιος και διαβάζεται χωρίς λογαριασμό. Βρες μια δουλειά, στείλε μήνυμα με την αίτησή σου, και ο μάστορας διαλέγει ανάμεσα σε όσους δήλωσαν ενδιαφέρον."
+
+#: templates/jobs/job_list.html
+msgid "The board turns over fast — most days are posted a few days ahead. Try another level, or come back tomorrow."
+msgstr "Ο πίνακας αλλάζει γρήγορα — οι περισσότερες μέρες ανεβαίνουν λίγες μέρες πριν. Δοκίμασε άλλο επίπεδο, ή πέρνα ξανά αύριο."
 
 #: templates/worklog/workspace.html
 msgid "The client can approve sooner. If they do nothing, it releases anyway."
@@ -2491,8 +2569,8 @@ msgid "The client hasn't funded this gig yet."
 msgstr "Ο μάστορας δεν έχει χρηματοδοτήσει ακόμη αυτό το μεροκάματο."
 
 #: templates/jobs/job_apply.html
-msgid "The client sees your worker profile with this — your trades, rate, experience and reviews. Nothing else is sent."
-msgstr "Ο μάστορας βλέπει μαζί με αυτό το προφίλ σου ως βοηθό — ειδικότητες, αμοιβή, εμπειρία και κριτικές. Τίποτα άλλο δεν αποστέλλεται."
+msgid "The client sees your profile with this — your trades, your rate, the days you're free and any ratings. Nothing else is sent."
+msgstr "Ο μάστορας βλέπει το προφίλ σου μαζί με αυτό — τις τέχνες σου, την τιμή σου, τις μέρες που είσαι διαθέσιμος και όποιες αξιολογήσεις έχεις. Τίποτα άλλο δεν στέλνεται."
 
 #: templates/worklog/workspace.html
 msgid "The day ended early"
@@ -2507,8 +2585,8 @@ msgid "The line people see on the board — a few words, not the whole job."
 msgstr "Η γραμμή που βλέπουν στον πίνακα — λίγες λέξεις, όχι όλη η δουλειά."
 
 #: templates/core/whitepaper.html
-msgid "The model behind Construction's Finest: how escrow works, why job and payment state are one machine, and the deliberate limits of v1."
-msgstr "Το μοντέλο πίσω από το Construction's Finest: πώς λειτουργεί η μεσεγγύηση, γιατί η κατάσταση της δουλειάς και της πληρωμής είναι μία μηχανή, και τα σκόπιμα όρια της v1."
+msgid "The model behind XTISE: how escrow works, why job and payment state are one machine, and the deliberate limits of v1."
+msgstr "Το μοντέλο πίσω από το XTISE: πώς λειτουργεί η μεσεγγύηση, γιατί η κατάσταση της δουλειάς και της πληρωμής είναι μία μηχανή, και τα σκόπιμα όρια της v1."
 
 #: templates/notifications/email/escrow_funded.txt
 msgid "The money for %(title)s is now held by the platform."
@@ -2670,15 +2748,17 @@ msgid "Threads open once a worker applies to one of your jobs, or once you apply
 msgstr "Οι συνομιλίες ανοίγουν μόλις ένας βοηθός κάνει αίτηση σε δουλειά σου, ή μόλις κάνεις εσύ αίτηση σε κάποια."
 
 #: jobs/forms.py
+msgid "Tick the days you can do. Leave out any you can't."
+msgstr "Τσέκαρε τις μέρες που μπορείς. Άφησε έξω όσες δεν μπορείς."
+
+#: jobs/forms.py
 msgid "Title, description, or area"
 msgstr "Τίτλος, περιγραφή ή περιοχή"
 
-#: assistant/options.py
 #: jobs/models.py
 msgid "Today"
 msgstr "Σήμερα"
 
-#: assistant/options.py
 #: jobs/models.py
 msgid "Tomorrow"
 msgstr "Αύριο"
@@ -2712,7 +2792,6 @@ msgid "Trade licences on a profile are self-reported and shown as exactly that. 
 msgstr "Οι επαγγελματικές άδειες σε ένα προφίλ δηλώνονται από τον ίδιο και εμφανίζονται ακριβώς ως τέτοιες. Έλεγξε στην αρμόδια αρχή πριν προσλάβεις για ρυθμιζόμενη εργασία."
 
 #: accounts/forms.py
-#: templates/accounts/worker_edit.html
 msgid "Trades"
 msgstr "Ειδικότητες"
 
@@ -2755,10 +2834,6 @@ msgstr "Τύπος"
 #: jobs/forms.py
 msgid "Type of position"
 msgstr "Τύπος θέσης"
-
-#: templates/assistant/_widget.html
-msgid "Type your answer…"
-msgstr "Γράψε την απάντησή σου…"
 
 #: templates/worklog/workspace.html
 msgid "Under review"
@@ -2840,6 +2915,10 @@ msgstr "Δεν χρησιμοποιούμε την τοποθεσία για ν�
 msgid "We do not verify licence numbers."
 msgstr "Δεν επαληθεύουμε αριθμούς αδειών."
 
+#: templates/account/login.html
+msgid "We use Google so there is no password to lose on a site. We get your name, your email and your picture — nothing else."
+msgstr "Χρησιμοποιούμε Google ώστε να μην υπάρχει κωδικός να χαθεί σε κάποιο σάιτ. Παίρνουμε το όνομά σου, το email σου και τη φωτογραφία σου — τίποτα άλλο."
+
 #: jobs/forms.py
 msgid "We'll settle it directly — cash, invoice, our own way"
 msgstr "Θα το διακανονίσουμε απευθείας — μετρητά, τιμολόγιο, με τον τρόπο μας"
@@ -2849,12 +2928,16 @@ msgid "Welcome"
 msgstr "Καλώς ήρθες"
 
 #: templates/accounts/select_role.html
-msgid "Welcome — Construction's Finest"
-msgstr "Καλώς ήρθες — Construction's Finest"
+msgid "Welcome — XTISE"
+msgstr "Καλώς ήρθες — XTISE"
 
 #: core/models.py
 msgid "Welder"
 msgstr "Συγκολλητής"
+
+#: accounts/forms.py
+msgid "What are you after?"
+msgstr "Τι ψάχνεις;"
 
 #: accounts/models.py
 msgid "What are you looking for right now?"
@@ -2864,9 +2947,17 @@ msgstr "Τι ψάχνεις αυτή τη στιγμή;"
 msgid "What are you posting?"
 msgstr "Τι ανεβάζεις;"
 
-#: templates/assistant/_widget.html
-msgid "What do you need?"
-msgstr "Τι χρειάζεσαι;"
+#: accounts/forms.py
+msgid "What can you do?"
+msgstr "Τι μπορείς να κάνεις;"
+
+#: accounts/forms.py
+msgid "What do you charge?"
+msgstr "Τι χρεώνεις;"
+
+#: jobs/forms.py
+msgid "What does it pay?"
+msgstr "Τι πληρώνει;"
 
 #: templates/worklog/workspace.html
 msgid "What gets paid"
@@ -2875,6 +2966,10 @@ msgstr "Τι πληρώνεται"
 #: assistant/options.py
 msgid "What is escrow?"
 msgstr ""
+
+#: jobs/forms.py
+msgid "What kind of work is it?"
+msgstr "Τι δουλειά είναι;"
 
 #: jobs/forms.py
 msgid "What the worker is paid in full, before the platform fee."
@@ -2900,9 +2995,21 @@ msgstr "Τι έχει ανέβει"
 msgid "What's the platform fee?"
 msgstr ""
 
+#: accounts/forms.py
+msgid "When can you work?"
+msgstr "Πότε μπορείς να δουλέψεις;"
+
+#: accounts/forms.py
+msgid "Where do you work?"
+msgstr "Πού δουλεύεις;"
+
 #: jobs/forms.py
 msgid "Where in town?"
 msgstr "Πού στην πόλη;"
+
+#: templates/accounts/worker_edit.html
+msgid "Where you'll travel to, within %(region)s."
+msgstr ""
 
 #: accounts/forms.py
 msgid "Where you're based"
@@ -2918,17 +3025,13 @@ msgstr "Ποιες ημέρες;"
 msgid "Which job?"
 msgstr "Ποια δουλειά;"
 
-#: templates/assistant/_widget.html
-msgid "Which one?"
-msgstr "Ποια;"
-
 #: templates/base.html
 msgid "Whitepaper"
 msgstr "Λευκή βίβλος"
 
 #: templates/core/whitepaper.html
-msgid "Whitepaper — Construction's Finest"
-msgstr "Λευκή βίβλος — Construction's Finest"
+msgid "Whitepaper — XTISE"
+msgstr "Λευκή βίβλος — XTISE"
 
 #: jobs/forms.py
 msgid "Who can do this?"
@@ -2998,6 +3101,10 @@ msgstr "Βοηθός στο εργοτάξιο"
 msgid "Worker profile"
 msgstr "Προφίλ βοηθό"
 
+#: templates/accounts/worker_edit.html
+msgid "Worker profile — XTISE"
+msgstr ""
+
 #: jobs/models.py
 msgid "Worker rating the client"
 msgstr "Ο βοηθός αξιολογεί τον μάστορα"
@@ -3022,7 +3129,30 @@ msgstr "Βγαίνει"
 msgid "Write them a new job instead."
 msgstr "Γράψ’ τους καινούργια δουλειά."
 
-#: assistant/options.py
+#: templates/notifications/email/_wrapper.txt
+msgid "XTISE"
+msgstr ""
+
+#: templates/accounts/worker_detail.html
+msgid "XTISE does not verify licence numbers. Check with your state board before hiring for regulated work."
+msgstr "Το XTISE δεν επαληθεύει αριθμούς αδειών. Έλεγξε στην αρμόδια αρχή πριν προσλάβεις για ρυθμιζόμενη εργασία."
+
+#: templates/payments/escrow_detail.html
+msgid "XTISE holds the money — neither side does. It goes to the worker once the day is signed off, or back to the client if the gig is called off before it starts."
+msgstr "Το XTISE κρατά τα χρήματα — καμία από τις δύο πλευρές. Πηγαίνουν στον βοηθό μόλις εγκριθεί η ημέρα, ή πίσω στον μάστορα αν το μεροκάματο ακυρωθεί πριν ξεκινήσει."
+
+#: templates/core/about.html
+msgid "XTISE is where a tradesperson finds a pair of hands. Most of the jobs here need no experience — somebody shows you on site, and you are paid for the days you work. One day, a few days, or a permanent place, with the money for a day held before anybody turns up."
+msgstr "Το XTISE είναι εκεί που ένας μάστορας βρίσκει χέρια. Οι περισσότερες δουλειές εδώ δεν θέλουν εμπειρία — κάποιος σου δείχνει στο εργοτάξιο, και πληρώνεσαι για τις μέρες που δουλεύεις. Μία μέρα, λίγες μέρες ή μόνιμη θέση, με τα λεφτά της ημέρας κρατημένα πριν εμφανιστεί κανείς."
+
+#: templates/accounts/feed.html
+msgid "XTISE — find work, hire crew"
+msgstr "XTISE — βρες δουλειά, βρες συνεργείο"
+
+#: templates/base.html
+msgid "XTISE, home"
+msgstr "XTISE, αρχική"
+
 #: templates/payments/payouts.html
 msgid "Yes"
 msgstr "Ναι"
@@ -3149,8 +3279,8 @@ msgid "You:"
 msgstr "Εσύ:"
 
 #: templates/accounts/dashboard.html
-msgid "Your account — Construction's Finest"
-msgstr "Ο λογαριασμός σου — Construction's Finest"
+msgid "Your account — XTISE"
+msgstr "Ο λογαριασμός σου — XTISE"
 
 #: templates/jobs/job_detail.html
 msgid "Your application"
@@ -3161,8 +3291,8 @@ msgid "Your details"
 msgstr "Τα στοιχεία σου"
 
 #: templates/accounts/details.html
-msgid "Your details — Construction's Finest"
-msgstr "Τα στοιχεία σου — Construction's Finest"
+msgid "Your details — XTISE"
+msgstr "Τα στοιχεία σου — XTISE"
 
 #: templates/accounts/details.html
 msgid "Your email comes from Google and can't be changed here. Your phone is only shown to people you're actively working with on a job."
@@ -3174,8 +3304,8 @@ msgid "Your jobs"
 msgstr "Οι δουλειές σου"
 
 #: templates/jobs/mine.html
-msgid "Your jobs — Construction's Finest"
-msgstr "Οι δουλειές σου — Construction's Finest"
+msgid "Your jobs — XTISE"
+msgstr "Οι δουλειές σου — XTISE"
 
 #: templates/assistant/_widget.html
 msgid "Your message"
@@ -3291,6 +3421,10 @@ msgstr "απομένουν"
 msgid "page covers the same ground in plainer language."
 msgstr "σελίδα καλύπτει τα ίδια θέματα με απλούστερα λόγια."
 
+#: templates/jobs/job_detail.html
+msgid "per day"
+msgstr "τη μέρα"
+
 #: templates/accounts/dashboard.html
 msgid "profile"
 msgstr "προφίλ"
@@ -3302,6 +3436,10 @@ msgstr "δες το προφίλ του ως μάστορα"
 #: templates/accounts/client_detail.html
 msgid "see their worker profile"
 msgstr "δες το προφίλ του ως βοηθό"
+
+#: templates/accounts/worker_edit.html
+msgid "they're the same whether you're working or hiring."
+msgstr "είναι τα ίδια είτε δουλεύεις είτε προσλαμβάνεις."
 
 #: templates/base.html
 msgid "unread"

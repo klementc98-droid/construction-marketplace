@@ -37,6 +37,22 @@ def nav(request):
     return {"nav": _SECTIONS.get(match.view_name, "")}
 
 
+def escrow(request):
+    """Expose ``escrow_available``: whether this deployment can hold money.
+
+    A context processor rather than a per-view flag because it is copy, not
+    behaviour — several unrelated templates promise something about how a job
+    gets paid, and on a deployment with no payment keys every one of those
+    sentences is a promise it cannot keep. The rule that actually stops escrow
+    being chosen lives on the forms; this is only what the reader is told.
+
+    Cheap: one truthiness check on a setting.
+    """
+    from payments import gateway
+
+    return {"escrow_available": gateway.configured()}
+
+
 #: The stylesheet and script that every page loads. Both are served from the
 #: same URL for the life of the project, which is exactly the shape a browser
 #: caches hardest — so an edit to either can sit on disk, be served correctly

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load i18n %}
-{% block title %}{% blocktranslate with who=worker.user %}Offer {{ who }} a job{% endblocktranslate %} — Construction's Finest{% endblock %}
+{% block title %}{% blocktranslate with who=worker.user %}Offer {{ who }} a job{% endblocktranslate %} — XTISE{% endblock %}
 
 {% block content %}
   <h1>{% blocktranslate with who=worker.user.short_name|default:worker.user %}Offer {{ who }} a job{% endblocktranslate %}</h1>
@@ -32,7 +32,7 @@
       {% endfor %}
       <p class="trust">
         <svg class="trust-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-shield"/></svg>
-        {% translate "Nothing is charged by sending this. How it is paid is the choice above, and it stays between you unless you both pick escrow." %}
+        {% if escrow_available %}{% translate "Nothing is charged by sending this. How it is paid is the choice above, and it stays between you unless you both pick escrow." %}{% else %}{% translate "Nothing is charged by sending this. You and the worker settle the day between you." %}{% endif %}
       </p>
     </div>
 

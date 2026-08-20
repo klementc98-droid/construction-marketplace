@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Construction's Finest — front-end behaviour
+   XTISE — front-end behaviour
    --------------------------------------------------------------------------
    Progressive enhancement only. Every feature here is an improvement on a page
    that already works without it: the feed paginates by link, the check-in form
@@ -761,6 +761,154 @@
 
 
   /* ======================================================================
+     Stepped forms
+     ----------------------------------------------------------------------
+     A form marked data-steps is already a complete, working form: every
+     fieldset is in the page, one submit posts the lot, and the server
+     validates it exactly as it always did. All this does is show one fieldset
+     at a time and add Back and Next.
+
+     That is the whole design, and it is why there is no wizard state
+     anywhere. Nothing is saved between steps, so nothing can be stranded
+     half-written; a reload starts the questions again with the fields still
+     holding whatever the browser kept, and the form that finally posts is the
+     same single POST the flat form sent.
+
+     Next runs the browser's own validation on the fields of the current step
+     only. That is the one thing worth doing eagerly: finding out on step six
+     that step two was wrong means scrolling back through five screens to a
+     field you can no longer see.
+     ====================================================================== */
+
+  function stepFields(step) {
+    return $$("input, select, textarea", step).filter(function (el) {
+      return !el.disabled && el.type !== "hidden";
+    });
+  }
+
+  /* Which step holds the first field the server complained about. Errors come
+     back with the whole form re-rendered, and opening on step one would show a
+     clean screen while the message sits three steps away. */
+  function firstErrorStep(steps) {
+    for (var i = 0; i < steps.length; i++) {
+      if ($(".errorlist", steps[i])) return i;
+    }
+    return 0;
+  }
+
+  function initSteps() {
+    $$("form[data-steps]").forEach(function (form) {
+      var steps = $$(".step", form);
+      if (steps.length < 2) return;          /* one question is not a sequence */
+
+      var back = $(".step-back", form);
+      var next = $(".step-next", form);
+      var submit = $(".step-submit", form);
+      var progress = $("[data-step-progress]", form);
+      var fill = $("[data-step-fill]", form);
+      var count = $("[data-step-count]", form);
+      var pattern = count ? count.getAttribute("data-step-pattern") : "";
+      var at = firstErrorStep(steps);
+
+      function show(i, focus) {
+        at = Math.max(0, Math.min(i, steps.length - 1));
+        steps.forEach(function (step, n) { step.hidden = n !== at; });
+
+        if (back) back.hidden = at === 0;
+        if (next) next.hidden = at === steps.length - 1;
+        if (submit) submit.hidden = at !== steps.length - 1;
+
+        if (fill) fill.style.width = ((at + 1) / steps.length * 100) + "%";
+        if (count && pattern) {
+          count.textContent = pattern
+            .replace("{n}", String(at + 1))
+            .replace("{of}", String(steps.length));
+        }
+
+        /* Focus the first field of the step, but only when the reader asked to
+           move. Doing it on the initial render would scroll a page somebody
+           has not started reading yet. */
+        if (focus) {
+          var first = stepFields(steps[at])[0];
+          if (first) first.focus({ preventScroll: true });
+          form.scrollIntoView({
+            behavior: reducedMotion.matches ? "auto" : "smooth",
+            block: "start"
+          });
+        }
+      }
+
+      /* The browser's own validation, on this step's fields alone. reportValidity
+         puts the browser's message on the field, which is the same one the
+         reader would have seen had they submitted. */
+      function stepIsValid() {
+        var fields = stepFields(steps[at]);
+        for (var i = 0; i < fields.length; i++) {
+          if (!fields[i].checkValidity()) {
+            fields[i].reportValidity();
+            return false;
+          }
+        }
+        return true;
+      }
+
+      on(next, "click", function () { if (stepIsValid()) show(at + 1, true); });
+      on(back, "click", function () { show(at - 1, true); });
+
+      /* Enter in a text field means "next question", not "post it half
+         written". The last step is the exception, where Enter is submit,
+         because there the two mean the same thing. */
+      on(form, "keydown", function (e) {
+        if (e.key !== "Enter") return;
+        var el = e.target;
+        if (!el || el.tagName === "TEXTAREA" || el.type === "submit") return;
+        if (at === steps.length - 1) return;
+        e.preventDefault();
+        if (stepIsValid()) show(at + 1, true);
+      });
+
+      if (progress) progress.hidden = false;
+      form.classList.add("is-stepped");
+      show(at, false);
+    });
+  }
+
+
+  /* ======================================================================
+     Openers
+     ----------------------------------------------------------------------
+     Buttons that write the first line of an application into the box beside
+     them. Nothing is submitted and nothing is chosen: the text lands in the
+     field, the cursor lands after it, and what gets sent is whatever the
+     reader leaves there.
+
+     Hidden in the markup and shown here, because without this file they would
+     be four buttons that do nothing - worse than not offering them at all.
+     ====================================================================== */
+
+  function initOpeners() {
+    $$("[data-openers]").forEach(function (group) {
+      var form = group.closest("form");
+      var box = form && $("textarea", form);
+      if (!box) return;
+
+      $$("[data-opener]", group).forEach(function (button) {
+        on(button, "click", function () {
+          var line = button.textContent.trim();
+          /* Appended, not replaced. Tapping a second opener while something is
+             already written must not throw away what was typed. */
+          box.value = box.value.trim() ? box.value.trim() + " " + line : line;
+          box.focus();
+          box.setSelectionRange(box.value.length, box.value.length);
+        });
+      });
+
+      group.hidden = false;
+    });
+  }
+
+
+  /* ======================================================================
      Boot
      ====================================================================== */
 
@@ -773,6 +921,8 @@
     initGeoForms();
     initConfirms();
     initDateLists();
+    initSteps();
+    initOpeners();
   }
 
   if (doc.readyState === "loading") on(doc, "DOMContentLoaded", boot);

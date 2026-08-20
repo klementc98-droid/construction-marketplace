@@ -1,134 +1,163 @@
 {% extends "base.html" %}
 {% load account_extras i18n %}
-{% block title %}{% translate "Edit worker profile — Construction's Finest" %}{% endblock %}
+{% block title %}{% translate "Worker profile — XTISE" %}{% endblock %}
 
 {% block content %}
-  <h1>{% translate "Worker profile" %}</h1>
-  <p class="lede">{% translate "This is what clients see when they search for your trade." %}</p>
-
-  {% include "assistant/_form_offer.html" with form_key="worker_profile" %}
-
-  <form method="post" enctype="multipart/form-data">
-    {% csrf_token %}
-    {{ form.region }}
-
-    {% include "_required_note.html" %}
-
-    <div class="card">
-      <h2>{% translate "Trades" %} <span class="req" aria-hidden="true">*</span><span class="sr-only">{% translate "(required)" %}</span></h2>
-      {{ form.trades.errors }}
-      <ul class="checks">
-        {% for choice in form.trades %}
-          <li><label for="{{ choice.id_for_label }}">{{ choice.tag }} {{ choice.choice_label }}</label></li>
-        {% endfor %}
-      </ul>
-    </div>
-
-    {% if regulated_trades %}
-      <div class="card">
-        <h2>{% translate "Licence numbers" %}</h2>
-        <p class="muted" style="margin-top:0;font-size:14px">
-          {% translate "Optional. Only fill in the ones for trades you selected above." %}
-        </p>
-        {% for trade in regulated_trades %}
-          <label for="license_{{ trade.id }}">{{ trade }} licence #</label>
-          <input type="text" id="license_{{ trade.id }}" name="license_{{ trade.id }}"
-                 value="{{ licenses|dict_get:trade.id }}"
-                 placeholder="{% translate "Licence number" %}">
-        {% endfor %}
-        <p class="note">
-          {% translate "Self-reported. Construction's Finest does not verify licence numbers yet, and never shows them to clients as verified." %}
-        </p>
-      </div>
+  <h1>{% if stepped %}{% translate "Set up your profile" %}{% else %}{% translate "Worker profile" %}{% endif %}</h1>
+  <p class="lede">
+    {% if stepped %}
+      {% translate "Six short questions. Nothing here needs experience, a licence or a CV." %}
+    {% else %}
+      {% translate "This is what clients see when they search for your trade." %}
     {% endif %}
+  </p>
 
-    <div class="card">
-      <h2>{% translate "About you" %}</h2>
+  {% comment %} One form, the same fieldsets either way.
 
-      <p class="note" style="margin-top:0">
-        {% translate "Your name, photo and age live on" %}
-        <a href="{% url 'accounts:details' %}">{% translate "your account details" %}</a> — they're
-        the same whether you're working or hiring.
-      </p>
+     The first time through it is stepped: one question per screen, with a
+     progress bar. Somebody writing this has often never done the work, and a
+     screen with thirteen inputs on it says "prove you belong here" before the
+     first answer is given — which is the opposite of what this whole board is
+     for.
 
-      {% include "_field.html" with field=form.service_area %}
-      {% comment %} profile.region, not form.region.initial — a bound ModelForm's initial for
-         an FK is the primary key, so that rendered as "within 1."
-      {% endcomment %}
-      <span class="helptext">Where you'll travel to, within {{ profile.region.name }}.</span>
+     Coming back to it, every question is on screen at once. Somebody who
+     returned to change their rate should not be walked through six screens to
+     reach it. Same markup, same single POST; only data-steps differs, and the
+     script does the rest.
+  {% endcomment %}
+  <form method="post" enctype="multipart/form-data"
+        class="card stepform{% if stepped %} is-first{% endif %}"
+        {% if stepped %}data-steps=""{% endif %}>
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    {% for field in form.hidden_fields %}{{ field }}{% endfor %}
 
-      {% include "_field.html" with field=form.years_experience %}
-      {% include "_field.html" with field=form.bio %}
-    </div>
+    {% if not stepped %}{% include "_required_note.html" %}{% endif %}
+    {% if stepped %}{% include "jobs/_step_progress.html" with total=form.steps|length %}{% endif %}
 
-    <div class="card">
-      <h2>{% translate "Rate" %}</h2>
-      {% include "_field.html" with field=form.rate_type %}
-      {% include "_field.html" with field=form.rate_min %}
-      {% include "_field.html" with field=form.rate_max %}
-      <span class="helptext">{% translate "Leave the second box empty for a single flat rate." %}</span>
-    </div>
+    {% for step in form.steps %}
+      <fieldset class="step{% if step.label_said %} step-said{% endif %}"
+                data-step="{{ step.index }}">
+        <legend class="step-q">{{ step.question }}</legend>
 
-    <div class="card">
-      <h2>{% translate "Availability" %}</h2>
+        {% comment %} Trades render as a list of tick boxes with their own markup rather
+           than through _field.html: the generic label-then-widget shape puts a
+           caption above a block of checkboxes, which reads as an unanswered
+           question sitting over an unrelated list.
+        {% endcomment %}
+        {% if "trades" in step.field_names %}
+          {{ form.trades.errors }}
+          <ul class="checks">
+            {% for choice in form.trades %}
+              <li><label for="{{ choice.id_for_label }}">{{ choice.tag }} {{ choice.choice_label }}</label></li>
+            {% endfor %}
+          </ul>
+          {% include "_field.html" with field=form.years_experience %}
 
-      {% include "_field.html" with field=form.seeking %}
-      {% include "_field.html" with field=form.availability_status %}
-      {% include "_field.html" with field=form.available_dates %}
-      {% include "_field.html" with field=form.availability_note %}
-    </div>
+          {% comment %} Licence numbers are not form fields — they are one text box per
+             regulated trade, saved by _save_licenses. They belong beside the
+             trades and nowhere else, and they are folded because most people
+             here have none and the question should not read as a hurdle.
+          {% endcomment %}
+          {% if regulated_trades %}
+            <details class="step-more">
+              <summary>{% translate "Licence numbers (optional)" %}</summary>
+              <p class="note" style="margin-top:0">
+                {% translate "Only for the trades you ticked above, and only if you have one. Nothing here needs a licence." %}
+              </p>
+              {% for trade in regulated_trades %}
+                <label for="license_{{ trade.id }}">{{ trade }} licence #</label>
+                <input type="text" id="license_{{ trade.id }}" name="license_{{ trade.id }}"
+                       value="{{ licenses|dict_get:trade.id }}"
+                       placeholder="{% translate "Licence number" %}">
+              {% endfor %}
+              <p class="note">
+                {% translate "Self-reported. XTISE does not verify licence numbers yet, and never shows them to clients as verified." %}
+              </p>
+            </details>
+          {% endif %}
 
-    <div class="card">
-      <h2>{% translate "Full-time work" %}</h2>
-      <p class="question">
-        {{ form.open_to_full_time.label }}
-        {% if form.open_to_full_time.field.required %}
-          <span class="req" aria-hidden="true">*</span><span class="sr-only">{% translate "(required)" %}</span>
+        {% else %}
+          {% for field in step.fields %}{% include "_field.html" %}{% endfor %}
         {% endif %}
-      </p>
-      <div class="radio-group">{{ form.open_to_full_time }}</div>
-      {{ form.open_to_full_time.errors }}
-      <span class="helptext">{{ form.open_to_full_time.help_text }}</span>
-    </div>
 
-    <div class="card">
-      <h2>{% translate "Résumé" %}</h2>
-      {{ form.cv }}{{ form.cv.errors }}
-      <span class="helptext">{% translate "Optional PDF." %}</span>
-      {% if profile.cv %}<p class="muted"><a href="{{ profile.cv.url }}">{% translate "Current résumé" %}</a></p>{% endif %}
-    </div>
+        {% comment %} Where they will travel to, named. profile.region rather than
+           form.region.initial — a bound ModelForm's initial for an FK is the
+           primary key, so that rendered as "within 1".
+        {% endcomment %}
+        {% if "service_area" in step.field_names %}
+          <span class="helptext">
+            {% blocktranslate with region=profile.region.name %}Where you'll travel to, within {{ region }}.{% endblocktranslate %}
+          </span>
+        {% endif %}
 
-    <button class="btn" type="submit" data-busy-label="Saving…">{% translate "Save profile" %}</button>
+        {% if step.folded %}
+          <details class="step-more">
+            <summary>{% translate "Add a résumé (optional)" %}</summary>
+            {% for field in step.folded %}{% include "_field.html" %}{% endfor %}
+            {% if profile.cv %}
+              <p class="muted"><a href="{{ profile.cv.url }}">{% translate "Current résumé" %}</a></p>
+            {% endif %}
+          </details>
+        {% endif %}
+
+        {% comment %} Said on the screen that asks for it, not only on the account page.
+           "Do I have to put my face on this" is asked at exactly this moment.
+        {% endcomment %}
+        {% if "bio" in step.field_names %}
+          <p class="note">
+            {% translate "Your name, photo and age live on" %}
+            <a href="{% url 'accounts:details' %}">{% translate "your account details" %}</a> —
+            {% translate "they're the same whether you're working or hiring." %}
+          </p>
+        {% endif %}
+      </fieldset>
+    {% endfor %}
+
+    <div class="btn-row step-nav" style="margin-top:16px">
+      <button class="btn step-next" type="button" hidden>{% translate "Next" %}</button>
+      <button class="btn step-submit" type="submit"
+              data-busy-label="{% translate "Saving…" %}">{% if stepped %}{% translate "Save my profile" %}{% else %}{% translate "Save profile" %}{% endif %}</button>
+      <button class="btn step-back secondary" type="button" hidden>{% translate "Back" %}</button>
+    </div>
   </form>
 
-  <div class="card" style="margin-top:20px">
-    <h2>{% translate "Photos of past work" %}</h2>
-    {% if profile.portfolio_photos.exists %}
-      <div class="gallery">
-        {% for photo in profile.portfolio_photos.all %}
-          <figure>
-            <img src="{{ photo.image.url }}" alt="{{ photo.caption }}">
-            <figcaption>{{ photo.caption }}</figcaption>
-            <form method="post" action="{% url 'accounts:portfolio_delete' photo.pk %}">
-              {% csrf_token %}
-              <button class="btn danger" type="submit"
-                      data-confirm="Remove this photo from your profile?">{% translate "Remove" %}</button>
-            </form>
-          </figure>
-        {% endfor %}
-      </div>
-    {% else %}
-      <p class="muted" style="margin-top:0">{% translate "No photos yet." %}</p>
-    {% endif %}
+  {% comment %} Outside the form above, and a separate POST of its own. Hidden until the
+     profile has been written once: offering to add photos of past work to a
+     profile that does not yet say what the work is puts the least important
+     thing on the screen first — and for somebody starting out, "photos of past
+     work" is a question with no good answer.
+  {% endcomment %}
+  {% if not stepped %}
+    <div class="card" style="margin-top:20px">
+      <h2>{% translate "Photos of past work" %}</h2>
+      {% if profile.portfolio_photos.exists %}
+        <div class="gallery">
+          {% for photo in profile.portfolio_photos.all %}
+            <figure>
+              <img src="{{ photo.image.url }}" alt="{{ photo.caption }}">
+              <figcaption>{{ photo.caption }}</figcaption>
+              <form method="post" action="{% url 'accounts:portfolio_delete' photo.pk %}">
+                {% csrf_token %}
+                <button class="btn danger" type="submit"
+                        data-confirm="Remove this photo from your profile?">{% translate "Remove" %}</button>
+              </form>
+            </figure>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="muted" style="margin-top:0">{% translate "No photos yet." %}</p>
+      {% endif %}
 
-    <form method="post" action="{% url 'accounts:portfolio_add' %}" enctype="multipart/form-data"
-          style="margin-top:14px">
-      {% csrf_token %}
-      <label for="{{ photo_form.image.id_for_label }}">{% translate "Add a photo" %}</label>
-      {{ photo_form.image }}
-      <label for="{{ photo_form.caption.id_for_label }}">{% translate "Caption" %}</label>
-      {{ photo_form.caption }}
-      <button class="btn secondary" type="submit" style="margin-top:12px">{% translate "Add photo" %}</button>
-    </form>
-  </div>
+      <form method="post" action="{% url 'accounts:portfolio_add' %}" enctype="multipart/form-data"
+            style="margin-top:14px">
+        {% csrf_token %}
+        <label for="{{ photo_form.image.id_for_label }}">{% translate "Add a photo" %}</label>
+        {{ photo_form.image }}
+        <label for="{{ photo_form.caption.id_for_label }}">{% translate "Caption" %}</label>
+        {{ photo_form.caption }}
+        <button class="btn secondary" type="submit" style="margin-top:12px">{% translate "Add photo" %}</button>
+      </form>
+    </div>
+  {% endif %}
 {% endblock %}

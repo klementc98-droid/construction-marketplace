@@ -17,7 +17,7 @@ from django.db import IntegrityError, transaction
 from contextlib import contextmanager
 from unittest.mock import patch
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.formats import date_format
@@ -1243,12 +1243,18 @@ class EditingADayOfABookingTests(JobFactoryMixin, TestCase):
         self.assertEqual(job.gig_date, moved_to)
 
 
+@override_settings(STRIPE_SECRET_KEY="sk_test_offered_here")
 class PaymentMethodCounterTests(JobFactoryMixin, TestCase):
     """A worker offered cash-in-hand can come back asking for escrow.
 
     The answer "yes, but not on trust" — which a board built around held money
     should make easy to give. And it is an answer about the arrangement, not
     about one day, so on a multi-day offer it covers all of them.
+
+    The key is set for the whole class because the forms stop offering escrow
+    on a deployment that has none, which is the right behaviour and makes this
+    a test of something that cannot happen there. Nothing here talks to Stripe;
+    the key only says the platform is one that could.
     """
 
     def days(self, count):

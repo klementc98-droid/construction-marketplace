@@ -15,7 +15,7 @@ from .forms import JobFilterForm, WorkerFilterForm
 
 
 class PanelFieldsTests(TestCase):
-    """The search box is rendered apart from the rest, by name, not by index."""
+    """Two filters are rendered apart from the rest, by name, not by index."""
 
     def test_the_search_box_is_not_in_the_panel(self):
         for form_class in (JobFilterForm, WorkerFilterForm):
@@ -23,13 +23,35 @@ class PanelFieldsTests(TestCase):
                 names = [f.name for f in form_class().panel_fields()]
                 self.assertNotIn("q", names)
 
+    def test_the_experience_chips_are_not_in_the_panel(self):
+        """The filter the product exists for does not go behind a button.
+
+        Somebody who has never done the work is asking "is there anything here
+        I can take?", and the answer has to be visible without first
+        discovering that a Filters panel exists. Rendering it twice would be
+        worse than hiding it: two controls for one value, disagreeing.
+        """
+        names = [f.name for f in JobFilterForm().panel_fields()]
+        self.assertNotIn("experience", names)
+
     def test_every_other_filter_is_in_the_panel(self):
         """Guards the drift that a hardcoded name list would eventually cause."""
         for form_class in (JobFilterForm, WorkerFilterForm):
             with self.subTest(form=form_class.__name__):
                 form = form_class()
-                expected = [n for n in form.fields if n != "q"]
+                hoisted = {form.SEARCH_FIELD, form.CHIP_FIELD}
+                expected = [n for n in form.fields if n not in hoisted]
                 self.assertEqual([f.name for f in form.panel_fields()], expected)
+
+    def test_a_hoisted_field_is_a_real_field(self):
+        """A typo in CHIP_FIELD would silently hoist nothing and leave the chip
+        row rendering from a field that is also still in the panel."""
+        for form_class in (JobFilterForm, WorkerFilterForm):
+            with self.subTest(form=form_class.__name__):
+                form = form_class()
+                for name in (form.SEARCH_FIELD, form.CHIP_FIELD):
+                    if name is not None:
+                        self.assertIn(name, form.fields)
 
 
 class ActiveCountTests(TestCase):

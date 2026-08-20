@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Construction's Finest — design system
+   XTISE — design system
    --------------------------------------------------------------------------
    One stylesheet, no build step, no framework. Every class here is emitted by
    a template; nothing is speculative. Templates carry no look of their own, so
@@ -28,79 +28,74 @@
 
 :root {
   /* --- Palette ------------------------------------------------------------
-     Neutral ground, one warm colour. Near-white paper, white cards, near-black
-     text, and a single champagne gold for anything you press. Nothing else is
-     coloured: on a screen read outdoors, a page with one accent tells you
-     where to look, and a page with four tells you nothing.
+     XTISE: near-black, electric blue, off-white. Three colours and no fourth.
 
-     White and gold, sharing its accent with the luxe theme — the same #c9b27c,
-     so the two themes the app has are one material seen in two lights rather
-     than two brands. The lime this used to run has gone from the app
-     altogether: it was the wrong register on white for a marketplace whose
-     subject is money, and once this palette changed, the dark theme that kept
-     it was the only green left in the building.
+     The blue is the brand. It is the thing you press, the state you are in,
+     the badge that matters — and it is deliberately spent on those and nothing
+     else, because a page with one accent tells you where to look and a page
+     with four tells you nothing. Everything that is not a decision is black,
+     grey or paper.
 
-     The important constraint survives the change of hue, and gets sharper.
-     The gold CANNOT carry text on white: #c9b27c measures 1.9:1 against a
-     white card. It is a fill, and what sits on it is --accent-fg, the
-     near-black, at 8.45:1. Where the accent has to *be* the text — a link, an
-     active tab, a hover — the token is --accent-ink, a deep bronze of the same
-     hue at 7:1 on white. Using --accent there produces a word nobody can read,
-     which is the one mistake this palette invites, so the two are named
-     differently on purpose.
+     The constraint that shaped the palette before this one has lifted, and it
+     is worth saying why rather than leaving the old rule half-applied. The
+     champagne gold could not carry text on white — 1.9:1 — so it was a fill
+     and a second, darker token had to exist for anything written. #2563ff
+     measures 4.88:1 on white, which clears the floor for body text, and white
+     on it measures the same, so a filled button and a blue word are both
+     legible without inventing a second hue.
 
-     Note that luxe can do what this cannot: on near-black, the gold itself
-     clears 9:1, so there --accent-ink is the gold. Same colour, opposite
-     ground, opposite rule. */
+     --accent-ink survives anyway, at 7.65:1, for small and dense text: link
+     runs, meta lines, the figures on a stat tile. Passing at 4.88 is not the
+     same as being comfortable at 12px, and the two names keep that choice
+     visible instead of leaving it to whoever is typing.
 
-  --bg:            #f5f5f2;
-  --bg-tint:       #f2ece0;   /* the wash behind the header/hero */
+     No orange, no yellow, no hazard stripes. The construction in this brand
+     comes from geometry and structure — the grid behind the header, the hard
+     edges, the weight of the type — not from the colour of a warning sign. */
+
+  --bg:            #f7f8fa;
+  --bg-tint:       #eef1f7;   /* the wash behind the header/hero */
   --panel:         #ffffff;
-  /* The greys carried a green cast to sit under the lime. Warmed to sit under
-     the gold instead — a cool grey beside champagne reads as a smudge. */
-  --panel-2:       #f4f1ea;
-  --panel-3:       #eae5da;
-  /* Dividers you can actually see. These were #e3e5df / #c7cbc2 — a hair off
-     the panel they sit on, which reads as a printing fault rather than as a
-     line. A rule either separates two things or it should not be drawn, so
-     both steps are darkened until they do the job they are there for. */
-  --line:          #ddd5c5;
-  --line-strong:   #bdb29a;
-  --fg:            #202427;
-  --fg-2:          #3e454a;
-  --dim:           #5f666c;
-  /* 5.1:1 on --panel. It was #a48d74, which measured 3.1:1 — under the 4.5:1
-     floor for body text, and it carries real content (the job line under an
-     inbox row, placeholders, secondary facts), not just decoration. */
-  --dimmer:        #62696f;
+  /* Greys with a cool cast, to sit under the blue. The set before these was
+     warmed for champagne; the same greys beside electric blue read as dust. */
+  --panel-2:       #f2f4f8;
+  --panel-3:       #e6e9f0;
+  /* Dividers you can actually see. A rule either separates two things or it
+     should not be drawn. */
+  --line:          #dfe3ea;
+  --line-strong:   #b9c0cc;
+  --fg:            #0b0d10;   /* the brand black — 19.5:1 on paper */
+  --fg-2:          #333a45;   /* 11.5:1 */
+  --dim:           #5a6270;   /* 6.2:1 — carries real content, not decoration */
+  --dimmer:        #5d6572;   /* 5.9:1 */
 
-  --accent:        #c9b27c;   /* champagne — a fill, never text on white */
-  --accent-hover:  #bda169;
-  --accent-2:      #dfc98f;   /* decoration only */
-  --accent-3:      #f0e3c4;   /* palest step of the scale */
-  --brick:         #9a8340;   /* 4.74:1 under --accent-fg — see --heat below */
-  --accent-soft:   #faf5ea;   /* accent at ~10% over panel, precomputed */
-  --accent-fg:     #171a1c;   /* what sits on the gold — 8.45:1 */
-  --accent-ink:    #6f5514;   /* the accent when it must be text — 7:1 */
+  --accent:        #2563ff;   /* XTISE blue — 4.88:1 on white, so it may be text */
+  --accent-hover:  #1d4ed8;
+  --accent-2:      #5b8bff;   /* the lit step */
+  --accent-3:      #cddaff;   /* palest step — decoration only, no text on it */
+  --accent-deep:   #1b47c4;   /* the dark end of the ramp, and the ink */
+  --accent-soft:   #eef3ff;   /* accent at ~8% over panel, precomputed */
+  --accent-fg:     #ffffff;   /* what sits on the blue — 4.88:1 */
+  --accent-ink:    #1b47c4;   /* the accent when it must be small text — 7.65:1 */
 
-  /* --- The heat scale, as two gradients -----------------------------------
-     Kept as tokens so the button, the badge and the filament under the header
-     are visibly the same material rather than three oranges that nearly match.
+  /* --- The brand ramp, as two gradients -----------------------------------
+     Kept as tokens so the button, the badge and the line under the header are
+     visibly the same material rather than three blues that nearly match.
 
-     Two of them, and the split is a contrast rule, not a taste one. `--heat`
-     runs accent → brick, both dark enough under --accent-fg that a label is
-     safe wherever it lands. `--heat-bright` opens on the palest step, which no
-     word can be read against — so it is only ever used on things with nothing
-     written on them: the 2px filaments, the card edge, the mark. Do not put
-     text on --heat-bright. */
-  --heat:        linear-gradient(135deg, var(--accent) 0%, var(--brick) 100%);
-  --heat-bright: linear-gradient(135deg, var(--accent-3) 0%, var(--accent-2) 30%,
-                                         var(--accent) 66%, var(--brick) 100%);
+     Two of them, and the split is a contrast rule rather than a taste one.
+     `--brand-fill` runs accent → deep, both dark enough under white that a
+     label is safe wherever it lands. `--brand-edge` opens on the palest step,
+     which no word can be read against — so it is only ever used on things with
+     nothing written on them: the 2px rules, a card edge, the wordmark's X. Do
+     not put text on --brand-edge. */
+  --brand-fill:  linear-gradient(135deg, var(--accent) 0%, var(--accent-deep) 100%);
+  --brand-edge:  linear-gradient(135deg, var(--accent-3) 0%, var(--accent-2) 30%,
+                                         var(--accent) 66%, var(--accent-deep) 100%);
 
-  --ok:            #2f7a34;
-  --warn:          #8a5a00;
-  --err:           #b3261e;
-  --info:          #1f5673;
+  --ok:            #167a3c;   /* 5.4:1 */
+  --warn:          #8a5a00;   /* 5.9:1 */
+  --err:           #b3261e;   /* 6.5:1 */
+  --info:          #1f5673;   /* 8.0:1 */
 
   /* --- Radii -------------------------------------------------------------- */
   --r-xs:    6px;
@@ -115,28 +110,27 @@
   --radius-sm:  var(--r-sm);
 
   /* --- Elevation ----------------------------------------------------------
-     Neutral, because the ground is neutral: the warm-tinted shadows this had
-     were tuned for a cream page and read as dirt on white. Three steps only —
+     Cast in the brand black rather than in neutral grey, so a raised card
+     reads as sitting on this page and not on a stock one. Three steps only —
      resting, raised, floating. */
-  --shadow-sm: 0 1px 2px rgb(23 26 28 / .06),
-               0 1px 1px rgb(23 26 28 / .04);
-  --shadow-md: 0 2px 4px -1px rgb(23 26 28 / .07),
-               0 8px 16px -6px rgb(23 26 28 / .10);
-  --shadow-lg: 0 4px 8px -2px rgb(23 26 28 / .08),
-               0 18px 36px -12px rgb(23 26 28 / .14);
-  --shadow-heat: 0 2px 6px -1px rgb(154 131 64 / .26),
-                 0 12px 24px -10px rgb(154 131 64 / .34);
-  /* The glow under a gig badge, per theme because the badge is filled with
-     --heat and a glow of the wrong hue under it reads as a smudge rather than
-     a light. It was a hard-coded burnt orange in the rule itself, which is why
-     luxe had to override the rule; now every palette answers the question. */
-  --glow-gig:  0 1px 3px -1px rgb(154 131 64 / .45);
+  --shadow-sm: 0 1px 2px rgb(11 13 16 / .06),
+               0 1px 1px rgb(11 13 16 / .04);
+  --shadow-md: 0 2px 4px -1px rgb(11 13 16 / .07),
+               0 8px 16px -6px rgb(11 13 16 / .10);
+  --shadow-lg: 0 4px 8px -2px rgb(11 13 16 / .08),
+               0 18px 36px -12px rgb(11 13 16 / .14);
+  --shadow-brand: 0 2px 6px -1px rgb(37 99 255 / .26),
+                  0 12px 24px -10px rgb(37 99 255 / .30);
+  /* The glow under a filled badge, per theme because the badge carries
+     --brand-fill and a halo of the wrong hue under it reads as a smudge
+     rather than a light. */
+  --glow-gig:  0 1px 3px -1px rgb(37 99 255 / .45);
 
   /* --- Focus --------------------------------------------------------------
      Two rings: a solid accent line for definition and a soft halo so it stays
      visible against both the panel and the accent button itself. */
-  --ring: 0 0 0 2px var(--panel), 0 0 0 4px var(--accent-ink);
-  --ring-soft: 0 0 0 4px rgb(111 85 20 / .22);
+  --ring: 0 0 0 2px var(--panel), 0 0 0 4px var(--accent);
+  --ring-soft: 0 0 0 4px rgb(37 99 255 / .24);
 
   /* --- Motion -------------------------------------------------------------
      Fast enough to feel like a direct response, slow enough to be read. */
@@ -153,16 +147,22 @@
   /* The page gutter, named once so full-bleed panels can cancel it exactly. */
   --gutter:     clamp(14px, 3.4vw, 22px);
 
-  /* --- Brick --------------------------------------------------------------
-     A stretcher-bond course, drawn in gradients so it costs no request. Two
-     offset layers give the half-brick stagger; the whole thing is used at low
-     opacity as a texture behind headers and heroes, never as a surface a word
-     has to be read against. */
-  --brick-course:
+  /* --- The grid -----------------------------------------------------------
+     A drafting grid: fine lines at 24px with a heavier one every fourth,
+     drawn in gradients so it costs no request. It replaces the brick course
+     that used to sit here, and the swap is the whole brand argument in one
+     texture — a wall of bricks says building site, a measured grid says the
+     drawing the site was built from. Used at low opacity behind headers and
+     heroes, never as a surface a word has to be read against. */
+  --grid-lines:
     repeating-linear-gradient(0deg,
-      transparent 0 21px, color-mix(in srgb, var(--brick) 22%, transparent) 21px 23px),
+      transparent 0 23px, color-mix(in srgb, var(--accent) 14%, transparent) 23px 24px),
     repeating-linear-gradient(90deg,
-      transparent 0 46px, color-mix(in srgb, var(--brick) 22%, transparent) 46px 48px);
+      transparent 0 23px, color-mix(in srgb, var(--accent) 14%, transparent) 23px 24px),
+    repeating-linear-gradient(0deg,
+      transparent 0 95px, color-mix(in srgb, var(--accent) 22%, transparent) 95px 96px),
+    repeating-linear-gradient(90deg,
+      transparent 0 95px, color-mix(in srgb, var(--accent) 22%, transparent) 95px 96px);
 
   color-scheme: light;
 }
@@ -171,20 +171,15 @@
 /* ==========================================================================
    2. The dark answer, for a reader who has chosen nothing
    --------------------------------------------------------------------------
-   There used to be a lime dark theme here and it has gone. Two dark themes was
-   one more than the palette could justify: with the light theme moved to white
-   and gold, the lime was the last green left in the app and belonged to
-   nothing else on screen. Dark is now luxe, and the toggle runs light → luxe.
-
-   What survives is this block, and only for the case where the toggle cannot
+   Carries the dark theme's tokens for the one case where the toggle cannot
    speak: JavaScript off or blocked, so no `data-theme` is written, and the
-   reader's OS says dark. It carries luxe's tokens so that reader gets a black
-   page rather than a white one. The gold *flourishes* keyed to
-   `[data-theme="luxe"]` further down — the prices, the brand word, the edges —
-   do not reach here, and are not worth duplicating for a case this narrow: the
-   palette is what stops the page being unreadable, and the palette is here.
+   reader's OS says dark. That reader gets a black page rather than a white
+   one. The flourishes keyed to `[data-theme="luxe"]` further down — the
+   prices, the wordmark, the edges — do not reach here, and are not worth
+   duplicating for a case this narrow: the palette is what stops the page being
+   unreadable, and the palette is here.
 
-   Duplicated rather than shared with the luxe block below, deliberately.
+   Duplicated rather than shared with the block below, deliberately.
    `light-dark()` would remove the repetition and take the whole palette down
    with it on any browser that lacks it, and an unstyled page is a worse
    outcome than forty duplicated lines.
@@ -192,64 +187,59 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg:            #050505;
-    --bg-tint:       #0a0a08;   /* the wash behind the header/hero */
-    --panel:         #0f0f0d;
-    --panel-2:       #15140f;
-    --panel-3:       #1c1a14;
-    --line:          #24221d;   /* almost invisible, and meant to be */
-    --line-strong:   #3a362c;
-    --fg:            #f1eee7;   /* warm white, never pure — 17.6:1 on the ground */
-    --fg-2:          #cfc8bc;
-    --dim:           #a39b8d;   /* 7:1 on --panel */
-    --dimmer:        #a8a092;
+    --bg:            #0b0d10;   /* the brand black, used as the ground */
+    --bg-tint:       #101319;
+    --panel:         #12151a;
+    --panel-2:       #171b21;
+    --panel-3:       #1e232b;
+    --line:          #262c35;
+    --line-strong:   #3a424e;
+    --fg:            #f7f8fa;   /* the brand paper, used as the ink — 18.3:1 */
+    --fg-2:          #ccd2dc;   /* 12.0:1 */
+    --dim:           #98a1b0;   /* 7.0:1 on --panel */
+    --dimmer:        #9ca5b4;
 
-    --accent:        #c9b27c;   /* champagne — a fill AND, here, safe as text */
-    --accent-hover:  #dcc894;
-    --accent-2:      #b49c66;
-    --accent-3:      #eadcb8;   /* palest step — decoration only, no text on it */
-    --brick:         #8c7742;
-    --accent-soft:   #1a1710;   /* gold at ~10% over panel, precomputed */
-    --accent-fg:     #0a0906;   /* what sits on the gold — 9.6:1 */
-    --accent-ink:    #c9b27c;   /* the gold as text — 9.3:1 on --panel */
+    --accent:        #2563ff;   /* the same blue — a fill here, never text */
+    --accent-hover:  #3d76ff;
+    --accent-2:      #5b8bff;
+    --accent-3:      #a8c2ff;
+    --accent-deep:   #1b47c4;
+    --accent-soft:   #131a2b;   /* blue at ~10% over panel, precomputed */
+    --accent-fg:     #ffffff;   /* what sits on the blue — 4.88:1 */
+    --accent-ink:    #6f9bff;   /* the blue as text on black — 6.8:1 on --panel */
 
-    /* Real gold is not a flat colour — it is a dark side, a lit side and a hot
-       line where the light crosses it. Two stops read as mustard; five read as
-       metal. This is the cheapest gold in the theme: it adds no new gold surface
-       at all, it only makes the surface already there behave like the material.
+    /* Lifted at the middle rather than run corner to corner. A flat blue on
+       black reads as a rectangle of colour; a ramp that brightens across the
+       middle reads as a surface with a light on it. Every stop stays dark
+       enough for white to sit on it, which is the constraint the range is
+       bounded by. */
+    --brand-fill: linear-gradient(135deg,
+              var(--accent-deep) 0%, var(--accent) 38%,
+              var(--accent-2) 62%, var(--accent) 100%);
+    --brand-edge: linear-gradient(135deg,
+              var(--accent) 0%, var(--accent-2) 30%, var(--accent-3) 52%,
+              var(--accent-2) 74%, var(--accent) 100%);
 
-       Every stop sits at or above --accent-2, the darkest gold that still clears
-       7:1 under --accent-fg. A button label crosses all five and has to be
-       readable over each one, so the range is bounded from below on purpose —
-       dropping --brick in at 0% looks richer and fails at the one end where the
-       text is. */
-    --heat: linear-gradient(135deg,
-              var(--accent-2) 0%, var(--accent) 24%, var(--accent-3) 46%,
-              var(--accent) 68%, var(--accent-2) 100%);
-    --heat-bright: linear-gradient(135deg,
-              var(--accent) 0%, var(--accent-3) 22%, #fff6e2 40%,
-              var(--accent-3) 58%, var(--accent) 82%, var(--accent-2) 100%);
-
-    --ok:            #86be72;
+    --ok:            #5fc98a;   /* 8.9:1 on --panel */
     --warn:          #e0b15c;
-    --err:           #e88a7d;
+    --err:           #ff8f85;
     --info:          #7fb3cc;
 
-    /* Blacker than the dark theme's, because they fall on a blacker ground: a
-       shadow tuned for #171a1c disappears entirely against #050505. */
+    /* Blacker than the light theme's, because they fall on a black ground: a
+       shadow tuned for paper disappears entirely against #0b0d10. */
     --shadow-sm: 0 1px 2px rgb(0 0 0 / .6);
     --shadow-md: 0 2px 4px -1px rgb(0 0 0 / .55),
                  0 10px 20px -6px rgb(0 0 0 / .65);
     --shadow-lg: 0 4px 10px -2px rgb(0 0 0 / .6),
                  0 22px 44px -12px rgb(0 0 0 / .75);
-    /* The one glow. Kept faint — a gold halo under every raised thing is exactly
-       the "gold everywhere" this palette is trying to avoid. */
-    --shadow-heat: 0 2px 6px -1px rgb(201 178 124 / .18),
-                   0 14px 28px -12px rgb(201 178 124 / .26);
-    --glow-gig:  0 1px 3px -1px rgb(201 178 124 / .35);
+    /* Kept faint. A blue halo under every raised thing is exactly the "brand
+       colour everywhere" this palette is trying to avoid. */
+    --shadow-brand: 0 2px 6px -1px rgb(37 99 255 / .30),
+                    0 14px 28px -12px rgb(37 99 255 / .40);
+    --glow-gig:  0 1px 3px -1px rgb(37 99 255 / .45);
 
-    --ring: 0 0 0 2px var(--panel), 0 0 0 4px var(--accent);
-    --ring-soft: 0 0 0 4px rgb(201 178 124 / .26);
+    --ring: 0 0 0 2px var(--panel), 0 0 0 4px var(--accent-ink);
+    --ring-soft: 0 0 0 4px rgb(37 99 255 / .35);
 
     color-scheme: dark;
   }
@@ -257,182 +247,144 @@
 
 
 /* ==========================================================================
-   2b. Luxe theme — near-black and champagne gold
+   2b. Luxe theme — the brand black, lit blue
    --------------------------------------------------------------------------
-   One of the two themes the toggle runs: light → luxe, white and gold then
-   black and gold. It began as a third choice beside a lime dark theme; that
-   theme has gone and this is what dark means here now.
+   One of the two themes the toggle runs: light → luxe, paper then black. Both
+   are XTISE; this is the one the brand's own colour was picked against, since
+   #0b0d10 is the primary and everything here is made of it.
 
-   The discipline this theme lives or dies by is how little gold is on screen.
-   Gold is roughly 5–10% of the interface: the thing you press, the price, a
-   premium badge, the tab you are on. Everything else is black, charcoal and
-   warm white. Gold spread across borders, headings and rules stops reading as
-   money and starts reading as a novelty skin, which is the one mistake this
-   palette invites.
+   The discipline this theme lives or dies by is how little blue is on screen.
+   Blue is roughly 5–10% of the interface: the thing you press, the price, the
+   badge that decides whether somebody applies, the tab you are on. Everything
+   else is black, charcoal and near-white. Blue spread across borders, headings
+   and rules stops reading as the brand and starts reading as a skin.
 
-   Unlike the light theme, this ground lets the gold carry text — 9.3:1 on a card —
-   so --accent-ink is the gold itself and --accent-fg is the near-black that
-   sits on top of it. The gradients and the brick texture are built from these
-   same tokens upstream, so they follow without being restated here.
+   The rule about text inverts here. On this ground #2563ff measures 3.75:1 on
+   a card — under the floor — so it stays a fill, and --accent-ink is the
+   lifted #6f9bff at 6.8:1. Opposite ground, opposite rule, same brand.
    ========================================================================== */
 
 :root[data-theme="luxe"] {
-  --bg:            #050505;
-  --bg-tint:       #0a0a08;   /* the wash behind the header/hero */
-  --panel:         #0f0f0d;
-  --panel-2:       #15140f;
-  --panel-3:       #1c1a14;
-  --line:          #24221d;   /* almost invisible, and meant to be */
-  --line-strong:   #3a362c;
-  --fg:            #f1eee7;   /* warm white, never pure — 17.6:1 on the ground */
-  --fg-2:          #cfc8bc;
-  --dim:           #a39b8d;   /* 7:1 on --panel */
-  --dimmer:        #a8a092;
+  --bg:            #0b0d10;   /* the brand black, used as the ground */
+  --bg-tint:       #101319;
+  --panel:         #12151a;
+  --panel-2:       #171b21;
+  --panel-3:       #1e232b;
+  --line:          #262c35;
+  --line-strong:   #3a424e;
+  --fg:            #f7f8fa;   /* the brand paper, used as the ink — 18.3:1 */
+  --fg-2:          #ccd2dc;   /* 12.0:1 */
+  --dim:           #98a1b0;   /* 7.0:1 on --panel */
+  --dimmer:        #9ca5b4;
 
-  --accent:        #c9b27c;   /* champagne — a fill AND, here, safe as text */
-  --accent-hover:  #dcc894;
-  --accent-2:      #b49c66;
-  --accent-3:      #eadcb8;   /* palest step — decoration only, no text on it */
-  --brick:         #8c7742;
-  --accent-soft:   #1a1710;   /* gold at ~10% over panel, precomputed */
-  --accent-fg:     #0a0906;   /* what sits on the gold — 9.6:1 */
-  --accent-ink:    #c9b27c;   /* the gold as text — 9.3:1 on --panel */
+  --accent:        #2563ff;   /* the same blue — a fill here, never text */
+  --accent-hover:  #3d76ff;
+  --accent-2:      #5b8bff;
+  --accent-3:      #a8c2ff;
+  --accent-deep:   #1b47c4;
+  --accent-soft:   #131a2b;   /* blue at ~10% over panel, precomputed */
+  --accent-fg:     #ffffff;   /* what sits on the blue — 4.88:1 */
+  --accent-ink:    #6f9bff;   /* the blue as text on black — 6.8:1 on --panel */
 
-  /* Real gold is not a flat colour — it is a dark side, a lit side and a hot
-     line where the light crosses it. Two stops read as mustard; five read as
-     metal. This is the cheapest gold in the theme: it adds no new gold surface
-     at all, it only makes the surface already there behave like the material.
+  /* Lifted at the middle rather than run corner to corner. A flat blue on
+     black reads as a rectangle of colour; a ramp that brightens across the
+     middle reads as a surface with a light on it. Every stop stays dark enough
+     for white to sit on it, which is the constraint the range is bounded by. */
+  --brand-fill: linear-gradient(135deg,
+            var(--accent-deep) 0%, var(--accent) 38%,
+            var(--accent-2) 62%, var(--accent) 100%);
+  --brand-edge: linear-gradient(135deg,
+            var(--accent) 0%, var(--accent-2) 30%, var(--accent-3) 52%,
+            var(--accent-2) 74%, var(--accent) 100%);
 
-     Every stop sits at or above --accent-2, the darkest gold that still clears
-     7:1 under --accent-fg. A button label crosses all five and has to be
-     readable over each one, so the range is bounded from below on purpose —
-     dropping --brick in at 0% looks richer and fails at the one end where the
-     text is. */
-  --heat: linear-gradient(135deg,
-            var(--accent-2) 0%, var(--accent) 24%, var(--accent-3) 46%,
-            var(--accent) 68%, var(--accent-2) 100%);
-  --heat-bright: linear-gradient(135deg,
-            var(--accent) 0%, var(--accent-3) 22%, #fff6e2 40%,
-            var(--accent-3) 58%, var(--accent) 82%, var(--accent-2) 100%);
-
-  --ok:            #86be72;
+  --ok:            #5fc98a;   /* 8.9:1 on --panel */
   --warn:          #e0b15c;
-  --err:           #e88a7d;
+  --err:           #ff8f85;
   --info:          #7fb3cc;
 
-  /* Blacker than the dark theme's, because they fall on a blacker ground: a
-     shadow tuned for #171a1c disappears entirely against #050505. */
   --shadow-sm: 0 1px 2px rgb(0 0 0 / .6);
   --shadow-md: 0 2px 4px -1px rgb(0 0 0 / .55),
                0 10px 20px -6px rgb(0 0 0 / .65);
   --shadow-lg: 0 4px 10px -2px rgb(0 0 0 / .6),
                0 22px 44px -12px rgb(0 0 0 / .75);
-  /* The one glow. Kept faint — a gold halo under every raised thing is exactly
-     the "gold everywhere" this palette is trying to avoid. */
-  --shadow-heat: 0 2px 6px -1px rgb(201 178 124 / .18),
-                 0 14px 28px -12px rgb(201 178 124 / .26);
-  --glow-gig:  0 1px 3px -1px rgb(201 178 124 / .35);
+  --shadow-brand: 0 2px 6px -1px rgb(37 99 255 / .30),
+                  0 14px 28px -12px rgb(37 99 255 / .40);
+  --glow-gig:  0 1px 3px -1px rgb(37 99 255 / .45);
 
-  --ring: 0 0 0 2px var(--panel), 0 0 0 4px var(--accent);
-  --ring-soft: 0 0 0 4px rgb(201 178 124 / .26);
+  --ring: 0 0 0 2px var(--panel), 0 0 0 4px var(--accent-ink);
+  --ring-soft: 0 0 0 4px rgb(37 99 255 / .35);
 
   color-scheme: dark;
 }
 
-/* The prices, in gold. Money is the thing a marketplace is actually about, and
-   in this theme it is the one piece of running text allowed to be the accent —
-   which is only legible because on this ground the gold clears 9:1. */
+/* The prices, in blue. Money is the thing a marketplace is actually about, and
+   it is the one piece of running text allowed to be the accent — on this
+   ground the lifted blue clears 6.8:1. */
 :root[data-theme="luxe"] .pay,
 :root[data-theme="luxe"] .feed-headline .pay,
 :root[data-theme="luxe"] .job-row .pay {
   color: var(--accent-ink);
 }
 
-/* --- more gold, spent on edges rather than on fills -----------------------
+/* --- the brand colour, spent on edges rather than on fills -----------------
 
-   Everything below adds gold without adding gold *area*, which is the whole
-   trick to this palette. A hairline, a rim and a numeral are gold the way a
-   watch is gold: the case catches the light and the dial stays black. Filling
-   the same components instead would double the gold on screen and halve what
-   it is worth — the failure described at the top of this section.
+   Everything below adds blue without adding blue *area*, which is the whole
+   trick to this palette. A hairline, a rim and a numeral put the brand on
+   screen the way a machined part puts its finish on screen: the edge catches
+   the light and the face stays black. Filling the same components instead
+   would double the blue and halve what it is worth.
 
-   The 5–10% rule survives intact. Edges are one pixel wide. */
+   The 5-10% rule survives intact. Edges are one pixel wide. */
 
-/* Raised surfaces take a warm rim and a highlight along the top edge, as if
+/* Raised surfaces take a cool rim and a highlight along the top edge, as if
    the room were lit from above. Mixed rather than set, so it stays a whisper
-   off the charcoal line and never becomes a gold box. */
+   off the charcoal line and never becomes a blue box. */
 :root[data-theme="luxe"] .card,
 :root[data-theme="luxe"] .stat-row {
-  border-color: color-mix(in srgb, var(--accent) 16%, var(--line));
-  box-shadow: var(--shadow-sm), inset 0 1px 0 rgb(234 220 184 / .06);
+  border-color: color-mix(in srgb, var(--accent) 22%, var(--line));
+  box-shadow: var(--shadow-sm), inset 0 1px 0 rgb(168 194 255 / .07);
 }
 /* The hero is lit harder — it is the one surface meant to look like a display
    case — but keeps its own depth rather than dropping to the card's. */
 :root[data-theme="luxe"] .hero {
-  border-color: color-mix(in srgb, var(--accent) 30%, var(--line));
-  box-shadow: var(--shadow-md), inset 0 1px 0 rgb(234 220 184 / .1);
+  border-color: color-mix(in srgb, var(--accent) 38%, var(--line));
+  box-shadow: var(--shadow-md), inset 0 1px 0 rgb(168 194 255 / .12);
 }
 
-/* The name, in gold leaf. One element, at the top of every page, and the only
-   place the metallic gradient is spent on something that is not a control.
-
-   Fallback colour first and transparent only behind @supports: a browser
-   without background-clip painting a transparent wordmark leaves a hole where
-   the business name goes. */
-:root[data-theme="luxe"] .brand { color: var(--accent-ink); }
-:root[data-theme="luxe"] .brand:hover { color: var(--accent-hover); }
-:root[data-theme="luxe"] .brand-word {
-  background: var(--heat-bright);
-  -webkit-background-clip: text;
-  background-clip: text;
-}
-@supports (-webkit-background-clip: text) or (background-clip: text) {
-  :root[data-theme="luxe"] .brand-word { color: transparent; }
-}
-/* Forced colours throws the gradient away and would keep the transparent. Put
-   the wordmark back and let the system paint it. */
-@media (forced-colors: active) {
-  :root[data-theme="luxe"] .brand-word { color: CanvasText; background: none; }
-}
-
-/* Section rules start gold under the heading and fade out across the page, so
-   the line reads as light falling on the left of it rather than as a gold
+/* Section rules start blue under the heading and fade out across the page, so
+   the line reads as light falling on the left of it rather than as an
    underscore. border-bottom-color is the fallback and carries the tint, never
    transparent — a browser that skips border-image must still show a rule. */
 :root[data-theme="luxe"] .section-head {
-  border-bottom-color: color-mix(in srgb, var(--accent) 26%, var(--line));
+  border-bottom-color: color-mix(in srgb, var(--accent) 30%, var(--line));
   border-image: linear-gradient(90deg,
-    color-mix(in srgb, var(--accent) 62%, transparent) 0%,
-    color-mix(in srgb, var(--accent) 12%, transparent) 38%,
+    color-mix(in srgb, var(--accent-ink) 72%, transparent) 0%,
+    color-mix(in srgb, var(--accent) 18%, transparent) 38%,
     transparent 78%) 1;
 }
 
-/* The numbers join the prices. A stat is a figure someone is judged on, and in
-   this theme that is the same category of thing as money. "New" is not a
-   figure and stays out of it. */
-:root[data-theme="luxe"] .stat .v { color: var(--accent-ink); }
+/* Only the money. Every figure in a stat row used to carry the accent, which
+   was right when the accent appeared twice a screen — five saturated figures
+   in one box means none of them is the one you were meant to read, and the
+   rate is always the one you were meant to read. The rest are set in the ink
+   they are: they are facts, not the answer. */
+:root[data-theme="luxe"] .stat--money .v { color: var(--accent-ink); }
 :root[data-theme="luxe"] .stat .v.new { color: var(--dim); }
 
-/* A thin gold rim on every face. Costs nothing, and on a page full of avatars
-   it is the detail that reads as expensive. */
+/* A thin rim on every face. Costs nothing, and on a page full of avatars it is
+   the detail that reads as considered. */
 :root[data-theme="luxe"] .pic {
-  border-color: color-mix(in srgb, var(--accent) 38%, var(--line-strong));
+  border-color: color-mix(in srgb, var(--accent) 42%, var(--line-strong));
 }
 
 
-/* --- the same gold, spent on the white theme --------------------------------
+/* --- the same brand colour, spent on the light theme ------------------------
 
-   Everything above is keyed to luxe. This is the light theme's share of it,
-   and it exists because a white page carrying gold on the buttons alone reads
-   as a grey page with one yellow control on it — the material never arrives.
-   The rule the luxe section lives by holds here too: gold on edges, figures
-   and the mark, never as a fill behind text.
-
-   One difference, and it decides every value below. On near-black the gold
-   itself is the ink at 9:1; on white it measures 1.9:1 and cannot be text at
-   all, so anything that *is* a word uses --accent-ink, the bronze of the same
-   hue at 7:1. Borders and rims take the gold straight, because nothing has to
-   be read off them.
+   Everything above is keyed to luxe. This is the light theme's share, and it
+   exists because a white page carrying blue on the buttons alone reads as a
+   grey page with one blue control on it — the brand never arrives. The rule
+   holds here too: blue on edges, figures and the mark, never as a fill behind
+   text.
 
    `:not([data-theme="luxe"])` rather than `[data-theme="light"]`: the light
    palette is also what a browser gets before the toggle has written anything,
@@ -440,54 +392,54 @@
    paint.
    ========================================================================== */
 
-/* Money, in bronze. The one piece of running text allowed to carry the accent,
-   for the same reason it is allowed to in luxe: a marketplace is about what
-   the day pays, and the eye should find that figure first. */
+/* Money, in the ink blue. The one piece of running text allowed to carry the
+   accent, for the same reason it is allowed to in luxe: a marketplace is about
+   what the day pays, and the eye should find that figure first. */
 :root:not([data-theme="luxe"]) .pay,
 :root:not([data-theme="luxe"]) .feed-headline .pay,
 :root:not([data-theme="luxe"]) .job-row .pay {
   color: var(--accent-ink);
 }
 
-/* The numbers a person is judged on join the prices. "New" is not a figure. */
-:root:not([data-theme="luxe"]) .stat .v { color: var(--accent-ink); }
+/* Only the money — see the note in the luxe block above. */
+:root:not([data-theme="luxe"]) .stat--money .v { color: var(--accent-ink); }
 :root:not([data-theme="luxe"]) .stat .v.new { color: var(--dim); }
 
-/* Raised surfaces take a warm rim. Mixed into the line rather than set, so it
-   stays a tint on the edge and never becomes a gold box on white. */
+/* Raised surfaces take a cool rim. Mixed into the line rather than set, so it
+   stays a tint on the edge and never becomes a blue box on white. */
 :root:not([data-theme="luxe"]) .card,
 :root:not([data-theme="luxe"]) .stat-row {
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+  border-color: color-mix(in srgb, var(--accent) 24%, var(--line));
 }
 :root:not([data-theme="luxe"]) .hero {
-  border-color: color-mix(in srgb, var(--accent) 62%, var(--line));
+  border-color: color-mix(in srgb, var(--accent) 34%, var(--line));
   box-shadow: var(--shadow-md), inset 0 1px 0 rgb(255 255 255 / .6);
 }
 
-/* A gold rim on every face. On a page full of avatars it is the cheapest
-   detail that reads as considered. */
+/* A rim on every face. On a page full of avatars it is the cheapest detail
+   that reads as considered. */
 :root:not([data-theme="luxe"]) .pic {
-  border-color: color-mix(in srgb, var(--accent) 55%, var(--line-strong));
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--line-strong));
 }
 
-/* Section rules start gold under the heading and fade across the page, so the
+/* Section rules start blue under the heading and fade across the page, so the
    line reads as light falling on the left of it rather than as an underscore.
    border-bottom-color carries the tint as the fallback, never transparent. */
 :root:not([data-theme="luxe"]) .section-head {
-  border-bottom-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+  border-bottom-color: color-mix(in srgb, var(--accent) 40%, var(--line));
   border-image: linear-gradient(90deg,
-    var(--brick) 0%,
-    color-mix(in srgb, var(--accent) 70%, transparent) 30%,
-    color-mix(in srgb, var(--accent) 22%, transparent) 62%,
+    var(--accent) 0%,
+    color-mix(in srgb, var(--accent) 55%, transparent) 30%,
+    color-mix(in srgb, var(--accent) 18%, transparent) 62%,
     transparent 88%) 1;
 }
 
 /* The hairlines *between* stat cells. They are not borders — the row is a grid
    with a 1px gap and its own background showing through, which is how the app
    gets one line where two cells meet instead of two. So the divider colour is
-   this background, and tinting it is what puts gold between the figures. */
+   this background, and tinting it is what puts the brand between the figures. */
 :root:not([data-theme="luxe"]) .stat-row {
-  background: color-mix(in srgb, var(--accent) 45%, var(--line));
+  --stat-line: color-mix(in srgb, var(--accent) 30%, var(--line));
 }
 
 /* The current tab. It already sat on a wash of the accent; the label joins it,
@@ -499,51 +451,79 @@
    are the second choice on the page and stay unfilled — the edge is what makes
    them look chosen deliberately rather than left over. */
 :root:not([data-theme="luxe"]) .btn.secondary {
-  border-color: color-mix(in srgb, var(--accent) 52%, var(--line-strong));
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--line-strong));
 }
 :root:not([data-theme="luxe"]) .btn.secondary:hover {
-  border-color: var(--accent-ink);
+  border-color: var(--accent);
   color: var(--accent-ink);
 }
 
-/* Badges keep their shape and gain a warm edge. Not the filled gig badge —
+/* Badges keep their shape and gain a cool edge. Not the filled gig badge —
    that one is already the accent and does not need outlining as well. */
 :root:not([data-theme="luxe"]) .badge:not(.gig):not(.ok):not(.state) {
-  border-color: color-mix(in srgb, var(--accent) 42%, var(--line-strong));
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--line-strong));
 }
 
 /* Trade pills, the row of them under a name. Same reasoning as the badges. */
 :root:not([data-theme="luxe"]) .pill {
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--line-strong));
+  border-color: color-mix(in srgb, var(--accent) 32%, var(--line-strong));
 }
 
-/* Quiet notes are set off by a left rule; in gold it reads as an aside that
-   belongs to the page rather than as a leftover border. */
+/* Quiet notes are set off by a left rule; in the accent it reads as an aside
+   that belongs to the page rather than as a leftover border. */
 :root:not([data-theme="luxe"]) .note {
-  border-left-color: color-mix(in srgb, var(--accent) 60%, var(--line-strong));
+  border-left-color: color-mix(in srgb, var(--accent) 55%, var(--line-strong));
 }
 
-/* The name in gold leaf, as in luxe — but built from the dark end of the
-   scale. Luxe's gradient opens on --accent-3, which is the palest step and
-   invisible on white; this one runs bronze → gold → bronze so every stop is
-   a colour a word survives being made of.
 
-   Fallback colour first and transparent only behind @supports: a browser that
-   cannot clip a background to text would otherwise leave a hole where the
-   business name goes. */
-:root:not([data-theme="luxe"]) .brand-word {
-  color: var(--accent-ink);
-  background: linear-gradient(135deg,
-    var(--accent-ink) 0%, var(--brick) 26%, var(--accent-hover) 52%,
-    var(--brick) 74%, var(--accent-ink) 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
+/* ==========================================================================
+   2c. The wordmark
+   --------------------------------------------------------------------------
+   XTISE, and the wordmark IS the logo — there is no icon beside it and no
+   monogram in front of it. What used to sit here was a drawn mark plus a name;
+   the mark has gone, because a wordmark that needs a picture to be recognised
+   is not yet a wordmark.
+
+   The X carries the brand. It is set in the accent, tracked a shade tighter
+   than its neighbours and cut with a hairline that follows the diagonal it
+   already has: an X is two members crossing, which is the one letter in this
+   name that is also a structural drawing. Everything after it is the brand
+   black, or the paper colour on a dark ground.
+
+   Both halves are real text. It scales with the page, it translates nothing,
+   it survives a font failing to load, and a screen reader says "XTISE" once —
+   all of which an SVG wordmark has to be talked into doing.
+   ========================================================================== */
+
+.brand-word {
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--fg);
 }
-@supports (-webkit-background-clip: text) or (background-clip: text) {
-  :root:not([data-theme="luxe"]) .brand-word { color: transparent; }
+.brand-x {
+  /* Tighter than the rest and a hair larger: the letter is doing the work of
+     a logo, and at the same size as its neighbours it just looks like a
+     capital. */
+  display: inline-block;
+  margin-right: .02em;
+  color: var(--accent);
+  font-weight: 900;
+  letter-spacing: -0.06em;
 }
+:root[data-theme="luxe"] .brand-x { color: var(--accent-ink); }
+
+/* Hovering the brand moves the X rather than the whole name. The name is the
+   identity and should sit still; the letter is the part that behaves like a
+   mark. The colour on .brand:hover itself is set in the header section, which
+   is the one place that decides what the anchor does. */
+.brand:hover .brand-x { color: var(--accent-hover); }
+
+/* Never let the name break across two lines — a wrapped wordmark reads as a
+   layout bug, not a brand. */
+.brand-word { white-space: nowrap; }
+
 @media (forced-colors: active) {
-  :root:not([data-theme="luxe"]) .brand-word { color: CanvasText; background: none; }
+  .brand-x { color: LinkText; }
 }
 
 
@@ -613,7 +593,7 @@ body::before {
   z-index: -1;
   pointer-events: none;
   opacity: .04;
-  background-image: var(--brick-course);
+  background-image: var(--grid-lines);
 }
 
 img, svg, video { max-width: 100%; }
@@ -809,7 +789,7 @@ header.top::after {
   position: absolute;
   left: 0; right: 0; bottom: -1px;
   height: 2px;
-  background: var(--heat-bright);
+  background: var(--brand-edge);
   transform: scaleX(0);
   animation: filament var(--t-slow) var(--ease-out) .06s forwards;
 }
@@ -845,7 +825,6 @@ header.top .wrap {
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 9px;
   margin-right: 12px;
   padding: 4px 6px 4px 2px;
   border-radius: var(--r-sm);
@@ -855,14 +834,9 @@ header.top .wrap {
   letter-spacing: -0.036em;
   white-space: nowrap;
 }
+/* The anchor keeps its colour; the X is the part that answers a hover. See the
+   wordmark section, which is where every rule about the mark lives. */
 .brand:hover { color: var(--fg); text-decoration: none; }
-/* Never let the name break across two lines — a wrapped wordmark reads as a
-   layout bug, not a brand. */
-.brand-word { white-space: nowrap; }
-.brand svg { display: block; overflow: visible; }
-/* The roofline lifts a hair on hover — the whole mark, not just a colour. */
-.brand svg path { transition: transform var(--t-base) var(--ease-out); }
-.brand:hover svg path:first-child { transform: translateY(-1px); }
 
 .spacer { flex: 1; }
 
@@ -1003,7 +977,7 @@ header.top .wrap {
   position: absolute;
   left: 0; right: 0; top: -1px;
   height: 2px;
-  background: var(--heat-bright);
+  background: var(--brand-edge);
   opacity: .9;
 }
 @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
@@ -1108,11 +1082,17 @@ header.top .wrap {
   header.top .nav-link { padding-inline: 8px; font-size: 13.5px; }
   .brand { margin-right: 6px; }
   /* Signed in, the header also carries Account, Sign out, the theme toggle and
-     an avatar. "Construction's Finest" plus all four does not fit at 320px, so
-     the wordmark gives way to the roofline mark alone — the anchor's aria-label
-     keeps the accessible name. Signed out there is room, and that is the one
-     screen where the name is doing real work, so there it stays. */
-  header.top.signed-in .brand-word { display: none; }
+     an avatar. The full wordmark plus all four does not fit at 320px, so the
+     name gives way to the X alone — which is what the X is for, and what it
+     already does as the favicon and the home-screen icon. The anchor's
+     aria-label keeps the accessible name either way.
+
+     Not `display:none` on the whole wordmark, which is what this was: with the
+     drawn mark gone from beside the name, that left an empty link where the
+     way home is. Signed out there is room, and that is the one screen where
+     the full name is doing real work, so there it stays. */
+  header.top.signed-in .brand-rest { display: none; }
+  header.top.signed-in .brand-x { font-size: 1.15em; margin-right: 0; }
 }
 
 
@@ -1146,7 +1126,7 @@ header.top .wrap {
   user-select: none;
   overflow: hidden;
   -webkit-tap-highlight-color: transparent;
-  box-shadow: var(--shadow-heat), inset 0 1px 0 rgb(255 255 255 / .18);
+  box-shadow: var(--shadow-brand), inset 0 1px 0 rgb(255 255 255 / .18);
   transition: background var(--t-fast) var(--ease),
               border-color var(--t-fast) var(--ease),
               box-shadow var(--t-fast) var(--ease),
@@ -1168,7 +1148,7 @@ header.top .wrap {
   inset: 0;
   z-index: -1;
   border-radius: inherit;
-  background: var(--heat);
+  background: var(--brand-fill);
   opacity: .9;
   transition: opacity var(--t-fast) var(--ease);
 }
@@ -1176,7 +1156,7 @@ header.top .wrap {
   color: var(--accent-fg);
   text-decoration: none;
   transform: translateY(-1px);
-  box-shadow: var(--shadow-heat), var(--shadow-md), inset 0 1px 0 rgb(255 255 255 / .18);
+  box-shadow: var(--shadow-brand), var(--shadow-md), inset 0 1px 0 rgb(255 255 255 / .18);
 }
 .btn:hover::after { opacity: 1; }
 /* Presses read as a press. On touch this is the only feedback there is. */
@@ -1322,6 +1302,12 @@ input[type=date]:hover::-webkit-calendar-picker-indicator { opacity: 1; }
    this draws its own. A data URI cannot read `currentColor` or a custom
    property, so the chevron is stated twice — once per theme — rather than
    left as a hardcoded grey that goes invisible against the dark panel. */
+/* The chevron is a data: URI, so its colour cannot be a token — it is baked
+   into the image. Both values below are the theme's own --dim, written out by
+   hand, and they have to be changed by hand when that changes. They were still
+   the warm brown of the palette before this one, which the token sweep could
+   not reach and nothing would have caught: a slightly wrong grey on a select
+   arrow is invisible until you put the two themes side by side. */
 select {
   appearance: none;
   -webkit-appearance: none;
@@ -1329,15 +1315,15 @@ select {
   background-repeat: no-repeat;
   background-position: right 13px center;
   background-size: 11px 7px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5l5-5' fill='none' stroke='%237d6a57' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5l5-5' fill='none' stroke='%235a6270' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   cursor: pointer;
 }
 :root[data-theme="luxe"] select {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5l5-5' fill='none' stroke='%23a3907c' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5l5-5' fill='none' stroke='%2398a1b0' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) select {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5l5-5' fill='none' stroke='%23a3907c' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5l5-5' fill='none' stroke='%2398a1b0' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   }
 }
 /* Multi-selects list their options; no chevron applies. */
@@ -2002,13 +1988,23 @@ details.fold > div { padding-top: 6px; animation: rise var(--t-base) var(--ease-
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: var(--r-md);
-  background: var(--line);
+  /* The panel, not the divider colour. The dividers are drawn by the cells
+     below, because a row of four readings across three columns leaves one
+     grid cell with nothing on top of it - and a background showing through
+     there is a solid block of divider colour where a fifth reading would be.
+     Themes tint --stat-line; nothing tints this. */
+  background: var(--panel);
+  --stat-line: var(--line);
 }
 .stat {
   padding: 13px 15px;
   border: 0;
   border-radius: 0;
   background: var(--panel);
+  /* The hairline grid. Each cell casts a 1px ring; neighbouring rings meet in
+     the 1px gap, and the row's overflow:hidden clips the ring where it reaches
+     the outside edge, so only the lines between cells are ever seen. */
+  box-shadow: 0 0 0 1px var(--stat-line);
 }
 .stat .k {
   color: var(--dim);
@@ -2050,9 +2046,9 @@ details.fold > div { padding-top: 6px; animation: rise var(--t-base) var(--ease-
    The colours come from the existing semantic set and stop at the icon and the
    edge. The figure itself stays near-black: this is a rate and a rating, and a
    prettier tinted number that is fractionally harder to read is the wrong
-   trade. The burnt orange stays spent on the primary action, the mark and the focus
-   ring — the money tile borrows it because on a hiring card the rate IS the
-   primary information, and nothing else here competes for it. */
+   trade. The brand blue stays spent on the primary action, the wordmark and the
+   focus ring — the money tile borrows it because on a hiring card the rate IS
+   the primary information, and nothing else here competes for it. */
 .stat-row.compact {
   margin-top: 14px;
   grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
@@ -2063,6 +2059,7 @@ details.fold > div { padding-top: 6px; animation: rise var(--t-base) var(--ease-
   overflow: visible;
 }
 .stat-row.compact .stat {
+  box-shadow: none;              /* separate tiles, not one gridded box */
   padding: 9px 11px 10px;
   border: 1px solid color-mix(in srgb, var(--tone, var(--line)) 28%, var(--line));
   border-radius: var(--r-sm);
@@ -2081,16 +2078,18 @@ details.fold > div { padding-top: 6px; animation: rise var(--t-base) var(--ease-
 
 .stat-ico { width: 13px; height: 13px; flex: none; color: var(--tone, var(--dimmer)); }
 
-/* --- the worker card's four readings, as one gold box --------------------
+/* --- the worker card's four readings, as one framed block ----------------
    Four tiles in four colours was legible and busy: a green, a blue, an amber
-   and a gold competing inside a card whose only accent is gold. On a phone it
-   was worse than busy — four tiles at a 104px minimum do not fit 390px, and
-   the fourth ran off the edge.
+   and a gold competing inside a card with one accent. On a phone it was worse
+   than busy — four tiles at a 104px minimum do not fit 390px, and the fourth
+   ran off the edge.
 
-   So one box rather than four objects: a gold ground with white cells sitting
-   on it, which is the same figure the rest of the light theme uses — the
-   accent on the edges and around things, never behind the words. The tone
-   variable stays for luxe, where the dark ground carries it differently. */
+   So one block rather than four objects: a tinted ground with white cells
+   sitting on it, which is the figure the rest of the light theme uses — the
+   accent around things, never behind the words. Read as a frame around a set
+   of readings rather than as four separate labels, which is what they are. The
+   tone variable stays for luxe, where the dark ground carries it
+   differently. */
 :root:not([data-theme="luxe"]) .stat-row.compact {
   padding: 7px;
   border: 1px solid color-mix(in srgb, var(--accent) 62%, var(--line));
@@ -2113,6 +2112,12 @@ details.fold > div { padding-top: 6px; animation: rise var(--t-base) var(--ease-
   .stat-row.compact {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  /* An odd tile last in a two-column grid leaves the tinted ground showing
+     where a fourth reading would have gone — a solid block beside the figure,
+     which reads as a missing tile rather than as a background. Stretching it
+     across both columns fills the row and gives the longest reading (a list of
+     dates) the width it wants anyway. */
+  .stat-row.compact .stat:last-child:nth-child(odd) { grid-column: 1 / -1; }
 }
 
 .stat--rate   { --tone: var(--accent); }
@@ -2175,20 +2180,10 @@ a.job-row:hover .stat-row.compact .stat {
 .badge.gig {
   border-color: transparent;
   background: var(--accent);
-  background-image: var(--heat);
+  background-image: var(--brand-fill);
   color: var(--accent-fg);
   box-shadow: var(--glow-gig);
 }
-/* The badge that decides whether somebody reads the rest of the card. Green
-   rather than gold: gold is what this app charges for and what it pays out,
-   and this is neither — it is an invitation, and it should read as one. */
-.badge.learn {
-  border-color: color-mix(in srgb, var(--ok) 40%, var(--line));
-  background: color-mix(in srgb, var(--ok) 12%, transparent);
-  color: var(--ok);
-  font-weight: 640;
-}
-
 .badge.state {
   border-color: color-mix(in srgb, var(--warn) 36%, var(--line));
   background: color-mix(in srgb, var(--warn) 10%, transparent);
@@ -2427,6 +2422,572 @@ a.job-row:hover .title { color: var(--accent-ink); }
 /* A dot between facts, quiet enough that the facts read as a list and not as
    a sentence with punctuation in it. */
 .sep { opacity: .45; margin: 0 5px; }
+
+/* --------------------------------------------------------------------------
+   JobCard - templates/jobs/_job_row.html
+   --------------------------------------------------------------------------
+   Four bands, in the order the reader asks for them: what it is, whether they
+   can do it, where and when, then the arithmetic. Grid rather than a stack of
+   margins so the gaps between bands are declared once and stay equal when one
+   of them is missing.
+   ------------------------------------------------------------------------ */
+.jobcard { display: grid; gap: 9px; }
+
+/* Icon, text, money. The text column is the only one allowed to grow, and
+   min-width:0 on it is what stops a long title pushing the rate off the edge
+   of a phone instead of wrapping. */
+.jobcard-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 11px;
+}
+/* The trade, as a mark rather than as a word to be read. The accent at a
+   tenth strength: enough to give every card an anchor for the eye to land on,
+   not enough to compete with the badge under it. */
+.jobcard-ico {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex: none;
+  border: 1px solid color-mix(in srgb, var(--accent) 34%, var(--line));
+  border-radius: var(--r-sm);
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+}
+.jobcard-ico svg { width: 21px; height: 21px; }
+
+.jobcard-what { min-width: 0; }
+.jobcard-trade {
+  display: block;
+  color: var(--dim);
+  font-size: 11px;
+  font-weight: 680;
+  letter-spacing: .07em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+.jobcard-title {
+  display: block;
+  color: var(--fg);
+  font-size: 16.5px;
+  font-weight: 700;
+  letter-spacing: -0.028em;
+  line-height: 1.3;
+}
+a.job-row:hover .jobcard-title { color: var(--accent-ink); }
+
+.jobcard-pay {
+  color: var(--accent-ink);
+  font-size: 15.5px;
+  font-weight: 760;
+  letter-spacing: -0.026em;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+/* Where, when, and - only when it is not simply open - what state it is in.
+   One wrapping row: on a narrow phone these fall onto two lines by themselves
+   rather than by a breakpoint guessing where the text ends. */
+.jobcard-facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px 14px;
+  color: var(--dim);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.fact { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+.fact-ico { width: 14px; height: 14px; flex: none; opacity: .8; }
+
+.jobcard-sum {
+  color: var(--dim);
+  font-size: 12.5px;
+  line-height: 1.5;
+  opacity: .9;
+}
+
+/* --------------------------------------------------------------------------
+   ExperienceBadge - templates/jobs/_experience_badge.html
+   --------------------------------------------------------------------------
+   Three levels, and the green one is deliberately the loudest. "You do not
+   need experience" is the sentence this whole product rests on; the other two
+   are information, and information does not need to shout.
+
+   A dot as well as a colour, because the three tones must survive being
+   printed, being read by somebody who cannot separate red from green, and
+   being looked at in sunlight on a site. The words carry the meaning either
+   way - the colour only makes them findable faster.
+   ------------------------------------------------------------------------ */
+.xp {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  /* Both axes. The card is a grid, and a grid item stretches by default -
+     without this the pill runs the full width of the card and reads as a
+     banner across it rather than as a badge on it. */
+  align-self: start;
+  justify-self: start;
+  padding: 5px 11px;
+  border: 1px solid;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 680;
+  letter-spacing: -0.01em;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+.xp-dot { width: 7px; height: 7px; flex: none; border-radius: 50%; background: currentColor; }
+
+/* Filled, where the other two are outlines. This is the one badge in the app
+   that changes whether somebody applies, and a tint of the same weight as
+   "some experience helps" makes it a third option rather than an invitation.
+
+   Green rather than the brand blue, and the reason is worth keeping: blue in
+   this app means something you press or something you have chosen. The badge
+   is neither — it is a fact about the job, and dressing a fact as a control is
+   how a card ends up with three things that look tappable and one that is. */
+.xp-go {
+  border-color: transparent;
+  background: var(--ok);
+  color: #fff;
+  font-weight: 760;
+  box-shadow: 0 1px 2px -1px color-mix(in srgb, var(--ok) 60%, transparent);
+}
+.xp-go .xp-dot { background: color-mix(in srgb, #fff 80%, transparent); }
+.xp-steady {
+  border-color: color-mix(in srgb, var(--warn) 42%, var(--line));
+  background: color-mix(in srgb, var(--warn) 10%, transparent);
+  color: var(--warn);
+}
+/* Red, but the palest of the three. It is not an error - somebody skilled is
+   exactly who this job wants - it only has to be unmistakably *not* the green
+   one to a reader who is scanning rather than reading. */
+.xp-stop {
+  border-color: color-mix(in srgb, var(--err) 34%, var(--line));
+  background: color-mix(in srgb, var(--err) 7%, transparent);
+  color: var(--err);
+}
+
+/* --------------------------------------------------------------------------
+   Apply - templates/jobs/job_apply.html
+   --------------------------------------------------------------------------
+   The reassurance is a panel rather than a paragraph, because it is the thing
+   on this page that has to be read. Everything under it is optional, and a
+   sentence set like the rest of the small print gets skipped by exactly the
+   reader who needs it.
+   ------------------------------------------------------------------------ */
+.apply-lead {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  margin-bottom: 18px;
+  padding: 13px 15px;
+  border: 1px solid color-mix(in srgb, var(--ok) 34%, var(--line));
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--ok) 7%, transparent);
+}
+.apply-ico { width: 20px; height: 20px; margin-top: 2px; color: var(--ok); }
+
+.openers { margin-bottom: 14px; }
+.openers-t {
+  margin: 0 0 8px;
+  color: var(--dim);
+  font-size: 12px;
+  font-weight: 620;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+.openers-row { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Wrapping, not scrolling, and not truncated. These are sentences the reader
+   is about to put their name to - one has to be able to read the whole of one
+   before tapping it. */
+.opener {
+  padding: 9px 13px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--panel);
+  color: var(--fg-2);
+  font: inherit;
+  font-size: 13.5px;
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--t-base) var(--ease),
+              background var(--t-base) var(--ease);
+}
+.opener:hover {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+  background: var(--accent-soft);
+  color: var(--fg);
+}
+.opener:active { transform: scale(.985); }
+
+/* --------------------------------------------------------------------------
+   StepForm and StepProgress - templates/jobs/job_form.html
+   --------------------------------------------------------------------------
+   The fieldsets are a plain form until the script marks the form .is-stepped.
+   Everything that would look wrong on a form with all its questions showing
+   at once - the enormous question heading, the height floor that keeps the
+   buttons still - is scoped to that class, so the no-script page stays the
+   ordinary form it was.
+   ------------------------------------------------------------------------ */
+.step { min-width: 0; padding: 0; border: 0; margin: 0; }
+
+/* The question, set like a question and not like a form label. On a step with
+   one input this is the whole screen, and a 12px uppercase caption above a box
+   would make the screen look empty. */
+.step-q {
+  padding: 0;
+  margin: 0 0 14px;
+  color: var(--fg);
+  font-size: clamp(19px, 4.6vw, 23px);
+  font-weight: 700;
+  letter-spacing: -0.026em;
+  line-height: 1.25;
+}
+
+/* The label of a step whose heading already said it. Hidden from the screen,
+   not from the page: the input still needs a label element pointing at it, and
+   the asterisk and its (required) text go with it - the widget carries the
+   real `required` attribute, which is what the accessibility tree reads. */
+.stepform.is-stepped .step-said > label {
+  position: absolute;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* The fold for fields that belong on a step without being what it asks. Set
+   like a link rather than a heading: it should read as something available,
+   not as another question waiting for an answer. */
+.step-more { margin-top: 6px; }
+.step-more > summary {
+  cursor: pointer;
+  padding: 6px 0;
+  color: var(--accent-ink);
+  font-size: 13.5px;
+  font-weight: 640;
+  list-style: none;
+}
+.step-more > summary::-webkit-details-marker { display: none; }
+.step-more > summary::before { content: "+ "; }
+.step-more[open] > summary::before { content: "\2212 "; }
+.step-more[open] > summary { margin-bottom: 6px; }
+
+/* A floor, not a fixed height. Steps differ - one radio group, or a title and
+   a description and a location - and without this the card and its buttons
+   jump up and down the screen as you move between them. Tall enough for the
+   biggest short step; the long ones simply grow past it. */
+.stepform.is-stepped .step { min-height: 190px; }
+
+/* Next is the primary action on every step but the last, where Post it is. Two
+   filled buttons never appear together because the script hides whichever one
+   is not the way forward. */
+.stepform.is-stepped .step-nav { margin-top: 20px; }
+
+/* --- the progress -------------------------------------------------------- */
+.steps-progress { margin: 0 0 18px; }
+
+.steps-bar {
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--panel-3, var(--line));
+}
+.steps-fill {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--brand-fill);
+  transition: width var(--t-slow) var(--ease);
+}
+.steps-count {
+  margin: 7px 0 0;
+  color: var(--dim);
+  font-size: 12px;
+  font-weight: 620;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .steps-fill { transition: none; }
+}
+
+/* --------------------------------------------------------------------------
+   Sign in - templates/account/login.html
+   --------------------------------------------------------------------------
+   A short column in the middle of the page. There is one thing to do here and
+   the page should look like it: nothing else on screen, and the button as wide
+   as the card so it cannot be missed with a thumb.
+   ------------------------------------------------------------------------ */
+.signin { max-width: 460px; margin-inline: auto; }
+.signin-go { width: 100%; justify-content: center; }
+.signin .note { margin-top: 14px; }
+
+/* --------------------------------------------------------------------------
+   PathCards - templates/accounts/_paths.html
+   --------------------------------------------------------------------------
+   Two rows, not two columns. Side by side they would be two 150px boxes on a
+   phone with the words wrapping four deep, and the pair would read as a
+   segmented control - one of two settings - rather than as two doors.
+
+   They sit inside the hero, which already has a filled button on it, so both
+   stay outlined. Three filled things stacked in one panel and none of them is
+   the primary action any more.
+   ------------------------------------------------------------------------ */
+.paths { display: grid; gap: 10px; margin: 20px 0 4px; }
+
+.path {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 13px;
+  padding: 14px 15px;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line));
+  border-radius: var(--r-md);
+  background: var(--panel);
+  color: inherit;
+  text-align: left;
+  transition: border-color var(--t-base) var(--ease),
+              box-shadow var(--t-base) var(--ease),
+              transform var(--t-base) var(--ease);
+}
+.path:hover {
+  border-color: color-mix(in srgb, var(--accent) 70%, var(--line));
+  box-shadow: var(--shadow-md);
+  color: inherit;
+  text-decoration: none;
+  transform: translateY(-2px);
+}
+.path:active { transform: scale(.99); box-shadow: var(--shadow-sm); }
+
+.path-ico {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: var(--r-sm);
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+}
+.path-ico svg { width: 23px; height: 23px; }
+
+.path-body { display: grid; gap: 3px; min-width: 0; }
+.path-body strong {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.024em;
+  line-height: 1.25;
+}
+.path-sub { color: var(--dim); font-size: 13.5px; line-height: 1.45; }
+
+/* The chevron is the only thing on the card that moves, and it moves because
+   the card is a door rather than a panel with a link on it. */
+.path-go {
+  width: 18px;
+  height: 18px;
+  color: var(--accent-ink);
+  opacity: .6;
+  transition: transform var(--t-base) var(--ease), opacity var(--t-base) var(--ease);
+}
+.path:hover .path-go { opacity: 1; transform: translateX(3px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .path, .path-go { transition: none; }
+  .path:hover { transform: none; }
+  .path:hover .path-go { transform: none; }
+}
+
+/* --------------------------------------------------------------------------
+   JobHead - the top of templates/jobs/job_detail.html
+   --------------------------------------------------------------------------
+   The same three bands as the card, at the size of a page heading, so a job
+   opened from the board resolves into the page it was already showing rather
+   than into a different-looking document.
+   ------------------------------------------------------------------------ */
+.jobhead { display: grid; gap: 11px; margin-bottom: 20px; }
+.jobhead-top {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 13px;
+}
+.jobhead .jobcard-ico { width: 44px; height: 44px; }
+.jobhead .jobcard-ico svg { width: 24px; height: 24px; }
+.jobhead-what { min-width: 0; }
+.jobhead-title {
+  margin: 2px 0 0;
+  font-size: clamp(21px, 5.2vw, 27px);
+  line-height: 1.2;
+}
+.jobhead-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px 12px;
+  margin: 0;
+  color: var(--dim);
+  font-size: 14px;
+}
+
+/* --------------------------------------------------------------------------
+   ApplyBar - the bottom of templates/jobs/job_detail.html
+   --------------------------------------------------------------------------
+   A phone only. On a wide screen the whole page is one or two scrolls and the
+   button in the flow is easy to reach; pinning a bar there would cover content
+   to solve a problem that screen does not have.
+
+   It sits on top of the tab bar rather than replacing it - somebody reading a
+   job must still be able to leave for their messages - so its offset is the
+   tab bar's own height token plus whatever the phone reserves for its home
+   indicator. Two fixed things stacked at the bottom of a screen have to agree
+   about that number, and they do because they read it from the same place.
+   ------------------------------------------------------------------------ */
+.applybar { display: none; }
+.applybar-spacer { display: none; }
+
+@media (max-width: 779px) {
+  .applybar {
+    position: fixed;
+    left: 0; right: 0;
+    bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom));
+    z-index: 49;                      /* under the tab bar, over the page */
+    display: block;
+    border-top: 1px solid var(--line);
+    background: var(--panel);
+    box-shadow: 0 -10px 26px -20px rgb(74 34 12 / .6);
+  }
+  .applybar-in {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    max-width: var(--wrap);          /* lines up with the page column */
+    margin: 0 auto;
+    padding: 10px var(--gutter);
+  }
+  .applybar-pay {
+    color: var(--accent-ink);
+    font-size: 17px;
+    font-weight: 780;
+    letter-spacing: -0.028em;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+  /* "per day" is the difference between a fair rate and a derisory one on a
+     week-long booking, and it does not get to be inferred from context. */
+  .applybar-per {
+    display: block;
+    color: var(--dim);
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+  }
+  .applybar-go { flex: 1; max-width: 62%; justify-content: center; text-align: center; }
+
+  /* One Apply per screen. The row in the flow is the desktop one; hiding it
+     here is what stops a phone showing the same button twice. */
+  .apply-inline { display: none; }
+
+  .applybar-spacer { display: block; height: 66px; }
+}
+
+/* On a feed card the badge sits between the headline and the tag row, where
+   the tags are a wrapping paragraph and it is not. Its own line, with the same
+   air above and below as the rest of the card. */
+.feed-card .xp { margin: 4px 0 10px; }
+
+/* --------------------------------------------------------------------------
+   ExperienceChips - templates/jobs/_experience_chips.html
+   --------------------------------------------------------------------------
+   The one filter that gets to live above the fold instead of behind the
+   Filters button. Horizontal scroll rather than wrapping: four chips that
+   sometimes occupy one line and sometimes two would move the first job on the
+   board up and down as the language changes.
+   ------------------------------------------------------------------------ */
+.chips {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 16px;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.chips::-webkit-scrollbar { display: none; }
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex: none;
+  /* 40px tall. A filter meant to be tapped with a work glove on cannot be a
+     text link with padding. */
+  min-height: 40px;
+  padding: 0 15px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--fg-2);
+  font-size: 13.5px;
+  font-weight: 640;
+  white-space: nowrap;
+  transition: border-color var(--t-base) var(--ease),
+              background var(--t-base) var(--ease),
+              color var(--t-base) var(--ease);
+}
+.chip:hover { border-color: var(--line-strong); color: var(--fg); text-decoration: none; }
+.chip-dot { width: 8px; height: 8px; flex: none; border-radius: 50%; background: currentColor; opacity: .55; }
+.chip.is-on .chip-dot { opacity: 1; }
+
+/* The applied chip is filled, and filled in the brand colour whichever chip it
+   is. Two things follow from that, and both are the point.
+
+   A selected state that is one step darker at the border is a selected state
+   people miss, and missing it means reading a filtered board without knowing
+   it. Filled, it is unmissable.
+
+   And it is one colour rather than four. Tinting each chip in its own level's
+   tone made the selected state say the same thing the dot already says, twice,
+   in a colour that then had to compete with three others across the row. Blue
+   means "this is what you have chosen" everywhere else in the app, so it means
+   that here too — and the dot keeps saying which level, in the tone the badges
+   use, because that is the dot's job. */
+.chip.is-on {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-fg);
+  font-weight: 720;
+}
+/* On the filled chip the tone dot is the one thing that must not go blue —
+   it is the only part still saying which level was chosen. Ringed in white so
+   a dark dot survives the blue behind it. */
+.chip.is-on .chip-dot {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-fg) 55%, transparent);
+}
+.chip-go.is-on .chip-dot     { background: #7ee2a8; }
+.chip-steady.is-on .chip-dot { background: #ffcf70; }
+.chip-stop.is-on .chip-dot   { background: #ff9d94; }
+
+/* Edge to edge on a phone, the same treatment the rows below get: the strip
+   scrolls out to the screen edge so it is visibly scrollable, and the first
+   chip still lines up with the text of the cards. */
+@media (max-width: 559px) {
+  .chips {
+    margin-inline: calc(var(--gutter) * -1);
+    padding-inline: var(--gutter);
+  }
+}
 
 /* A person's row: avatar beside a block of text that must be allowed to
    shrink, or long names blow the layout out sideways. */
@@ -2697,7 +3258,7 @@ a.job-row.pick:hover .card::after {
   position: absolute;
   left: 0; right: 0; top: 0;
   height: 2px;
-  background: var(--heat-bright);
+  background: var(--brand-edge);
   opacity: 0;
   transition: opacity var(--t-base) var(--ease);
 }
@@ -3063,7 +3624,7 @@ a.job-row.pick:hover .card::after {
 .bubble.mine { flex-direction: row-reverse; }
 .bubble.mine .bubble-body {
   background: var(--accent);
-  background-image: var(--heat);
+  background-image: var(--brand-fill);
   color: var(--accent-fg);
   box-shadow: 0 1px 2px -1px rgb(191 68 19 / .45);
 }
@@ -3209,7 +3770,7 @@ a.job-row.pick:hover .card::after {
   inset: 0;
   z-index: -1;
   opacity: .07;
-  background-image: var(--brick-course);
+  background-image: var(--grid-lines);
   -webkit-mask-image: linear-gradient(160deg, #000 0%, transparent 72%);
   mask-image: linear-gradient(160deg, #000 0%, transparent 72%);
 }
@@ -3224,7 +3785,7 @@ a.job-row.pick:hover .card::after {
    nothing at all where the most important word used to be. */
 .hero h1 .hot {
   color: var(--accent-ink);
-  background: var(--heat);
+  background: var(--brand-fill);
   -webkit-background-clip: text;
   background-clip: text;
 }
@@ -3558,19 +4119,19 @@ footer.foot .foot-brand { color: var(--fg-2); font-weight: 700; }
   border: 0;
   border-radius: var(--r-full);
   background: var(--accent);
-  background-image: var(--heat);
+  background-image: var(--brand-fill);
   color: var(--accent-fg);
   font-family: inherit;
   font-size: 14.5px;
   font-weight: 700;
   letter-spacing: -0.012em;
   cursor: pointer;
-  box-shadow: var(--shadow-heat), var(--shadow-md);
+  box-shadow: var(--shadow-brand), var(--shadow-md);
   transition: background var(--t-base) var(--ease),
               transform var(--t-base) var(--ease-out),
               box-shadow var(--t-base) var(--ease);
 }
-.asst-launch:hover { box-shadow: var(--shadow-heat), var(--shadow-lg); transform: translateY(-1px); }
+.asst-launch:hover { box-shadow: var(--shadow-brand), var(--shadow-lg); transform: translateY(-1px); }
 .asst-launch:active { transform: scale(.96); }
 .asst-launch:focus-visible { outline: none; box-shadow: var(--ring), var(--shadow-md); }
 .asst-launch svg { flex: none; }
@@ -3623,49 +4184,6 @@ footer.foot .foot-brand { color: var(--fg-2); font-weight: 700; }
 .asst-x { margin-left: auto; }
 
 .asst-body { padding: 16px; overflow-y: auto; }
-.asst-lede { margin: 0 0 10px; color: var(--dim); font-size: 13px; }
-
-/* The branch point. Two full-width targets, description included — the choice
-   decides the whole conversation, so it is worth two lines each rather than a
-   pair of terse buttons someone has to guess between. */
-.asst-pick {
-  display: block;
-  width: 100%;
-  margin-bottom: 10px;
-  padding: 13px 15px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  background: var(--panel);
-  color: var(--fg);
-  font-family: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition: border-color var(--t-base) var(--ease),
-              background var(--t-base) var(--ease);
-}
-.asst-pick:hover { border-color: var(--accent-ink); background: var(--accent-soft); }
-.asst-pick:focus-visible { outline: none; box-shadow: var(--ring); }
-.asst-pick-t { display: block; font-size: 14.5px; font-weight: 620; }
-.asst-pick-d { display: block; margin-top: 3px; color: var(--dim); font-size: 12.5px; line-height: 1.5; }
-
-.asst-forms { margin: 0 0 10px; padding: 12px 14px; border-radius: var(--r-md); background: var(--panel-2); }
-.asst-form-pick {
-  display: block;
-  width: 100%;
-  margin-top: 6px;
-  padding: 9px 12px;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--r-sm);
-  background: var(--panel);
-  color: var(--fg);
-  font-family: inherit;
-  font-size: 13.5px;
-  font-weight: 560;
-  text-align: left;
-  cursor: pointer;
-}
-.asst-form-pick:hover { border-color: var(--accent-ink); color: var(--accent-ink); }
-.asst-form-pick:focus-visible { outline: none; box-shadow: var(--ring); }
 
 /* ==========================================================================
    Negotiation
@@ -3729,32 +4247,6 @@ footer.foot .foot-brand { color: var(--fg-2); font-weight: 700; }
 
 .terms-now h2 { margin-top: 0; }
 
-
-/* The offer that sits above a form. Tinted rather than plain-carded so it reads
-   as an aside to the form and not as the form's first question — somebody who
-   wants to type should be able to skip past it without parsing it. */
-.chat-offer {
-  display: flex;
-  align-items: center;
-  gap: 13px;
-  margin-bottom: 16px;
-  padding: 14px 16px;
-  border: 1px solid color-mix(in srgb, var(--accent) 26%, var(--line));
-  border-radius: var(--r-md);
-  background: var(--accent-soft);
-}
-.chat-offer-i { width: 21px; height: 21px; flex: none; color: var(--accent-ink); }
-.chat-offer-b { flex: 1; min-width: 0; }
-.chat-offer-b strong { display: block; color: var(--fg); font-size: 14.5px; font-weight: 640; }
-.chat-offer-b span { display: block; margin-top: 3px; color: var(--dim); font-size: 12.5px; line-height: 1.55; }
-.chat-offer-go { flex: none; width: auto; min-height: 40px; }
-
-@media (max-width: 559px) {
-  .chat-offer { flex-wrap: wrap; }
-  .chat-offer-i { display: none; }
-  .chat-offer-go { width: 100%; }
-}
-
 .asst-chat { flex: 1; min-height: 190px; }
 .asst-log { display: flex; flex-direction: column; gap: 9px; }
 
@@ -3815,17 +4307,6 @@ footer.foot .foot-brand { color: var(--fg-2); font-weight: 700; }
 
 .asst-opt:active { transform: scale(.96); }
 .asst-opt:focus-visible { outline: none; box-shadow: var(--ring); }
-
-/* The handoff into the prefilled form. Full width and set apart from the
-   bubbles: it is the one thing left to do in the panel, and on a phone it has
-   to be an unmissable target rather than a link inside a sentence. */
-.asst-handoff {
-  align-self: stretch;
-  justify-content: center;
-  margin-top: 5px;
-  text-align: center;
-  text-decoration: none;
-}
 
 /* Three dots while the model thinks. Decoration on a state that is also
    expressed by the disabled input, so the reduced-motion rule can kill it. */

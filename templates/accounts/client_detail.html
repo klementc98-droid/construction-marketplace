@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load i18n %}
 {% load account_extras i18n %}
-{% block title %}{{ profile }} — Construction's Finest{% endblock %}
+{% block title %}{{ profile }} — XTISE{% endblock %}
 
 {% block content %}
   {% url 'jobs:list' as jobs_url %}
@@ -33,7 +33,7 @@
     {# The same person, the other way round. #}
     {% if profile.user.is_worker %}
       <p class="note" style="margin-top:14px">
-        Also takes work on Construction's Finest —
+        Also takes work on XTISE —
         <a href="{% url 'accounts:worker_detail' profile.user.worker_profile.pk %}">{% translate "see their worker profile" %}</a>.
       </p>
     {% endif %}

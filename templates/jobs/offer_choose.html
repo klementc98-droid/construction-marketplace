@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load i18n money_extras %}
-{% block title %}{% blocktranslate with who=worker.user %}Offer {{ who }} a job{% endblocktranslate %} — Construction's Finest{% endblock %}
+{% block title %}{% blocktranslate with who=worker.user %}Offer {{ who }} a job{% endblocktranslate %} — XTISE{% endblock %}
 
 {% block content %}
   <h1>{% blocktranslate with who=worker.user.short_name|default:worker.user %}Offer {{ who }} a job{% endblocktranslate %}</h1>

@@ -1,0 +1,20 @@
+# Everything the image does not need, and two things it must never contain.
+.env
+db.sqlite3
+
+.git
+.gitignore
+.venv
+venv
+__pycache__
+*.py[cod]
+media
+staticfiles
+.pytest_cache
+.coverage
+
+# docs/ deliberately stays. The assistant reads docs/whitepaper.md at runtime —
+# see assistant.knowledge.whitepaper — and without it the model loses the whole
+# product argument and answers "I'm not sure" to anything about what XTISE is
+# for. It fails softly, which is exactly why leaving it out would be easy to
+# miss.

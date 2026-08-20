@@ -8,10 +8,33 @@
    A single value leaves a strip of cream above a dark page on mobile Safari
    and Chrome, which is the one place the seam is impossible to miss.
 {% endcomment %}
-<meta name="theme-color" content="#f5f5f2" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#050505" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f7f8fa" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0b0d10" media="(prefers-color-scheme: dark)">
 <meta name="description" content="{% block description %}{% translate "Tradespeople looking for helpers. No experience needed — you learn on site and you are paid for the days you work." %}{% endblock %}">
-<title>{% block title %}Construction's Finest{% endblock %}</title>
+<title>{% block title %}XTISE{% endblock %}</title>
+
+{% comment %} What a pasted link turns into in a chat. Most of this app's traffic will
+   arrive as a job sent to somebody by their cousin, so the card that link
+   unfurls into is a real surface and not an afterthought.
+
+   Every URL here is built from the request rather than written down, so the
+   same templates serve localhost, a phone tunnel and xtise.gr without knowing
+   which of the three they are on — see SITE_URL in settings for the one place
+   that does have to know, and why it is only needed for email.
+
+   og:image is a PNG. Every platform that renders one of these refuses SVG, and
+   a link that previews as a grey box is worse than one with no image at all.
+{% endcomment %}
+<meta property="og:site_name" content="XTISE">
+<meta property="og:type" content="website">
+<meta property="og:title" content="{% block og_title %}XTISE{% endblock %}">
+<meta property="og:description" content="{% translate "Tradespeople looking for helpers. No experience needed — you learn on site and you are paid for the days you work." %}">
+<meta property="og:url" content="{{ request.build_absolute_uri }}">
+<meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{% static 'og.png' %}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="{{ LANGUAGE_CODE }}">
+<meta name="twitter:card" content="summary_large_image">
 
 {% comment %}
 Theme, resolved before the first paint. This has to be inline and blocking:
@@ -48,6 +71,8 @@ correct answer anyway.
 {% endcomment %}
 <link rel="stylesheet" href="{% static 'css/crew.css' %}?v={{ asset_v }}">
 <link rel="icon" href="{% static 'favicon.svg' %}?v={{ asset_v }}" type="image/svg+xml">
+{# The same X with room for the lap joint, for a home-screen shortcut. #}
+<link rel="apple-touch-icon" href="{% static 'appicon.svg' %}?v={{ asset_v }}">
 <script src="{% static 'js/crew.js' %}?v={{ asset_v }}" defer></script>
 {% block head %}{% endblock %}
 </head>
@@ -80,6 +105,47 @@ correct answer anyway.
        stroke-linecap="round" stroke-linejoin="round">
       <path d="M4 5.5h16"/><path d="M4 12h16"/><path d="M4 18.5h9"/>
     </g>
+    {% comment %} The trades, in the same line weight as everything else in this sheet.
+       Drawn rather than borrowed: an emoji is a different typeface at a
+       different weight in every browser, and a board of them reads as a chat
+       window instead of a place people are hired.
+    {% endcomment %}
+    <g id="i-trade" fill="none" stroke="currentColor" stroke-width="1.8"
+       stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 20h18M6 20V9l6-4 6 4v11"/><path d="M10 20v-5h4v5"/>
+    </g>
+    <g id="i-hammer" fill="none" stroke="currentColor" stroke-width="1.8"
+       stroke-linecap="round" stroke-linejoin="round">
+      <path d="M14 4l6 6-3 3-6-6z"/><path d="M11 7L4 14v6h6l7-7"/>
+    </g>
+    <g id="i-wrench" fill="none" stroke="currentColor" stroke-width="1.8"
+       stroke-linecap="round" stroke-linejoin="round">
+      <path d="M15 3a5 5 0 00-4.6 6.9L3 17.3 6.7 21l7.4-7.4A5 5 0 1015 3z"/>
+    </g>
+    <g id="i-bolt" fill="none" stroke="currentColor" stroke-width="1.8"
+       stroke-linecap="round" stroke-linejoin="round">
+      <path d="M13 2L4 14h7l-1 8 9-12h-7z"/>
+    </g>
+    <g id="i-brick" fill="none" stroke="currentColor" stroke-width="1.8"
+       stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="5" width="18" height="5" rx="1"/>
+      <rect x="3" y="14" width="18" height="5" rx="1"/>
+      <path d="M12 5v5M8 14v5M16 14v5"/>
+    </g>
+    <g id="i-roller" fill="none" stroke="currentColor" stroke-width="1.8"
+       stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="4" width="13" height="5" rx="1"/>
+      <path d="M16 6.5h3v4h-6V14"/><rect x="10" y="14" width="6" height="7" rx="1"/>
+    </g>
+    <g id="i-saw" fill="none" stroke="currentColor" stroke-width="1.8"
+       stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 7h14l4 4-4 4H3z"/><path d="M6 15v3M10 15v3M14 15v3"/>
+    </g>
+    <g id="i-hardhat" fill="none" stroke="currentColor" stroke-width="1.8"
+       stroke-linecap="round" stroke-linejoin="round">
+      <path d="M2.5 17.5h19"/><path d="M5.5 17.5v-3a6.5 6.5 0 0 1 13 0v3"/>
+      <path d="M9.4 8.4V5.8A1.8 1.8 0 0 1 11.2 4h1.6a1.8 1.8 0 0 1 1.8 1.8v2.6"/>
+    </g>
     <g id="i-check" fill="none" stroke="currentColor" stroke-width="2"
        stroke-linecap="round" stroke-linejoin="round">
       <circle cx="12" cy="12" r="9"/><path d="m8.2 12.3 2.6 2.6 5-5.4"/>
@@ -88,6 +154,11 @@ correct answer anyway.
        stroke-linecap="round" stroke-linejoin="round">
       <path d="M12 3 4.5 6v6c0 4.3 3.1 7.6 7.5 9 4.4-1.4 7.5-4.7 7.5-9V6L12 3Z"/>
       <path d="m9 12 2.2 2.2L15.5 10"/>
+    </g>
+    <g id="i-pin" fill="none" stroke="currentColor" stroke-width="1.9"
+       stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 21s7-5.6 7-11a7 7 0 1 0-14 0c0 5.4 7 11 7 11Z"/>
+      <circle cx="12" cy="10" r="2.6"/>
     </g>
     <g id="i-clock" fill="none" stroke="currentColor" stroke-width="1.9"
        stroke-linecap="round" stroke-linejoin="round">
@@ -118,27 +189,16 @@ correct answer anyway.
 {% endcomment %}
 <header class="top{% if user.is_authenticated %} signed-in{% endif %}">
   <div class="wrap">
-    <a class="brand" href="{% url 'accounts:home' %}" aria-label="{% translate "Construction's Finest, home" %}">
-      {% comment %} Two angled bars — a roofline. Small enough to read at 20px. The
-         roof takes the heat gradient; the ground line under it stays neutral so
-         the mark still has a light and a dark half at 20px, which is what stops
-         it collapsing into an orange smudge.
-      {% endcomment %}
-      <svg width="22" height="22" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <defs>
-          {# The --heat-bright ramp, restated as SVG stops. #}
-          <linearGradient id="brand-heat" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stop-color="var(--accent-3)"/>
-            <stop offset=".3" stop-color="var(--accent-2)"/>
-            <stop offset=".66" stop-color="var(--accent)"/>
-            <stop offset="1" stop-color="var(--brick)"/>
-          </linearGradient>
-        </defs>
-        <path d="M2 12.5 10 3l8 9.5" stroke="url(#brand-heat)" stroke-width="2.8"
-              stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M6 17h8" stroke="var(--dim)" stroke-width="2.8" stroke-linecap="round"/>
-      </svg>
-      <span class="brand-word">Construction's Finest</span>
+    {% comment %} The wordmark is the logo. There is no mark beside it and no monogram
+       in front of it — what stood here was a drawn roofline plus a name, and a
+       wordmark that needs a picture to be recognised is not yet a wordmark.
+
+       The X is a span rather than a glyph in an image, so the name is one piece
+       of selectable, translatable, screen-readable text that survives a font
+       failing to load. It is styled in .brand-x, where the reasoning lives.
+    {% endcomment %}
+    <a class="brand" href="{% url 'accounts:home' %}" aria-label="{% translate "XTISE, home" %}">
+      <span class="brand-word"><span class="brand-x">X</span><span class="brand-rest">TISE</span></span>
     </a>
 
     {% comment %} No "Home" link here: the brand to the left of this bar already goes there,
@@ -224,7 +284,10 @@ correct answer anyway.
         {% include "_avatar.html" with person=user size="sm" %}
       </a>
     {% else %}
-      <a class="nav-link" href="{% url 'account_login' %}">{% translate "Sign in" %}</a>
+      {% comment %} Straight to Google, not to a page with one button on it. The current
+         path travels with it so signing in from a job lands back on that job.
+      {% endcomment %}
+      <a class="nav-link" href="{% url 'google_login' %}?process=login&amp;next={{ request.get_full_path|urlencode }}">{% translate "Sign in" %}</a>
     {% endif %}
   </div>
 </header>
@@ -243,7 +306,7 @@ correct answer anyway.
 <footer class="foot">
   <div class="wrap">
     {% block footer %}
-      <span class="foot-brand">Construction's Finest</span>
+      <span class="foot-brand">XTISE</span>
       <a href="{% url 'jobs:list' %}">{% translate "Find work" %}</a>
       <a href="{% url 'jobs:worker_list' %}">{% translate "Find workers" %}</a>
       <a href="{% url 'core:about' %}"
@@ -287,7 +350,7 @@ correct answer anyway.
       {% include "_avatar.html" with person=user size="sm" %}
       <span class="label">{% translate "Profile" %}</span></a>
   {% else %}
-    <a href="{% url 'account_login' %}">
+    <a href="{% url 'google_login' %}?process=login&amp;next={{ request.get_full_path|urlencode }}">
       <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-workers"/></svg>
       <span class="label">{% translate "Sign in" %}</span></a>
   {% endif %}

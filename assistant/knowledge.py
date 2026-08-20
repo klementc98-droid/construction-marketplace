@@ -17,6 +17,11 @@ copy for a person; the model does the plain-language part.
 
 from __future__ import annotations
 
+from functools import cache
+from pathlib import Path
+
+from django.conf import settings
+
 from config import business_rules as rules
 from core.state_machine import TRANSITIONS, JobState
 
@@ -33,6 +38,11 @@ from core.state_machine import TRANSITIONS, JobState
 #: prevent, and the pairing makes that hard to miss. Whitelist and knowledge
 #: are updated together or not at all.
 TOPICS: tuple[tuple[str, str], ...] = (
+    (
+        "Who this is for",
+        "that most jobs here need no experience, what a helper is expected to "
+        "do, how somebody with no trade behind them starts",
+    ),
     ("Pay and fees", "what you take home, the platform fee and when it applies"),
     (
         "Paying hand to hand or by escrow",
@@ -44,12 +54,53 @@ TOPICS: tuple[tuple[str, str], ...] = (
     ("Applying and offers", "applying, direct offers, countering, being picked"),
     ("Ratings and profiles", "how ratings work, when stats appear, licences"),
     ("Accounts and navigation", "signing in, roles, where to find things"),
+    (
+        "What the product is and why",
+        "what problem it exists to solve, how it decided to solve it, what is "
+        "deliberately not built — all of it from the whitepaper",
+    ),
 )
 
 
 def topics() -> str:
     """The whitelist, as lines the model can both obey and read back."""
     return "\n".join(f"- {name}: {detail}" for name, detail in TOPICS)
+
+
+#: Where the published whitepaper lives. The same file served at /whitepaper/.
+WHITEPAPER = Path(settings.BASE_DIR) / "docs" / "whitepaper.md"
+
+
+@cache
+def whitepaper() -> str:
+    """The whitepaper, as the model's reference on what this product is.
+
+    Read from the file rather than summarised into this module, for the reason
+    the rest of the module exists: a paraphrase is a second copy, and a second
+    copy drifts. Somebody editing the argument at /whitepaper/ should not also
+    have to remember that a chat assistant is quoting an older version of it.
+
+    It is the argument and not the rulebook, and the prompt says so — where the
+    whitepaper and the live configuration disagree about a number, the
+    configuration wins and the whitepaper is simply out of date.
+
+    English only, and deliberately. The Greek edition is a translation of the
+    same argument; carrying both would double the prompt to say one thing
+    twice, and the model is told separately which language to answer in.
+
+    Cached for the life of the process. It is a file on disk that changes on
+    deploy, and reading it on every message would be a disk read per chat turn
+    for content that cannot have changed since the process started.
+    """
+    try:
+        text = WHITEPAPER.read_text(encoding="utf-8")
+    except OSError:
+        # Deployed without docs/, or a bad path. The assistant loses the
+        # product argument and keeps every fact that comes from config — which
+        # is the half that must never be wrong. Better a narrower assistant
+        # than a stack trace on somebody's first question.
+        return ""
+    return text.strip()
 
 
 def _hours(delta) -> int:
@@ -80,6 +131,21 @@ def _trades() -> str:
         note = " (regulated — licence expected)" if trade.requires_license else ""
         rows.append(f"{trade.name}{note}")
     return ", ".join(rows) if rows else "none configured yet"
+
+
+def _experience() -> str:
+    """The three levels, from the field's own choices.
+
+    Written out because it is the single most-asked thing on this board and the
+    most costly to get wrong in either direction: telling somebody with no
+    trade behind them that they need one turns away exactly the person the
+    platform exists for, and telling them every job will take them sends them
+    to a listing that wanted a time-served electrician.
+    """
+    from jobs.models import ExperienceWanted
+
+    lines = [f"- {value}: \"{label}\"" for value, label in ExperienceWanted.choices]
+    return "\n".join(lines)
 
 
 def facts() -> str:
@@ -162,6 +228,21 @@ RATINGS AND PROFILE STATS
 JOB LIFECYCLE (single state machine covering job and payment together)
 {_lifecycle()}
 
+WHO A JOB IS FOR — THE MOST IMPORTANT THING ON THIS BOARD
+- This is not a board where qualified tradespeople bid for work. It is a tradesperson
+  who needs a pair of hands, and the person answering may never have held a trowel.
+- Every job states what it wants from whoever takes it. Three answers, and the field
+  defaults to the first:
+{_experience()}
+- The board can be filtered to one level in a single tap, and every job card and job
+  page shows its level as a badge. Somebody asking "is there anything here for me"
+  should be sent to /jobs/?experience=none .
+- So the honest answer to "can I work here with no experience" is YES, and it is the
+  ordinary case rather than an exception. Say so plainly. What is expected is turning
+  up, on time, and doing what the tradesperson shows you.
+- A worker profile does not need experience, a licence or a CV either. Years of
+  experience can be zero and the profile reads "New" rather than badly.
+
 THE TWO POST TYPES
 - Gig: one dated shift at a fixed price for that day. Can use escrow.
 - Standing position: ongoing role paid at a rate (optionally a range). No escrow, no
@@ -211,9 +292,11 @@ ACCOUNT AND NAVIGATION
 - Two ways to get hired: apply to a public post, or receive a direct offer written for
   you by name. A direct offer never appears on the public board. Declining needs no reason.
 - Minimum age to use the platform: {rules.MINIMUM_WORKING_AGE}.
-- The chat assistant can help fill in a worker profile, a gig or a standing position by
-  asking one question at a time. It never saves anything: it opens the real form with
-  the answers filled in, and the person presses save themselves.
+- Posting a job and writing a worker profile both ask ONE question per screen, with a
+  progress bar, and nothing is saved until the last one. If somebody finds a form
+  long, tell them that — it is a short sequence of single questions, not a wall.
+- The chat assistant (you) answers questions and does nothing else. You cannot fill a
+  form in for anyone. Say where the form is and that it goes one question at a time.
 
 WHAT YOU CAN BE ASKED ABOUT
 {topics()}

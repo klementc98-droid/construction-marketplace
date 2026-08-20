@@ -172,7 +172,7 @@ def counter_create(request, pk: int, worker_pk: int | None = None):
 
     terms = _effective_terms(job, worker)
     if request.method == "POST":
-        form = CounterForm(request.POST, terms=terms)
+        form = CounterForm(request.POST, terms=terms, worker=worker)
         if form.is_valid():
             # The negotiable check at the top read a state from before this
             # form was filled in. Somebody confirmed in that window leaves a
@@ -228,7 +228,7 @@ def counter_create(request, pk: int, worker_pk: int | None = None):
             messages.success(request, f"Sent. {other} has your terms to answer.")
             return redirect("jobs:detail", pk=job.pk)
     else:
-        form = CounterForm(terms=terms)
+        form = CounterForm(terms=terms, worker=worker)
 
     return render(
         request,
@@ -244,6 +244,86 @@ def counter_create(request, pk: int, worker_pk: int | None = None):
     )
 
 
+
+
+def _reshape_booking(job, booking, wanted):
+    """Make the booking run on ``wanted``, and return its rows, oldest first.
+
+    Reuse before create, and create before cancel:
+
+    * a row already on a wanted day stays exactly as it is;
+    * a row on a day nobody wants is re-dated onto a wanted day that has no row
+      yet — which is what makes "move it to Tuesday" one row with a new date on
+      it, the same as it has always been, rather than a cancellation and a
+      creation that would read as two events in both parties' lists;
+    * anything still wanted is created, cloned from the job being answered;
+    * anything still spare is cancelled.
+
+    All of this is safe only because a counter lives while the job is POSTED:
+    no escrow exists, no day has been worked, and no row is assigned to
+    anybody. There is nothing to reconcile — see Counter's own docstring, which
+    is where that guarantee is written down.
+
+    The client is party to the change either way round. They either proposed
+    these days or they are the one accepting them, so cancelling a day their
+    own posting no longer covers is their action, and the state machine is
+    asked as such rather than being bypassed.
+    """
+    by_day = {row.gig_date: row for row in booking}
+    keep = [by_day[d] for d in wanted if d in by_day]
+    spare = [row for row in booking if row.gig_date not in set(wanted)]
+    needed = [d for d in wanted if d not in by_day]
+
+    rows = list(keep)
+
+    # Re-date what can be re-dated.
+    while spare and needed:
+        row, day = spare.pop(0), needed.pop(0)
+        row.gig_date = day
+        row.full_clean()
+        row.save(update_fields=["gig_date", "updated_at"])
+        rows.append(row)
+
+    # Create what is left wanting.
+    for day in needed:
+        rows.append(_clone_day(job, day))
+
+    # Retire what is left over. Claimed rather than assigned, because another
+    # request can move a posted row while this one is deciding — and losing
+    # that race must leave the row alone rather than overwrite whatever it
+    # became.
+    for row in spare:
+        assert_transition(row.state, JobState.CANCELLED, Actor.CLIENT)
+        claim(Job, row.pk, expect=row.state, to=JobState.CANCELLED)
+
+    rows.sort(key=lambda row: row.gig_date)
+    return rows
+
+
+def _clone_day(job, day):
+    """A new day of an existing booking, posted and ready to be sealed.
+
+    Everything about the work is copied from the job being answered; only the
+    date differs. ``offer_group`` is set from the job's own group, or from the
+    job itself when it had none — a single-day gig that gains a second day
+    becomes a booking of two, and both rows have to agree on which.
+    """
+    group = job.offer_group or job.pk
+    if not job.offer_group:
+        Job.objects.filter(pk=job.pk).update(offer_group=group)
+        job.offer_group = group
+
+    clone = Job.objects.get(pk=job.pk)
+    clone.pk = None
+    clone._state.adding = True
+    clone.gig_date = day
+    clone.offer_group = group
+    clone.state = JobState.POSTED
+    clone.assigned_worker = None
+    clone.filled_at = None
+    clone.full_clean()
+    clone.save()
+    return clone
 
 
 @login_required
@@ -286,20 +366,25 @@ def counter_respond(request, pk: int):
         )
         return redirect("jobs:detail", pk=job.pk)
 
-    # Agreed terms cover the booking, the same as an accepted offer and the
-    # same as a confirmed application. A counter is answered once because the
-    # reader was only ever shown one to answer.
+    # Which days are being agreed to.
     #
-    # Only the first day carries the counter and the offer rows — those are the
-    # ones being responded to. The remaining days are sealed on the terms the
-    # counter just wrote across them, which _seal already spreads for the
-    # payment method.
-    days = _booking_days(job)
+    # A counter names the days it wants, and that is the whole point of it: an
+    # offer can be a week, and the commonest honest answer to a week is "all of
+    # it except Wednesday". So the days the counter proposes become the days
+    # the booking runs — a counter is a proposal about this job, and accepting
+    # it agrees those terms for this job, days included.
+    #
+    # A counter that says nothing about days leaves the booking exactly as it
+    # was, the same as one that says nothing about the price.
+    booking = _booking_days(job)
+    wanted = counter.proposed_days or [d.gig_date for d in booking]
 
     # Accepting a counter seals the booking too, so the same rule applies. The
     # wording follows who is pressing it: the worker is told about their own
     # diary, the client about the worker's.
-    clash = clashing_dates(worker, days)
+    # Against the days being agreed, which is not the same list as the rows the
+    # booking currently holds — a counter can name a day nobody has posted yet.
+    clash = sorted(set(wanted) & set(worker.booked_dates))
     if clash:
         if party == Party.WORKER:
             messages.error(
@@ -320,13 +405,20 @@ def counter_respond(request, pk: int):
 
     all_sealed = []
     with transaction.atomic():
+        days = _reshape_booking(job, booking, wanted)
+
         for index, day in enumerate(days):
+            # The counter and the offer rows hang off the job that was being
+            # answered, wherever it ended up in the reshaped list. Writing the
+            # agreed price onto some other day of the booking would put it on a
+            # row nobody had proposed anything about.
+            answered = day.pk == job.pk
             result = _seal(
                 day.pk,
                 worker,
-                counter if index == 0 else None,
+                counter if answered else None,
                 now,
-                offer=offer if index == 0 else None,
+                offer=offer if answered else None,
                 actor=actor,
             )
             if result is not None:

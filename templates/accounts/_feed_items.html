@@ -24,6 +24,16 @@ arrived with the page or afterwards.
         </span>
       </div>
 
+      {% comment %} The level, on the home feed too. Every other screen that shows a job
+         shows it — the board, the job page — and this is the one somebody who
+         has never done the work lands on first, so leaving it off here left the
+         question unanswered in the place it is asked hardest.
+
+         The same component as everywhere else, so the answer looks the same
+         wherever it is read.
+      {% endcomment %}
+      {% include "jobs/_experience_badge.html" with job=job %}
+
       <p class="feed-tags">
         {% if job.is_gig %}
           {% comment %} A booking of several days is one card. Five cards differing

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load i18n money_extras %}
-{% block title %}{% translate "Counter — Construction's Finest" %}{% endblock %}
+{% block title %}{% translate "Counter — XTISE" %}{% endblock %}
 
 {% block content %}
   <h1>{% if opening %}{% translate "Name your price" %}{% else %}{% translate "Put different terms up" %}{% endif %}</h1>
@@ -31,9 +31,13 @@
         <div class="k">{% translate "Hours" %}</div>
         <div class="v">{{ terms.gig_hours|floatformat:"-1" }}</div>
       </div>
+      {% comment %} The days as they stand, not the one row this page was opened from.
+         An offer can be a week, and "Tue 25 Aug" beside a form that lets you
+         untick a Wednesday would be describing something else.
+      {% endcomment %}
       <div class="stat stat--jobs">
-        <div class="k">{% translate "Date" %}</div>
-        <div class="v">{{ terms.gig_date|date:"D j M" }}</div>
+        <div class="k">{% blocktranslate count n=terms.gig_dates|length %}Day{% plural %}Days{% endblocktranslate %}</div>
+        <div class="v">{{ terms.days_display }}</div>
       </div>
     </div>
   </div>

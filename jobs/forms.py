@@ -14,8 +14,47 @@ from django.utils.translation import gettext_lazy as _
 
 from core.dates import date_picker_attrs, parse_date_list
 from core.models import Region, Trade
+from core.steps import StepsMixin
 
-from .models import Application, Counter, Job, JobType, PositionType, Review
+from .models import (
+    Application,
+    Counter,
+    ExperienceWanted,
+    Job,
+    JobType,
+    PositionType,
+    Review,
+)
+
+
+def escrow_available() -> bool:
+    """Whether this deployment can actually hold money.
+
+    Read per call rather than at import: settings are read from the
+    environment, and a test that overrides the key expects the form built after
+    it to have noticed.
+
+    Imported inside the function so ``jobs.forms`` does not pull the payments
+    app in at import time for a boolean.
+    """
+    from payments import gateway
+
+    return gateway.configured()
+
+
+def _hide_escrow(form) -> None:
+    """Take the escrow question off a form that must not ask it.
+
+    ``disabled`` rather than only hiding it, and the distinction is the whole
+    point: a hidden input is a value a caller can post anyway, and this one
+    decides whether the platform is expected to hold somebody's money. Django
+    ignores submitted data for a disabled field and uses the initial, so the
+    answer is False whatever arrives.
+    """
+    field = form.fields["use_escrow"]
+    field.disabled = True
+    field.initial = False
+    field.widget = forms.HiddenInput()
 
 
 class _RegionDefaultMixin(forms.ModelForm):
@@ -36,8 +75,20 @@ class _RegionDefaultMixin(forms.ModelForm):
             self.fields["region"].widget = forms.HiddenInput()
 
 
-class _BaseJobForm(_RegionDefaultMixin):
-    """What both post types ask for."""
+class _BaseJobForm(StepsMixin, _RegionDefaultMixin):
+    """What both post types ask for.
+
+    The fields are also grouped into steps. Posting a job is the moment a
+    tradesperson decides whether this app is worth the trouble, and eleven
+    inputs on one screen is a form somebody abandons on a phone at the side of
+    a road — not because any single answer is hard, but because the screenful
+    reads as paperwork before the first one is given.
+
+    The grouping lives on the form rather than in the template because it is a
+    fact about the questions: what belongs with what, and in what order they
+    make sense to answer. A template that decided this would have to know every
+    field name, and would go stale the first time one was added.
+    """
 
     class Meta:
         model = Job
@@ -72,6 +123,11 @@ class _BaseJobForm(_RegionDefaultMixin):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["trade"].queryset = Trade.objects.all()
+        # Django's placeholder for an unchosen ModelChoiceField is a row of
+        # dashes. It is the first thing on the first screen of the flow, and it
+        # reads as a broken field rather than as a question waiting for an
+        # answer.
+        self.fields["trade"].empty_label = _("Pick a trade")
 
 
 class GigForm(_BaseJobForm):
@@ -113,6 +169,20 @@ class GigForm(_BaseJobForm):
     #: row, a thread and a card in somebody's list, and a mistyped paste should
     #: not be able to create ninety of them.
     MAX_DAYS = 14
+
+    #: Six questions, in the order somebody plans a day's work: what needs
+    #: doing, when, how long and for how much, who can do it, where and what to
+    #: tell them, and finally how the money moves. The trade comes first
+    #: because it is the only answer with no wrong option - starting on an
+    #: easy question is what gets the second one answered.
+    STEPS = [
+        (_("What kind of work is it?"), ["trade"]),
+        (_("Which days?"), ["gig_dates"]),
+        (_("How long, and how much?"), ["gig_hours", "fixed_pay"]),
+        (_("Who can do this?"), ["experience_wanted"]),
+        (_("Tell them about it"), ["title", "description", "region", "location"]),
+        (_("How is it paid?"), ["use_escrow"], ["site_latitude", "site_longitude"]),
+    ]
 
     class Meta(_BaseJobForm.Meta):
         fields = _BaseJobForm.Meta.fields + [
@@ -177,6 +247,23 @@ class GigForm(_BaseJobForm):
             date_picker_attrs(floor=timezone.localdate())
         )
 
+        # No Stripe, no escrow question — and no screen asking it either. The
+        # optional coordinates move up to the description step rather than
+        # being stranded behind a heading about payment, which leaves five
+        # questions instead of six. steps() numbers whatever it is given.
+        if not escrow_available():
+            _hide_escrow(self)
+            self.STEPS = [
+                (question, fields, *rest)
+                for question, fields, *rest in self.STEPS
+                if fields != ["use_escrow"]
+            ]
+            self.STEPS[-1] = (
+                self.STEPS[-1][0],
+                self.STEPS[-1][1],
+                ["site_latitude", "site_longitude"],
+            )
+
     def clean_gig_dates(self) -> list:
         dates = parse_date_list(
             self.cleaned_data.get("gig_dates"), today=timezone.localdate()
@@ -238,6 +325,18 @@ class GigForm(_BaseJobForm):
 
 class StandingForm(_BaseJobForm):
     """An open position, paid at a rate rather than a fixed total."""
+
+    #: Five, not the gig's six: a position has no date and no escrow decision,
+    #: because nothing is held for work with no day attached. The count is
+    #: whatever the questions come to - see _BaseJobForm.steps, which numbers
+    #: them rather than promising a fixed total.
+    STEPS = [
+        (_("What kind of work is it?"), ["trade"]),
+        (_("How long is it for?"), ["position_type"]),
+        (_("What does it pay?"), ["rate_type", "rate_min", "rate_max"]),
+        (_("Who can do this?"), ["experience_wanted"]),
+        (_("Tell them about it"), ["title", "description", "region", "location"]),
+    ]
 
     class Meta(_BaseJobForm.Meta):
         fields = _BaseJobForm.Meta.fields + [
@@ -451,20 +550,38 @@ class CounterForm(forms.ModelForm):
     single edit instead of a re-entry of everything.
     """
 
+    #: The days, as the same control the offer was written with. A worker
+    #: answering a week has to be able to say "these ones" — see the model's
+    #: note on why one date could not.
+    #:
+    #: ``data-date-list`` is what crew.js turns into the calendar. Without the
+    #: script it stays the text box it already is and the clean method below
+    #: parses it either way, so the field never depends on JavaScript.
+    gig_dates = forms.CharField(
+        required=False,
+        label=_("Which days?"),
+        help_text=_("Tick the days you can do. Leave out any you can't."),
+        widget=forms.TextInput(
+            attrs={"placeholder": _("2026-08-04, 2026-08-05"), "data-date-list": ""}
+        ),
+    )
+
+    #: The same ceiling the posting form uses, and for the same reason: each day
+    #: agreed here becomes a row, a thread and a card in somebody's list.
+    MAX_DAYS = 14
+
     class Meta:
         model = Counter
-        fields = ["fixed_pay", "gig_hours", "gig_date", "use_escrow", "note"]
+        fields = ["fixed_pay", "gig_hours", "use_escrow", "note"]
         labels = {
             "fixed_pay": _("Total pay for the day"),
             "gig_hours": _("Hours"),
-            "gig_date": _("Date"),
             "use_escrow": _("How is this paid?"),
             "note": _("Why? (optional)"),
         }
         widgets = {
             "fixed_pay": forms.NumberInput(attrs={"step": "1", "min": "1"}),
             "gig_hours": forms.NumberInput(attrs={"step": "0.5", "min": "0.5"}),
-            "gig_date": forms.DateInput(attrs={"type": "date"}),
             # Two labelled options, not a lone tick box. An unticked box cannot
             # tell "settle it ourselves" apart from "did not read the question",
             # and this one decides whether anybody's money is protected.
@@ -479,35 +596,81 @@ class CounterForm(forms.ModelForm):
             ),
         }
 
-    def __init__(self, *args, terms=None, **kwargs):
-        """``terms`` is the job as it stands, plus any counter already agreed."""
+    def __init__(self, *args, terms=None, worker=None, **kwargs):
+        """``terms`` is the job as it stands, plus any counter already agreed.
+
+        ``worker`` is whoever would end up doing the days. Their diary is what
+        the calendar greys out, and it is the reason this form takes them at
+        all: the answer "I'm booked that day" should be visible on the calendar
+        rather than discovered on submit.
+        """
         super().__init__(*args, **kwargs)
         self.terms = terms
+        self.worker = worker
 
-        # The same calendar the offer was written on. Attached before the early
-        # return below, because the picker is how the field is operated and not
-        # part of pre-filling it — a counter form built without terms still has
-        # a date to collect.
-        #
-        # The input keeps type="date". The script hides it and writes ISO into
-        # it, which is what a date input holds anyway, so with JS off this is
-        # still the native picker rather than a text box asking for a format.
-        self.fields["gig_date"].widget.attrs.update(
-            date_picker_attrs(floor=timezone.localdate(), single=True)
+        # Declared fields land after the model's, which would put the calendar
+        # below the note. Days first, the same order the posting form uses and
+        # for the same reason: the hours and the price are answers about the
+        # days, and the note is a remark about all of it.
+        self.order_fields(
+            ["gig_dates", "fixed_pay", "gig_hours", "use_escrow", "note"]
         )
-        self.fields["gig_date"].widget.attrs["min"] = timezone.localdate().isoformat()
+
+        # "Yes, but not on trust" is a real answer and a good reason to counter
+        # — when there is an escrow to ask for. Where there is not, asking is
+        # proposing terms the other side could accept and nobody could honour.
+        if not escrow_available():
+            _hide_escrow(self)
+
+        # The days they have already sold. Attached before the early return
+        # below, because the picker is how the field is operated and not part
+        # of pre-filling it — a counter form built without terms still has days
+        # to collect. Recomputed in clean_gig_dates as well: this is what the
+        # picker shows, not what the server trusts.
+        self.taken_days = list(worker.booked_dates) if worker is not None else []
+        self.fields["gig_dates"].widget.attrs.update(
+            date_picker_attrs(floor=timezone.localdate(), taken=self.taken_days)
+        )
 
         if terms is None:
             return
         if not self.is_bound:
-            for name in ("fixed_pay", "gig_hours", "gig_date", "use_escrow"):
+            for name in ("fixed_pay", "gig_hours", "use_escrow"):
                 self.fields[name].initial = getattr(terms, name, None)
+            # Pre-filled with the booking as it stands, so somebody dropping
+            # one day out of five unticks one box rather than entering four.
+            days = getattr(terms, "gig_dates", None) or []
+            self.fields["gig_dates"].initial = ", ".join(d.isoformat() for d in days)
 
-    def clean_gig_date(self):
-        day = self.cleaned_data.get("gig_date")
-        if day is not None and day < timezone.localdate():
-            raise forms.ValidationError("That date has already passed.")
-        return day
+    def clean_gig_dates(self) -> list:
+        dates = parse_date_list(
+            self.cleaned_data.get("gig_dates"), today=timezone.localdate()
+        )
+        # Empty means "the days are not part of this counter", exactly like a
+        # blank price means the money is not. Somebody haggling over the rate
+        # alone should not have to restate the calendar to do it.
+        if not dates:
+            return []
+        if len(dates) > self.MAX_DAYS:
+            raise forms.ValidationError(
+                _(
+                    "That's %(count)s days — %(limit)s at a time is the limit. "
+                    "Agree these and talk about the rest separately."
+                )
+                % {"count": len(dates), "limit": self.MAX_DAYS}
+            )
+
+        # A day this worker has already sold cannot be agreed here. The picker
+        # greys them out; this is the rule, and it has to hold for a form that
+        # was open while another deal closed underneath it.
+        if self.worker is not None:
+            clash = sorted(set(dates) & set(self.worker.booked_dates))
+            if clash:
+                raise forms.ValidationError(
+                    _("Already booked on %(days)s. Untick those.")
+                    % {"days": ", ".join(d.strftime("%d/%m") for d in clash)}
+                )
+        return dates
 
     def clean(self):
         cleaned = super().clean()
@@ -520,26 +683,54 @@ class CounterForm(forms.ModelForm):
         moved = any(
             cleaned.get(name) is not None
             and cleaned.get(name) != getattr(self.terms, name, None)
-            for name in ("fixed_pay", "gig_hours", "gig_date", "use_escrow")
+            for name in ("fixed_pay", "gig_hours", "use_escrow")
         )
+        days = cleaned.get("gig_dates")
+        if days is not None and list(days) != list(getattr(self.terms, "gig_dates", []) or []):
+            moved = True
         if not moved:
             raise forms.ValidationError(
-                "Change the pay, the hours or the date — otherwise there's "
+                "Change the pay, the hours or the days — otherwise there's "
                 "nothing here to answer."
             )
         return cleaned
 
+    def save(self, commit=True):
+        """Days go onto the model as ISO strings — see Counter.gig_dates."""
+        counter = super().save(commit=False)
+        days = self.cleaned_data.get("gig_dates") or []
+        counter.gig_dates = [d.isoformat() for d in days] or None
+        if commit:
+            counter.save()
+        return counter
+
 
 class ApplicationForm(forms.ModelForm):
+    """One optional note. There is no CV here and there never was.
+
+    The wording is the whole of it. "What makes you right for this one?" is a
+    reasonable question to ask a tradesperson and an impossible one to ask
+    somebody who has never held a trowel — which is most of the people this
+    board is for. They read it as proof they are not qualified and they close
+    the tab, and the client never learns anyone wanted the day.
+
+    So the field asks for a note and says it is optional in its own label,
+    where somebody scanning the page will actually read it.
+    """
+
     class Meta:
         model = Application
         fields = ["message"]
-        labels = {"message": "Message to the client"}
+        labels = {"message": _("Add a note (optional)")}
+        # The model's own help text is the sentence this form exists to stop
+        # asking. Cleared here rather than on the model: what to call a field
+        # is a question about this screen, and the column is shared.
+        help_texts = {"message": ""}
         widgets = {
             "message": forms.Textarea(
                 attrs={
-                    "rows": 5,
-                    "placeholder": _("Optional — what makes you right for this one?"),
+                    "rows": 4,
+                    "placeholder": _("Anything you want them to know. Or nothing."),
                 }
             )
         }
@@ -556,8 +747,14 @@ class BrowseFilterForm(forms.Form):
     #: Rendered in the search bar rather than the panel.
     SEARCH_FIELD = "q"
 
+    #: Rendered as chips above the list rather than in the panel. A filter this
+    #: important cannot live behind a button: the person it is for has to see
+    #: it without being told the panel exists.
+    CHIP_FIELD = None
+
     def panel_fields(self):
-        return [f for f in self if f.name != self.SEARCH_FIELD]
+        hoisted = {self.SEARCH_FIELD, self.CHIP_FIELD}
+        return [f for f in self if f.name not in hoisted]
 
     def active_count(self) -> int:
         """How many panel filters are set.
@@ -589,10 +786,51 @@ class JobFilterForm(BrowseFilterForm):
         choices=[("", _("Standing and gigs"))] + list(JobType.choices),
     )
     #: The one filter that answers "is this app for me?". Somebody with no
-    #: trade behind them is asking exactly this, and it should take one tap.
-    beginners = forms.BooleanField(
-        required=False, label=_("No experience needed")
+    #: trade behind them is asking exactly this, and it should take one tap —
+    #: so it is rendered as chips above the board, not folded into the panel.
+    experience = forms.ChoiceField(
+        required=False,
+        label=_("Experience"),
+        choices=[("", _("All"))] + list(ExperienceWanted.choices),
     )
+
+    CHIP_FIELD = "experience"
+
+    #: Short forms for the chips. The full choice labels are sentences written
+    #: for somebody filling in a form ("No experience needed — will show you");
+    #: a row of chips on a phone has room for two words.
+    CHIP_LABELS = {
+        "": _("All"),
+        ExperienceWanted.NONE: _("No experience"),
+        ExperienceWanted.SOME: _("Some experience"),
+        ExperienceWanted.SKILLED: _("Skilled"),
+    }
+
+    def chips(self):
+        """The experience filter as one tap each, in order of how much is asked.
+
+        Yields the value, its short label, its tone, and whether it is the one
+        currently applied, so the template stays markup and does not have to
+        know the choice values.
+        """
+        current = self.data.get(self.CHIP_FIELD) or ""
+        tones = {
+            "": "all",
+            ExperienceWanted.NONE: "go",
+            ExperienceWanted.SOME: "steady",
+            ExperienceWanted.SKILLED: "stop",
+        }
+        for value in ("", ExperienceWanted.NONE, ExperienceWanted.SOME,
+                      ExperienceWanted.SKILLED):
+            yield {
+                # None rather than "" for All: the querystring tag drops a
+                # parameter set to None and keeps an empty one, and a URL
+                # ending "?experience=" is a filter that looks applied.
+                "value": value or None,
+                "label": self.CHIP_LABELS[value],
+                "tone": tones[value],
+                "current": current == value,
+            }
 
     def filtered(self, queryset):
         data = self.cleaned_data if self.is_valid() else {}
@@ -601,7 +839,7 @@ class JobFilterForm(BrowseFilterForm):
             queryset.matching(data.get("q"))
             .for_trade(trade.slug if trade else None)
             .for_type(data.get("job_type"))
-            .open_to_beginners(bool(data.get("beginners")))
+            .for_experience(data.get("experience"))
         )
 
 

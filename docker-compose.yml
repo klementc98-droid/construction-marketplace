@@ -1,0 +1,106 @@
+# XTISE in production, on one VPS.
+#
+# Four services and one of them is the app twice: `web` answers requests and
+# `ticker` runs the scheduled work. They are the same image with a different
+# command, so a deploy cannot leave the two on different versions of the code.
+#
+#   docker compose up -d --build
+#
+# Read docs/deploy.md before the first run — the certificate has to exist
+# before nginx will start with the TLS server block.
+
+name: xtise
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # The healthcheck is what `depends_on: condition: service_healthy` waits
+    # for. Without it the web container starts while Postgres is still opening
+    # its socket, the first migrate fails, and the stack comes up broken in a
+    # way that looks like a code error.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_HOST: db
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      # User uploads — CVs and portfolio photos. A named volume rather than the
+      # image, because a rebuild replaces the image and these have to survive
+      # it. Back this up; see docs/deploy.md.
+      - media:/app/media
+    # Not published to the host. nginx is the only thing that can reach it, so
+    # there is no port on this box answering plain HTTP to the internet.
+    expose:
+      - "8000"
+
+  ticker:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_HOST: db
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - media:/app/media
+    # The scheduled work: queued email every minute, reconciliation every five,
+    # expiry and settlement and tomorrow's reminders hourly. One process, run
+    # under the same supervision as everything else, rather than a crontab on
+    # the host that nobody looks at until an email stops arriving.
+    #
+    # It runs migrations too, through the same entrypoint, which is harmless:
+    # migrate is idempotent and whichever container gets there first wins.
+    command: ["python", "manage.py", "run_timers"]
+
+  nginx:
+    image: nginx:1.29-alpine
+    restart: unless-stopped
+    depends_on:
+      - web
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - certs:/etc/letsencrypt
+      - certbot-www:/var/www/certbot
+      - media:/srv/media:ro
+    # Reload every twelve hours so a renewed certificate is picked up without
+    # anybody remembering to do it.
+    command: >
+      /bin/sh -c "while :; do sleep 12h & wait $${!}; nginx -s reload; done & nginx -g 'daemon off;'"
+
+  certbot:
+    image: certbot/certbot:latest
+    volumes:
+      - certs:/etc/letsencrypt
+      - certbot-www:/var/www/certbot
+    # Wakes twice a day, renews anything inside thirty days of expiry, sleeps.
+    # Let's Encrypt certificates last ninety days and renewing by hand is a
+    # task that gets forgotten exactly once.
+    entrypoint: >
+      /bin/sh -c "trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done"
+
+volumes:
+  pgdata:
+  media:
+  certs:
+  certbot-www:

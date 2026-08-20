@@ -1,0 +1,18 @@
+{% load i18n %}{% comment %}
+ExperienceBadge — what this job asks of the person taking it, in three levels.
+
+The component the product turns on. Most people reading this board have never
+done the work and arrive assuming the answer is no, so the answer has to be a
+badge on the card and not a sentence in the description: they decide whether to
+keep reading in about half a second, and a paragraph loses that argument.
+
+Takes ``job``. Green reads as an invitation and is deliberately the loudest of
+the three — the other two are quiet because "you need experience" is
+information, while "you don't" is the reason somebody stays.
+{% endcomment %}
+<span class="xp xp-{{ job.experience_tone }}">
+  <span class="xp-dot" aria-hidden="true"></span>
+  {% if job.experience_tone == "go" %}{% translate "No experience needed" %}
+  {% elif job.experience_tone == "steady" %}{% translate "Some experience helps" %}
+  {% else %}{% translate "Experienced" %}{% endif %}
+</span>
