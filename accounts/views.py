@@ -203,6 +203,14 @@ def worker_edit(request):
         {
             "form": form,
             "profile": profile,
+            # Whether this is the first time through, which decides between one
+            # question per screen and the whole form at once.
+            #
+            # No trades is the test, and it is exact: the profile row is created
+            # when the role is chosen, so its existence proves nothing, while
+            # trades is required by the form and so cannot be absent from a
+            # profile anybody has ever saved.
+            "stepped": not profile.trades.exists(),
             "photo_form": PortfolioPhotoForm(),
             "regulated_trades": Trade.objects.filter(requires_license=True),
             "licenses": {lic.trade_id: lic.number for lic in profile.licenses.all()},

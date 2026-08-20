@@ -10,6 +10,7 @@ from django.utils import timezone
 
 from config import business_rules as rules
 from core.models import Region, Trade
+from core.steps import StepsMixin
 from core.dates import date_picker_attrs, parse_date_list
 
 from .models import (
@@ -150,7 +151,35 @@ class _RegionMixin(forms.ModelForm):
             self.fields["region"].widget = forms.HiddenInput()
 
 
-class WorkerProfileForm(_RegionMixin):
+class WorkerProfileForm(StepsMixin, _RegionMixin):
+    """A helper's profile.
+
+    Filled in one question per screen the first time — see :mod:`core.steps`,
+    whose machinery the job forms share. Thirteen inputs on one screen is a
+    screen that says "prove you belong here", and the person writing this has
+    often never done the work. It is the last place in the app that can afford
+    to look like paperwork.
+
+    Editing shows the whole thing at once, because somebody who came back to
+    change their rate should not be walked through six screens to reach it.
+    """
+
+    #: Trade first: the one question anybody can answer without thinking, and
+    #: the right way to open. Experience rides with it rather than getting a
+    #: screen of its own, because "none" is a fine answer here and a screen
+    #: asking only that makes it look like a test.
+    STEPS = [
+        (_("What can you do?"), ["trades", "years_experience"]),
+        (_("What do you charge?"), ["rate_type", "rate_min", "rate_max"]),
+        (
+            _("When can you work?"),
+            ["availability_status", "available_dates", "availability_note"],
+        ),
+        (_("Where do you work?"), ["region", "service_area"]),
+        (_("What are you after?"), ["seeking", "open_to_full_time"]),
+        (_("Anything you want them to know?"), ["bio"], ["cv"]),
+    ]
+
     #: An explicit Yes/No, not a lone tick box. An unticked box cannot tell
     #: "no" apart from "didn't read it", and this answer decides whether the
     #: worker appears in a whole class of client searches. Required, because a

@@ -14,6 +14,7 @@ from django.utils.translation import gettext_lazy as _
 
 from core.dates import date_picker_attrs, parse_date_list
 from core.models import Region, Trade
+from core.steps import StepsMixin
 
 from .models import (
     Application,
@@ -44,7 +45,7 @@ class _RegionDefaultMixin(forms.ModelForm):
             self.fields["region"].widget = forms.HiddenInput()
 
 
-class _BaseJobForm(_RegionDefaultMixin):
+class _BaseJobForm(StepsMixin, _RegionDefaultMixin):
     """What both post types ask for.
 
     The fields are also grouped into steps. Posting a job is the moment a
@@ -58,71 +59,6 @@ class _BaseJobForm(_RegionDefaultMixin):
     make sense to answer. A template that decided this would have to know every
     field name, and would go stale the first time one was added.
     """
-
-    #: (question, [field names]) or (question, [field names], [folded names]).
-    #: Every visible field belongs to exactly one step - see the coverage test,
-    #: which fails rather than letting a new field quietly render nowhere.
-    #:
-    #: The third element is for fields that belong on a step without being what
-    #: it asks: optional, secondary, and answered by roughly nobody. They are
-    #: rendered behind a disclosure rather than dropped, because "we removed the
-    #: field nobody used" is how a feature disappears for the few who did.
-    STEPS: list = []
-
-    @classmethod
-    def step_field_names(cls) -> list:
-        """Every field name the steps name, in order, folded ones included.
-
-        One place knows the shape of a STEPS entry. Everything else - the
-        coverage tests especially - asks here, so adding a third element to an
-        entry does not mean finding every loop that unpacked two.
-        """
-        names = []
-        for _question, fields, *rest in cls.STEPS:
-            names.extend(fields)
-            names.extend(rest[0] if rest else [])
-        return names
-
-    def steps(self):
-        """The steps, numbered, with their bound fields.
-
-        Hidden fields are skipped: the region is a real field that is filled in
-        and hidden while there is one launch market, and a step containing only
-        it would be a screen asking nothing. A step left empty that way
-        disappears rather than being counted, so the progress never reads
-        "step 2 of 6" on a screen with no question on it.
-        """
-        rendered = []
-        for question, names, *rest in self.STEPS:
-            folded_names = rest[0] if rest else []
-            fields = [self[n] for n in names if n in self.fields]
-            fields = [f for f in fields if not f.is_hidden]
-            folded = [self[n] for n in folded_names if n in self.fields]
-            folded = [f for f in folded if not f.is_hidden]
-            if fields or folded:
-                # When the step asks one thing and the field's label is that
-                # same thing, the label is kept for the accessibility tree and
-                # taken off the screen - see .step-said in the stylesheet.
-                # Rendering it twice makes a one-question screen look like a
-                # heading with a mistake under it.
-                said = (
-                    len(fields) == 1
-                    and str(fields[0].label).strip() == str(question).strip()
-                )
-                rendered.append(
-                    {
-                        "question": question,
-                        "fields": fields,
-                        "folded": folded,
-                        "label_said": said,
-                    }
-                )
-        total = len(rendered)
-        for i, step in enumerate(rendered, start=1):
-            step["index"] = i
-            step["total"] = total
-            step["is_last"] = i == total
-        return rendered
 
     class Meta:
         model = Job
