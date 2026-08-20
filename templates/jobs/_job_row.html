@@ -12,6 +12,14 @@ so a job looks the same everywhere it appears.
         {% else %}{{ job.pay_display }}{% endif %}
       </span>
     </div>
+    {% comment %} First line of the card, before the trade or the money: whether this is
+       a job the reader can take at all. Most people on this board have never
+       done the work, and a card that makes them read to the bottom to find out
+       is a card they scroll past.
+    {% endcomment %}
+    {% if job.teaches_on_the_job %}
+      <span class="badge learn">{% translate "No experience needed" %}</span>
+    {% endif %}
     <div class="row-meta">
       {% if job.is_gig %}
         {% comment %} A booking of several days is one row: the badge carries the count

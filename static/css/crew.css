@@ -2179,6 +2179,16 @@ a.job-row:hover .stat-row.compact .stat {
   color: var(--accent-fg);
   box-shadow: var(--glow-gig);
 }
+/* The badge that decides whether somebody reads the rest of the card. Green
+   rather than gold: gold is what this app charges for and what it pays out,
+   and this is neither — it is an invitation, and it should read as one. */
+.badge.learn {
+  border-color: color-mix(in srgb, var(--ok) 40%, var(--line));
+  background: color-mix(in srgb, var(--ok) 12%, transparent);
+  color: var(--ok);
+  font-weight: 640;
+}
+
 .badge.state {
   border-color: color-mix(in srgb, var(--warn) 36%, var(--line));
   background: color-mix(in srgb, var(--warn) 10%, transparent);

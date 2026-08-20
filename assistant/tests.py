@@ -309,6 +309,7 @@ class CollectionTests(AssistantFixture):
         return {
             "title": "Framing help",
             "trade": self.carpentry.name,
+            "experience_wanted": "none",
             "description": "Two-storey rebuild, first floor.",
             "gig_dates": (timezone.localdate() + timedelta(days=3)).isoformat(),
             "gig_hours": 8,
@@ -348,6 +349,7 @@ class ReadyForReviewTests(AssistantFixture):
         payload = {
             "title": "Framing help",
             "trade": self.carpentry.name,
+            "experience_wanted": "none",
             "description": "First floor.",
             "gig_dates": (timezone.localdate() + timedelta(days=3)).isoformat(),
             "gig_hours": 8,
@@ -414,6 +416,7 @@ class HandoffTests(AssistantFixture):
             {
                 "title": "Framing help",
                 "trade": self.carpentry.pk,
+                "experience_wanted": "none",
                 "region": self.region.pk,
                 "description": "First floor.",
                 # Yesterday: the form must refuse it however it was collected.

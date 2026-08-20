@@ -182,6 +182,7 @@ class PostingPermissionTests(JobFactoryMixin, TestCase):
             reverse("jobs:post", args=["gig"]),
             {
                 "trade": self.carpentry.pk,
+                "experience_wanted": "none",
                 "title": "Concrete pour",
                 "description": "Slab, one day.",
                 "region": self.region.pk,
@@ -203,6 +204,7 @@ class PostingPermissionTests(JobFactoryMixin, TestCase):
             reverse("jobs:post", args=["gig"]),
             {
                 "trade": self.carpentry.pk,
+                "experience_wanted": "none",
                 "title": "Too late",
                 "description": "x",
                 "region": self.region.pk,

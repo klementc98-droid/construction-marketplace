@@ -53,6 +53,7 @@ class OfferTests(JobFactoryMixin, TestCase):
     def offer_payload(self, **overrides):
         return {
             "trade": self.carpentry.pk,
+            "experience_wanted": "none",
             "region": self.region.pk,
             "title": "Second fix, Tuesday",
             "description": "Hanging doors on the first floor.",
@@ -449,6 +450,7 @@ class MultiDayOfferTests(JobFactoryMixin, TestCase):
     def payload(self, dates, **overrides):
         return {
             "trade": self.carpentry.pk,
+            "experience_wanted": "none",
             "region": self.region.pk,
             "title": "Second fix",
             "description": "Hanging doors on the first floor.",
@@ -1080,6 +1082,7 @@ class StaleEditTests(JobFactoryMixin, TestCase):
     def edit_payload(self, **overrides):
         return {
             "trade": self.job.trade.pk,
+            "experience_wanted": "none",
             "region": self.job.region.pk,
             "title": self.job.title,
             "description": self.job.description,
@@ -1198,6 +1201,7 @@ class EditingADayOfABookingTests(JobFactoryMixin, TestCase):
             reverse("jobs:edit", args=[job.pk]),
             {
                 "trade": job.trade.pk,
+                "experience_wanted": "none",
                 "region": job.region.pk,
                 "title": job.title,
                 "description": job.description,
@@ -1257,6 +1261,7 @@ class PaymentMethodCounterTests(JobFactoryMixin, TestCase):
             reverse("jobs:offer", args=[self.worker_profile.pk]),
             {
                 "trade": self.carpentry.pk,
+                "experience_wanted": "none",
                 "region": self.region.pk,
                 "title": "Second fix",
                 "description": "Doors on the first floor.",
