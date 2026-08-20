@@ -225,13 +225,19 @@ transaction. It is not written yet.
 python manage.py test
 ```
 
-Around 670 tests, no network calls — Stripe and the assistant are both stubbed.
+Around 680 tests, no network calls — Stripe and the assistant are both stubbed.
 
 Stubbing the payment gateway is what makes the suite runnable without keys, and
 it hides exactly one thing: a mock accepts any arguments, so a service calling
 the gateway wrongly would pass every test and fail on the first real call. Two
 things stop that now — the patches are autospec'd, and one test binds the calls
 the services make against the signatures that will actually run.
+
+Stripe does not promise its events arrive in the order they happened, so the
+handlers are written to survive arriving backwards — a `payment_failed` for a
+superseded attempt cannot unfund a payment that is held, and an older
+`account.updated` cannot overwrite a newer one. Both are tested by delivering
+the events in the wrong order.
 
 The concurrency tests do not use threads, which prove nothing on SQLite. Each
 race is staged instead: a function is handed an instance that says one thing

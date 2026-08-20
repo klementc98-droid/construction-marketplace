@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone as dt_timezone
 
 from django.contrib import messages as flash
 from django.contrib.auth.decorators import login_required
@@ -345,18 +345,32 @@ def webhook(request):
         elif event["type"] == "account.updated":
             account = StripeAccount.objects.filter(account_id=obj["id"]).first()
             if account:
-                account.details_submitted = bool(obj.get("details_submitted"))
-                account.charges_enabled = bool(obj.get("charges_enabled"))
-                account.payouts_enabled = bool(obj.get("payouts_enabled"))
-                account.save(
-                    update_fields=[
-                        "details_submitted",
-                        "charges_enabled",
-                        "payouts_enabled",
-                        "updated_at",
-                    ]
+                # Stripe's timestamp, not ours, and compared before writing.
+                # Events are not delivered in the order they happened, so an
+                # older snapshot arriving late would otherwise overwrite a
+                # newer one — and these flags decide whether this worker can
+                # be funded at all. Being told "not yet" because two requests
+                # crossed is a person locked out of work by network timing.
+                stamped = datetime.fromtimestamp(
+                    event.get("created", 0), tz=dt_timezone.utc
                 )
-                handled = f"account {account.account_id} refreshed"
+                if account.flags_synced_at and account.flags_synced_at > stamped:
+                    handled = f"account {account.account_id}: older event ignored"
+                else:
+                    account.details_submitted = bool(obj.get("details_submitted"))
+                    account.charges_enabled = bool(obj.get("charges_enabled"))
+                    account.payouts_enabled = bool(obj.get("payouts_enabled"))
+                    account.flags_synced_at = stamped
+                    account.save(
+                        update_fields=[
+                            "details_submitted",
+                            "charges_enabled",
+                            "payouts_enabled",
+                            "flags_synced_at",
+                            "updated_at",
+                        ]
+                    )
+                    handled = f"account {account.account_id} refreshed"
     except Exception:  # pragma: no cover - defensive
         # Give the claim back and return 500 so Stripe retries. Keeping it
         # would mean the event is on record as handled while nothing happened,

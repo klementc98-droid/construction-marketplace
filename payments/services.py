@@ -562,7 +562,43 @@ def refund(escrow: EscrowPayment, *, actor: str) -> EscrowPayment:
 
 
 def mark_failed(escrow: EscrowPayment, reason: str) -> EscrowPayment:
+    """A payment attempt did not go through. Only from a row still waiting.
+
+    Written unconditionally until now, and that made it the one webhook able
+    to destroy money that exists. Stripe does not promise events arrive in the
+    order they happened, and a PaymentIntent that fails one attempt can succeed
+    on the next — so ``payment_failed`` for the first attempt can land *after*
+    ``amount_capturable_updated`` for the second. The row went from AUTHORIZED
+    to FAILED with the hold sitting live at Stripe, and nothing could reach it
+    afterwards: release refuses anything but AUTHORIZED, and reconciliation did
+    not look at FAILED rows at all. A funded job, unpayable, until the
+    authorisation expired on its own.
+
+    So the transition is claimed, and only from PENDING — the state that means
+    "we are waiting to hear whether money arrived". A failure arriving for a
+    row that has since been funded, released or returned is stale news about an
+    attempt that was superseded, and the only correct thing to do with it is
+    nothing.
+    """
+    if not claim(
+        EscrowPayment,
+        escrow.pk,
+        field="status",
+        expect=EscrowStatus.PENDING,
+        to=EscrowStatus.FAILED,
+        last_error=reason[:500],
+    ):
+        escrow.refresh_from_db()
+        if escrow.status != EscrowStatus.FAILED:
+            # Worth a line in the log: it is the ordinary out-of-order case,
+            # but it is also what a genuinely wrong failure would look like.
+            logger.info(
+                "Ignored a payment_failed for escrow %s, which is %s",
+                escrow.pk,
+                escrow.status,
+            )
+        return escrow
+
     escrow.status = EscrowStatus.FAILED
     escrow.last_error = reason[:500]
-    escrow.save(update_fields=["status", "last_error", "updated_at"])
     return escrow
