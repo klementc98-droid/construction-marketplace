@@ -41,15 +41,27 @@ class _BaseJobForm(_RegionDefaultMixin):
 
     class Meta:
         model = Job
-        fields = ["trade", "title", "description", "region", "location"]
+        fields = [
+            "trade",
+            "title",
+            "description",
+            "experience_wanted",
+            "region",
+            "location",
+        ]
         labels = {
             "trade": _("Trade"),
             "title": _("Give it a short name"),
             "description": _("Describe the work"),
+            "experience_wanted": _("Who can do this?"),
             "location": _("Where in town?"),
         }
         help_texts = {
             "title": _("The line people see on the board — a few words, not the whole job."),
+            "experience_wanted": _(
+                "Most of the people here are starting out. Saying you will "
+                "show them is what gets you applicants."
+            ),
             "location": _("Neighbourhood, cross streets, or site name."),
         }
         widgets = {
@@ -576,6 +588,11 @@ class JobFilterForm(BrowseFilterForm):
         label=_("Type"),
         choices=[("", _("Standing and gigs"))] + list(JobType.choices),
     )
+    #: The one filter that answers "is this app for me?". Somebody with no
+    #: trade behind them is asking exactly this, and it should take one tap.
+    beginners = forms.BooleanField(
+        required=False, label=_("No experience needed")
+    )
 
     def filtered(self, queryset):
         data = self.cleaned_data if self.is_valid() else {}
@@ -584,6 +601,7 @@ class JobFilterForm(BrowseFilterForm):
             queryset.matching(data.get("q"))
             .for_trade(trade.slug if trade else None)
             .for_type(data.get("job_type"))
+            .open_to_beginners(bool(data.get("beginners")))
         )
 
 

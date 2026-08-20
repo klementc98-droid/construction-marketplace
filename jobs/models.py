@@ -40,6 +40,26 @@ class JobType(models.TextChoices):
     GIG = "gig", _("One-day gig")
 
 
+class ExperienceWanted(models.TextChoices):
+    """How much the person posting actually needs the applicant to know.
+
+    The field the product exists for. This app is not a board where qualified
+    tradespeople bid for work — it is a tradesperson looking for a pair of
+    hands, and the person answering may be nineteen and have never held a
+    trowel. "No experience needed" is the sentence that decides whether they
+    apply at all, so it is a fact about the job rather than something buried in
+    a paragraph of description that they will read as "not for me".
+
+    Three answers rather than a checkbox, because "some" is the honest middle
+    and collapsing it into either extreme loses the jobs most people can
+    actually take.
+    """
+
+    NONE = "none", _("No experience needed — will show you")
+    SOME = "some", _("Some experience helps, not essential")
+    SKILLED = "skilled", _("Needs someone who knows the trade")
+
+
 class PositionType(models.TextChoices):
     """How long a standing position is expected to last.
 
@@ -77,6 +97,19 @@ class JobQuerySet(models.QuerySet):
 
     def for_trade(self, trade_slug: str | None):
         return self.filter(trade__slug=trade_slug) if trade_slug else self
+
+    def open_to_beginners(self, wanted: bool = True):
+        """Jobs somebody with no trade behind them can actually take.
+
+        The one filter on this board that changes who applies rather than what
+        they see. Somebody deciding whether this app is for them is asking
+        exactly this question, and it should take one tap to answer.
+        """
+        if not wanted:
+            return self
+        return self.filter(
+            experience_wanted__in=(ExperienceWanted.NONE, ExperienceWanted.SOME)
+        )
 
     def for_type(self, job_type: str | None):
         return self.filter(job_type=job_type) if job_type in JobType.values else self
@@ -246,6 +279,19 @@ class Job(TimestampedModel):
 
     trade = models.ForeignKey(Trade, on_delete=models.PROTECT, related_name="jobs")
     title = models.CharField(max_length=140)
+
+    #: What this job asks of the person taking it — see ExperienceWanted.
+    #:
+    #: Defaults to NONE, and that default is the product's opinion rather than
+    #: a shrug: most of these jobs are a second pair of hands, the people this
+    #: exists to reach have no experience to declare, and a board that assumes
+    #: skill by default quietly turns them away before they have applied.
+    experience_wanted = models.CharField(
+        max_length=16,
+        choices=ExperienceWanted.choices,
+        default=ExperienceWanted.NONE,
+        db_index=True,
+    )
     description = models.TextField(max_length=4000)
 
     region = models.ForeignKey(Region, on_delete=models.PROTECT, related_name="jobs")
@@ -588,6 +634,15 @@ class Job(TimestampedModel):
         nothing for either side to rate.
         """
         return self.state in (JobState.PAID_OUT, JobState.CLOSED)
+
+    @property
+    def teaches_on_the_job(self) -> bool:
+        """Would somebody with nothing behind them be welcome here?
+
+        Read by the board and by the job page, because it is the fact that
+        decides whether the person this app is for reads any further.
+        """
+        return self.experience_wanted == ExperienceWanted.NONE
 
     def get_absolute_url(self) -> str:
         """Where this job lives. Django's convention, and the one thing every

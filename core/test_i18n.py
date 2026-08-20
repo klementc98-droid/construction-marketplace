@@ -41,8 +41,8 @@ class CatalogueTests(TestCase):
             many = translation.ngettext(
                 "%(counter)s worker.", "%(counter)s workers.", 5
             )
-        self.assertEqual(one % {"counter": 1}, "1 τεχνίτης.")
-        self.assertEqual(many % {"counter": 5}, "5 τεχνίτες.")
+        self.assertEqual(one % {"counter": 1}, "1 βοηθός.")
+        self.assertEqual(many % {"counter": 5}, "5 βοηθοί.")
 
     def test_an_untranslated_string_falls_back_to_english(self):
         """Coverage is partial on purpose; the gap must read as English, not blank."""

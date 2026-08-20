@@ -10,9 +10,15 @@
        it costs to look.
     {% endcomment %}
     <section class="hero">
-      <h1>{% translate "Find work." %} <span class="hot">{% translate "Hire crew." %}</span></h1>
+      {% comment %} The headline is the whole positioning, so it says the thing nobody
+         else in this market says. Not "find work" — every board says that, and
+         it speaks to people who already have a trade. The person this exists
+         for does not have one yet and is asking whether they are allowed in.
+      {% endcomment %}
+      <h1>{% translate "No experience?" %}
+        <span class="hot">{% translate "Start on a site." %}</span></h1>
       <p>
-        {% translate "Day gigs and standing positions for the building trades. Find the work, find the people, agree it between you." %}
+        {% translate "Tradespeople here are looking for a pair of hands, not a CV. One day, one job, or a permanent place — you learn on site and you are paid for the days you work." %}
       </p>
       <a class="btn" href="{% url 'google_login' %}?process=login">
         <svg viewBox="0 0 24 24" aria-hidden="true" width="17" height="17">
