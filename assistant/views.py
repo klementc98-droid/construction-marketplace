@@ -139,7 +139,10 @@ def say(request):
     if not text:
         return HttpResponseBadRequest("Empty message.")
 
-    if conversation.rate_limited():
+    # Claimed rather than checked: the call is counted by the same operation
+    # that decides whether it is allowed, so concurrent requests cannot all
+    # read the same remaining allowance.
+    if not conversation.claim_call(request.user.pk):
         return JsonResponse(
             {
                 "reply": _(
@@ -152,7 +155,6 @@ def say(request):
         )
 
     conversation.add("user", text)
-    conversation.note_call()
 
     try:
         if conversation.branch == BRANCH_QA:
