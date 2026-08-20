@@ -11,6 +11,7 @@ from django.db import IntegrityError, models, transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from accounts.models import AvailabilityStatus, WorkerProfile
 from core.state_machine import Actor, JobState, assert_transition, claim
+from ..services import describe_dates
 from ..models import (
     Application,
     booking_of,
@@ -95,10 +96,21 @@ def _effective_terms(job, worker):
     What a new counter is measured against, and what "accept" would agree to.
     """
     counter = job.live_counter_from(worker)
+
+    # The days as they stand: whatever the live counter proposes, or else the
+    # booking itself. Not job.gig_date — a booking is several rows, and the one
+    # this view happens to be looking at is not the answer to "which days".
+    days = (counter.proposed_days if counter else []) or [
+        day.gig_date for day in _booking_days(job) if day.gig_date
+    ]
+
     return SimpleNamespace(
         fixed_pay=(counter.fixed_pay if counter and counter.fixed_pay is not None else job.fixed_pay),
         gig_hours=(counter.gig_hours if counter and counter.gig_hours is not None else job.gig_hours),
-        gig_date=(counter.gig_date if counter and counter.gig_date is not None else job.gig_date),
+        gig_dates=days,
+        gig_date=(days[0] if days else job.gig_date),
+        # Said the way a person would say it, for the panel above the form.
+        days_display=describe_dates(days),
         use_escrow=(
             counter.use_escrow
             if counter and counter.use_escrow is not None

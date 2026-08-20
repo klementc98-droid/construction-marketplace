@@ -503,20 +503,38 @@ class CounterForm(forms.ModelForm):
     single edit instead of a re-entry of everything.
     """
 
+    #: The days, as the same control the offer was written with. A worker
+    #: answering a week has to be able to say "these ones" — see the model's
+    #: note on why one date could not.
+    #:
+    #: ``data-date-list`` is what crew.js turns into the calendar. Without the
+    #: script it stays the text box it already is and the clean method below
+    #: parses it either way, so the field never depends on JavaScript.
+    gig_dates = forms.CharField(
+        required=False,
+        label=_("Which days?"),
+        help_text=_("Tick the days you can do. Leave out any you can't."),
+        widget=forms.TextInput(
+            attrs={"placeholder": _("2026-08-04, 2026-08-05"), "data-date-list": ""}
+        ),
+    )
+
+    #: The same ceiling the posting form uses, and for the same reason: each day
+    #: agreed here becomes a row, a thread and a card in somebody's list.
+    MAX_DAYS = 14
+
     class Meta:
         model = Counter
-        fields = ["fixed_pay", "gig_hours", "gig_date", "use_escrow", "note"]
+        fields = ["fixed_pay", "gig_hours", "use_escrow", "note"]
         labels = {
             "fixed_pay": _("Total pay for the day"),
             "gig_hours": _("Hours"),
-            "gig_date": _("Date"),
             "use_escrow": _("How is this paid?"),
             "note": _("Why? (optional)"),
         }
         widgets = {
             "fixed_pay": forms.NumberInput(attrs={"step": "1", "min": "1"}),
             "gig_hours": forms.NumberInput(attrs={"step": "0.5", "min": "0.5"}),
-            "gig_date": forms.DateInput(attrs={"type": "date"}),
             # Two labelled options, not a lone tick box. An unticked box cannot
             # tell "settle it ourselves" apart from "did not read the question",
             # and this one decides whether anybody's money is protected.
@@ -531,35 +549,75 @@ class CounterForm(forms.ModelForm):
             ),
         }
 
-    def __init__(self, *args, terms=None, **kwargs):
-        """``terms`` is the job as it stands, plus any counter already agreed."""
+    def __init__(self, *args, terms=None, worker=None, **kwargs):
+        """``terms`` is the job as it stands, plus any counter already agreed.
+
+        ``worker`` is whoever would end up doing the days. Their diary is what
+        the calendar greys out, and it is the reason this form takes them at
+        all: the answer "I'm booked that day" should be visible on the calendar
+        rather than discovered on submit.
+        """
         super().__init__(*args, **kwargs)
         self.terms = terms
+        self.worker = worker
 
-        # The same calendar the offer was written on. Attached before the early
-        # return below, because the picker is how the field is operated and not
-        # part of pre-filling it — a counter form built without terms still has
-        # a date to collect.
-        #
-        # The input keeps type="date". The script hides it and writes ISO into
-        # it, which is what a date input holds anyway, so with JS off this is
-        # still the native picker rather than a text box asking for a format.
-        self.fields["gig_date"].widget.attrs.update(
-            date_picker_attrs(floor=timezone.localdate(), single=True)
+        # Declared fields land after the model's, which would put the calendar
+        # below the note. Days first, the same order the posting form uses and
+        # for the same reason: the hours and the price are answers about the
+        # days, and the note is a remark about all of it.
+        self.order_fields(
+            ["gig_dates", "fixed_pay", "gig_hours", "use_escrow", "note"]
         )
-        self.fields["gig_date"].widget.attrs["min"] = timezone.localdate().isoformat()
+
+        # The days they have already sold. Attached before the early return
+        # below, because the picker is how the field is operated and not part
+        # of pre-filling it — a counter form built without terms still has days
+        # to collect. Recomputed in clean_gig_dates as well: this is what the
+        # picker shows, not what the server trusts.
+        self.taken_days = list(worker.booked_dates) if worker is not None else []
+        self.fields["gig_dates"].widget.attrs.update(
+            date_picker_attrs(floor=timezone.localdate(), taken=self.taken_days)
+        )
 
         if terms is None:
             return
         if not self.is_bound:
-            for name in ("fixed_pay", "gig_hours", "gig_date", "use_escrow"):
+            for name in ("fixed_pay", "gig_hours", "use_escrow"):
                 self.fields[name].initial = getattr(terms, name, None)
+            # Pre-filled with the booking as it stands, so somebody dropping
+            # one day out of five unticks one box rather than entering four.
+            days = getattr(terms, "gig_dates", None) or []
+            self.fields["gig_dates"].initial = ", ".join(d.isoformat() for d in days)
 
-    def clean_gig_date(self):
-        day = self.cleaned_data.get("gig_date")
-        if day is not None and day < timezone.localdate():
-            raise forms.ValidationError("That date has already passed.")
-        return day
+    def clean_gig_dates(self) -> list:
+        dates = parse_date_list(
+            self.cleaned_data.get("gig_dates"), today=timezone.localdate()
+        )
+        # Empty means "the days are not part of this counter", exactly like a
+        # blank price means the money is not. Somebody haggling over the rate
+        # alone should not have to restate the calendar to do it.
+        if not dates:
+            return []
+        if len(dates) > self.MAX_DAYS:
+            raise forms.ValidationError(
+                _(
+                    "That's %(count)s days — %(limit)s at a time is the limit. "
+                    "Agree these and talk about the rest separately."
+                )
+                % {"count": len(dates), "limit": self.MAX_DAYS}
+            )
+
+        # A day this worker has already sold cannot be agreed here. The picker
+        # greys them out; this is the rule, and it has to hold for a form that
+        # was open while another deal closed underneath it.
+        if self.worker is not None:
+            clash = sorted(set(dates) & set(self.worker.booked_dates))
+            if clash:
+                raise forms.ValidationError(
+                    _("Already booked on %(days)s. Untick those.")
+                    % {"days": ", ".join(d.strftime("%d/%m") for d in clash)}
+                )
+        return dates
 
     def clean(self):
         cleaned = super().clean()
@@ -572,14 +630,26 @@ class CounterForm(forms.ModelForm):
         moved = any(
             cleaned.get(name) is not None
             and cleaned.get(name) != getattr(self.terms, name, None)
-            for name in ("fixed_pay", "gig_hours", "gig_date", "use_escrow")
+            for name in ("fixed_pay", "gig_hours", "use_escrow")
         )
+        days = cleaned.get("gig_dates")
+        if days is not None and list(days) != list(getattr(self.terms, "gig_dates", []) or []):
+            moved = True
         if not moved:
             raise forms.ValidationError(
-                "Change the pay, the hours or the date — otherwise there's "
+                "Change the pay, the hours or the days — otherwise there's "
                 "nothing here to answer."
             )
         return cleaned
+
+    def save(self, commit=True):
+        """Days go onto the model as ISO strings — see Counter.gig_dates."""
+        counter = super().save(commit=False)
+        days = self.cleaned_data.get("gig_dates") or []
+        counter.gig_dates = [d.isoformat() for d in days] or None
+        if commit:
+            counter.save()
+        return counter
 
 
 class ApplicationForm(forms.ModelForm):

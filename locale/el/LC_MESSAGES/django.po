@@ -417,6 +417,10 @@ msgstr "Όλες οι ειδικότητες"
 msgid "Already booked"
 msgstr "Ήδη κλεισμένες"
 
+#: jobs/forms.py
+msgid "Already booked on %(days)s. Untick those."
+msgstr "Ήδη κλεισμένος στις %(days)s. Ξετσέκαρέ τες."
+
 #: templates/jobs/offer_form.html
 msgid "Already have the work posted?"
 msgstr "Έχεις ήδη ανεβάσει τη δουλειά;"
@@ -778,9 +782,7 @@ msgstr "Αντιπροσφορά — Construction's Finest"
 msgid "Current résumé"
 msgstr "Τρέχον βιογραφικό"
 
-#: jobs/forms.py
 #: jobs/models.py
-#: templates/jobs/counter_form.html
 #: templates/jobs/job_detail.html
 msgid "Date"
 msgstr "Ημερομηνία"
@@ -796,6 +798,12 @@ msgstr "Η ημερομηνία πέρασε"
 #: templates/jobs/job_detail.html
 msgid "Dates"
 msgstr "Ημερομηνίες"
+
+#: templates/jobs/counter_form.html
+msgid "Day"
+msgid_plural "Days"
+msgstr[0] "Μέρα"
+msgstr[1] "Μέρες"
 
 #: templates/notifications/email/tomorrow.txt
 msgid "Day %(day_number)s of %(n)s on this booking."
@@ -2529,6 +2537,10 @@ msgid "That job isn't open to offer any more — it may have been taken or alrea
 msgstr "Αυτή η δουλειά δεν είναι πλέον διαθέσιμη — μπορεί να κλείστηκε ή να στάλθηκε ήδη σε κάποιον."
 
 #: jobs/forms.py
+msgid "That's %(count)s days — %(limit)s at a time is the limit. Agree these and talk about the rest separately."
+msgstr "Αυτές είναι %(count)s μέρες — το όριο είναι %(limit)s τη φορά. Συμφωνήστε αυτές και τα υπόλοιπα κουβεντιάστε τα ξεχωριστά."
+
+#: jobs/forms.py
 msgid "That's %(count)s days — %(limit)s at a time is the limit. Post these and write the rest as a second batch."
 msgstr "Αυτές είναι %(count)s ημέρες — το όριο είναι %(limit)s κάθε φορά. Δημοσίευσε αυτές και γράψε τις υπόλοιπες σε δεύτερη παρτίδα."
 
@@ -2750,6 +2762,10 @@ msgstr "Αυτές οι ώρες δεν είναι σωστές"
 #: templates/messaging/inbox.html
 msgid "Threads open once a worker applies to one of your jobs, or once you apply to one."
 msgstr "Οι συνομιλίες ανοίγουν μόλις ένας βοηθός κάνει αίτηση σε δουλειά σου, ή μόλις κάνεις εσύ αίτηση σε κάποια."
+
+#: jobs/forms.py
+msgid "Tick the days you can do. Leave out any you can't."
+msgstr "Τσέκαρε τις μέρες που μπορείς. Άφησε έξω όσες δεν μπορείς."
 
 #: jobs/forms.py
 msgid "Title, description, or area"

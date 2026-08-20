@@ -102,7 +102,7 @@ of them has seen.
                 {% translate "asked for" %}
                 {% if round.fixed_pay %}{{ round.fixed_pay|money }}{% endif %}
                 {% if round.gig_hours %}· {{ round.gig_hours|floatformat:"-1" }} hrs{% endif %}
-                {% if round.gig_date %}· {{ round.gig_date|date:"D j M" }}{% endif %}
+                {% if round.gig_dates %}· {{ round.days_display }}{% endif %}
               </div>
               <div class="step-meta">
                 {{ round.get_status_display }} · {{ round.created_at|timesince }} ago

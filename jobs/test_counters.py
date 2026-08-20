@@ -90,7 +90,7 @@ class CounterFixture(JobFactoryMixin, TestCase):
             {
                 "fixed_pay": "280",
                 "gig_hours": "8",
-                "gig_date": self.job.gig_date.isoformat(),
+                "gig_dates": self.job.gig_date.isoformat(),
                 "note": "",
             }
             | payload,
@@ -196,7 +196,9 @@ class TermsSafetyTests(CounterFixture):
 
     def test_a_counter_can_move_the_date_as_well(self):
         moved = self.job.gig_date + timedelta(days=1)
-        counter = self.counter(Party.WORKER, fixed_pay=Decimal("280"), gig_date=moved)
+        counter = self.counter(
+            Party.WORKER, fixed_pay=Decimal("280"), gig_dates=[moved.isoformat()]
+        )
         self.as_client()
         self.respond(counter, "accept")
         self.job.refresh_from_db()
@@ -742,7 +744,7 @@ class PartialCounterTests(CounterFixture):
 
     def test_a_counter_that_leaves_the_date_alone_goes_through(self):
         self.as_worker()
-        response = self.post_counter(gig_date="")
+        response = self.post_counter(gig_dates="")
 
         self.assertEqual(response.status_code, 302)
         counter = Counter.objects.get(job=self.job)
@@ -753,7 +755,7 @@ class PartialCounterTests(CounterFixture):
         from messaging.models import Message
 
         self.as_worker()
-        self.post_counter(gig_date="")
+        self.post_counter(gig_dates="")
 
         body = Message.objects.latest("created_at").body
         # The job's own day, since the counter did not move it.
@@ -762,7 +764,7 @@ class PartialCounterTests(CounterFixture):
     def test_a_counter_about_the_money_alone_still_reads_whole(self):
         """Nothing but the price, so date and hours both fall back."""
         self.as_worker()
-        self.post_counter(gig_date="", gig_hours="", fixed_pay="300")
+        self.post_counter(gig_dates="", gig_hours="", fixed_pay="300")
 
         from messaging.models import Message
 
@@ -779,7 +781,7 @@ class CounterFormTests(CounterFixture):
             Party.WORKER,
             fixed_pay="240",
             gig_hours="8",
-            gig_date=self.job.gig_date.isoformat(),
+            gig_dates=self.job.gig_date.isoformat(),
         )
         self.assertEqual(self.job.counters.count(), 0)
 
@@ -787,7 +789,7 @@ class CounterFormTests(CounterFixture):
         self.as_worker()
         self.post_counter(
             Party.WORKER,
-            gig_date=(timezone.localdate() - timedelta(days=1)).isoformat(),
+            gig_dates=(timezone.localdate() - timedelta(days=1)).isoformat(),
         )
         self.assertEqual(self.job.counters.count(), 0)
 

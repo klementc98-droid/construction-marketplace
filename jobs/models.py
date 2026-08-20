@@ -18,6 +18,7 @@ discouraged.
 
 from __future__ import annotations
 
+from datetime import date
 from decimal import Decimal
 
 from django.conf import settings
@@ -1108,7 +1109,18 @@ class Counter(TimestampedModel):
         validators=[MinValueValidator(Decimal("1"))],
         help_text=_("Total for the day."),
     )
-    gig_date = models.DateField(null=True, blank=True)
+    #: The days being proposed, as ISO strings, oldest first. NULL means the
+    #: counter does not touch the days at all — the same as every other field
+    #: here, which names only what it wants changed.
+    #:
+    #: A list rather than a date, because an offer can be a week and the
+    #: commonest real answer to a week is "all of it except Wednesday". With
+    #: one date the only ways to say that were to decline the whole booking or
+    #: to counter with a single different day and lose the other four.
+    #:
+    #: Stored as strings rather than dates because JSON has no date type; read
+    #: through :attr:`proposed_days`, which is what everything else should use.
+    gig_dates = models.JSONField(null=True, blank=True)
     gig_hours = models.DecimalField(
         max_digits=4,
         decimal_places=1,
@@ -1198,6 +1210,35 @@ class Counter(TimestampedModel):
             hours = (job.gig_hours or Decimal("0")).normalize()
             rows.append((_("Hours"), f"{hours}", f"{self.gig_hours.normalize()}"))
         return rows
+
+    @property
+    def proposed_days(self) -> list:
+        """The days this counter puts on the table, as dates. Empty if none."""
+        return [date.fromisoformat(d) for d in (self.gig_dates or [])]
+
+    @property
+    def days_display(self) -> str:
+        """The proposed days as a person would say them: "19, 20 and 25 Aug".
+
+        Built here rather than joined in a template, because the last separator
+        is a word and words are translated — the same reason describe_dates
+        exists, which is what this defers to.
+        """
+        from .services import describe_dates
+
+        return describe_dates(self.proposed_days)
+
+    @property
+    def gig_date(self):
+        """The first proposed day, or None.
+
+        Kept as a property so the places that legitimately want one day — the
+        terms panel, the notification sentence, writing the day onto the job
+        row this counter hangs off — read the same name they always did, while
+        there is still exactly one stored representation of the answer.
+        """
+        days = self.proposed_days
+        return days[0] if days else None
 
     def apply_to(self, job: "Job") -> list[str]:
         """Write the agreed terms onto the job. Returns the fields changed.

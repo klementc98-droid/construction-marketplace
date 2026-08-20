@@ -2124,6 +2124,12 @@ details.fold > div { padding-top: 6px; animation: rise var(--t-base) var(--ease-
   .stat-row.compact {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  /* An odd tile last in a two-column grid leaves the gold ground showing where
+     a fourth reading would have gone — a solid block beside the last figure,
+     which reads as a missing tile rather than as a background. Stretching it
+     across both columns fills the row and gives the longest reading (a list of
+     dates) the width it wants anyway. */
+  .stat-row.compact .stat:last-child:nth-child(odd) { grid-column: 1 / -1; }
 }
 
 .stat--rate   { --tone: var(--accent); }
