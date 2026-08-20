@@ -524,6 +524,27 @@ def job_apply(request, pk: int):
             # booking, so the row per day is bookkeeping the reader never meets.
             days = _booking_days(job)
             with transaction.atomic():
+                # Re-read inside the transaction: the open check at the top of
+                # this view judged a state from before the form was filled in.
+                # Somebody confirmed in that window leaves an APPLIED row on a
+                # job that is taken — an application nobody will ever answer,
+                # sitting in that worker's list looking live.
+                #
+                # This narrows the window rather than closing it, and the
+                # difference is worth being exact about: an application has no
+                # status of its own to make the write conditional on. What is
+                # guaranteed is the part that matters — who gets the job is
+                # decided by the conditional UPDATE in _seal, and nothing
+                # arriving late can win it there.
+                if not Job.objects.filter(
+                    pk=job.pk, state=JobState.POSTED
+                ).exists():
+                    messages.error(
+                        request,
+                        "Somebody was confirmed for this job while you were "
+                        "writing — nothing has been sent.",
+                    )
+                    return redirect("jobs:list")
                 for day in days:
                     application = form.save(commit=False)
                     application.pk = None
@@ -577,9 +598,31 @@ def job_apply(request, pk: int):
 @require_POST
 def application_withdraw(request, pk: int):
     application = get_object_or_404(Application, pk=pk, worker=_worker(request))
-    application.status = ApplicationStatus.WITHDRAWN
-    application.responded_at = timezone.now()
-    application.save(update_fields=["status", "responded_at", "updated_at"])
+
+    # Only from APPLIED, and claimed rather than assumed. There was no state
+    # check here at all, so a worker who had just been picked could withdraw
+    # the application that got them the job — leaving the job saying they
+    # accepted it and the application saying they walked away. The job is
+    # sealed by then; nothing here can unseal it, and the record should not
+    # pretend otherwise.
+    if not claim(
+        Application,
+        application.pk,
+        field="status",
+        expect=ApplicationStatus.APPLIED,
+        to=ApplicationStatus.WITHDRAWN,
+        responded_at=timezone.now(),
+    ):
+        application.refresh_from_db()
+        messages.info(
+            request,
+            "That application has already been answered — nothing has been "
+            "changed."
+            if application.status != ApplicationStatus.WITHDRAWN
+            else "Already withdrawn.",
+        )
+        return redirect("jobs:detail", pk=application.job_id)
+
     messages.success(request, "Withdrawn.")
     return redirect("jobs:detail", pk=application.job_id)
 
@@ -834,6 +877,21 @@ def _offer_existing(request, *, worker, offerable, bookings):
 
     try:
         with transaction.atomic():
+            # Same reasoning as applying, from the other side: the list this
+            # was chosen from was drawn before the form was filled in, and a
+            # job confirmed in that window would otherwise end up with a
+            # pending offer sitting on it — two people apparently owed an
+            # answer about work that is already somebody's.
+            if not Job.objects.filter(
+                pk__in=[day.pk for day in days], state=JobState.POSTED
+            ).exists():
+                messages.error(
+                    request,
+                    "That job was answered while you were writing — nothing "
+                    "has been sent.",
+                )
+                return redirect("jobs:mine")
+
             for day in days:
                 # update_or_create, because asking again after a decline should
                 # reuse that row rather than stack a second one — the same rule
@@ -1082,10 +1140,16 @@ def offer_respond(request, pk: int):
         return redirect("jobs:mine")
 
     if not job.is_open:
-        # Cancelled or filled while they were reading it.
-        offer.status = OfferStatus.WITHDRAWN
-        offer.responded_at = now
-        offer.save(update_fields=["status", "responded_at", "updated_at"])
+        # Cancelled or filled while they were reading it. Claimed like the
+        # rest: if they answered it in the same moment, their answer stands.
+        claim(
+            Offer,
+            offer.pk,
+            field="status",
+            expect=OfferStatus.PENDING,
+            to=OfferStatus.WITHDRAWN,
+            responded_at=now,
+        )
         messages.error(request, "That offer is no longer available.")
         return redirect("jobs:mine")
 
@@ -1567,9 +1631,16 @@ def counter_respond(request, pk: int):
         # stands at the posted terms and a direct offer stays open at its
         # original ones — either side still has a plain "no" elsewhere if they
         # want one, and conflating the two would end deals over a number.
-        counter.status = CounterStatus.DECLINED
-        counter.responded_at = now
-        counter.save(update_fields=["status", "responded_at", "updated_at"])
+        if not claim(
+            Counter,
+            counter.pk,
+            field="status",
+            expect=CounterStatus.PENDING,
+            to=CounterStatus.DECLINED,
+            responded_at=now,
+        ):
+            messages.info(request, "Those terms have already been answered.")
+            return redirect("jobs:detail", pk=job.pk)
         messages.success(
             request,
             "Turned those terms down. The job's original terms still stand.",
@@ -1652,9 +1723,20 @@ def offer_withdraw(request, pk: int):
         messages.info(request, "That offer has already been answered.")
         return redirect("jobs:detail", pk=offer.job_id)
 
-    offer.status = OfferStatus.WITHDRAWN
-    offer.responded_at = timezone.now()
-    offer.save(update_fields=["status", "responded_at", "updated_at"])
+    # The is_pending check above reads a status the worker can change while
+    # the client is deciding. Claimed, so an accept landing in between wins and
+    # this becomes a message rather than a withdrawal written over a yes.
+    if not claim(
+        Offer,
+        offer.pk,
+        field="status",
+        expect=OfferStatus.PENDING,
+        to=OfferStatus.WITHDRAWN,
+        responded_at=timezone.now(),
+    ):
+        messages.info(request, "They answered that offer first — it stands.")
+        return redirect("jobs:detail", pk=offer.job_id)
+
     messages.success(request, f"Offer to {offer.worker.user} withdrawn.")
     return redirect("jobs:detail", pk=offer.job_id)
 

@@ -24,7 +24,15 @@ from django.utils.formats import date_format
 from accounts.models import AvailabilityStatus, WorkerProfile
 from core.state_machine import JobState
 
-from .models import Application, Job, JobType, Offer, OfferStatus
+from .models import (
+    Application,
+    ApplicationStatus,
+    Job,
+    JobType,
+    Offer,
+    OfferStatus,
+    Party,
+)
 from decimal import Decimal
 
 from .forms import OfferForm
@@ -889,6 +897,103 @@ class OfferPageLinksTests(JobFactoryMixin, TestCase):
         self.client.force_login(self.worker_user)
         response = self.client.get(reverse("jobs:counter", args=[job.pk]))
         self.assertEqual(response.status_code, 200)
+
+
+class StatusWritesAreClaimedTests(JobFactoryMixin, TestCase):
+    """Every write that moves an Application, Offer or Counter names its old
+    state and claims it.
+
+    The money paths learned this; these did not. They were the ordinary CRUD
+    endpoints — read the row, write the new status — and each of them could
+    overwrite an answer that had already been given.
+    """
+
+    def setUp(self):
+        self.job = self.gig()
+
+    # -- applications ------------------------------------------------------
+
+    def test_a_selected_applicant_cannot_withdraw_the_application(self):
+        """It had no state check at all, so somebody just picked could withdraw
+        the application that got them the job — leaving the job saying they
+        accepted and the application saying they walked away."""
+        application = Application.objects.create(
+            job=self.job, worker=self.worker_profile,
+            status=ApplicationStatus.SELECTED,
+        )
+
+        self.client.force_login(self.worker_user)
+        self.client.post(reverse("jobs:application_withdraw", args=[application.pk]))
+
+        application.refresh_from_db()
+        self.assertEqual(application.status, ApplicationStatus.SELECTED)
+
+    def test_an_ordinary_withdrawal_still_works(self):
+        application = Application.objects.create(
+            job=self.job, worker=self.worker_profile
+        )
+
+        self.client.force_login(self.worker_user)
+        self.client.post(reverse("jobs:application_withdraw", args=[application.pk]))
+
+        application.refresh_from_db()
+        self.assertEqual(application.status, ApplicationStatus.WITHDRAWN)
+
+    def test_applying_to_a_job_confirmed_meanwhile_writes_nothing(self):
+        """An APPLIED row on a taken job is an application nobody will ever
+        answer, sitting in that worker's list looking live."""
+        self.client.force_login(self.worker_user)
+
+        stale = Job.objects.get(pk=self.job.pk)
+        Job.objects.filter(pk=self.job.pk).update(state=JobState.ACCEPTED)
+
+        with patch("jobs.views.get_object_or_404", return_value=stale):
+            self.client.post(
+                reverse("jobs:apply", args=[self.job.pk]), {"message": "me please"}
+            )
+
+        self.assertFalse(Application.objects.filter(job=self.job).exists())
+
+    # -- offers ------------------------------------------------------------
+
+    def test_an_accepted_offer_cannot_be_withdrawn_underneath_the_worker(self):
+        offer = Offer.objects.create(
+            job=self.job, worker=self.worker_profile, status=OfferStatus.ACCEPTED
+        )
+
+        self.client.force_login(self.client_user)
+        self.client.post(reverse("jobs:offer_withdraw", args=[offer.pk]))
+
+        offer.refresh_from_db()
+        self.assertEqual(offer.status, OfferStatus.ACCEPTED)
+
+    def test_a_pending_offer_can_still_be_withdrawn(self):
+        offer = Offer.objects.create(job=self.job, worker=self.worker_profile)
+
+        self.client.force_login(self.client_user)
+        self.client.post(reverse("jobs:offer_withdraw", args=[offer.pk]))
+
+        offer.refresh_from_db()
+        self.assertEqual(offer.status, OfferStatus.WITHDRAWN)
+
+    # -- counters ----------------------------------------------------------
+
+    def test_an_answered_counter_cannot_be_declined_a_second_time(self):
+        counter = Counter.objects.create(
+            job=self.job,
+            worker=self.worker_profile,
+            proposed_by=Party.WORKER,
+            fixed_pay=Decimal("120"),
+            status=CounterStatus.ACCEPTED,
+        )
+
+        self.client.force_login(self.client_user)
+        self.client.post(
+            reverse("jobs:counter_respond", args=[counter.pk]), {"answer": "decline"}
+        )
+
+        counter.refresh_from_db()
+        self.assertEqual(counter.status, CounterStatus.ACCEPTED)
 
 
 class StaleEditTests(JobFactoryMixin, TestCase):
