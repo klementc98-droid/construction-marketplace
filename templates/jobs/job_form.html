@@ -69,7 +69,7 @@
           {% if is_gig and step.is_last %}
             <p class="trust">
               <svg class="trust-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-shield"/></svg>
-              {% translate "Nothing is charged by posting. If you choose escrow, you fund it when you confirm a worker; otherwise payment stays between the two of you." %}
+              {% if escrow_available %}{% translate "Nothing is charged by posting. If you choose escrow, you fund it when you confirm a worker; otherwise payment stays between the two of you." %}{% else %}{% translate "Nothing is charged here, now or later. You and the worker settle the day between you — the platform keeps the record, not the money." %}{% endif %}
             </p>
           {% endif %}
         </fieldset>
@@ -79,7 +79,7 @@
     {% if job and is_gig %}
       <p class="trust">
         <svg class="trust-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-shield"/></svg>
-        {% translate "Nothing is charged by posting. If you choose escrow, you fund it when you confirm a worker; otherwise payment stays between the two of you." %}
+        {% if escrow_available %}{% translate "Nothing is charged by posting. If you choose escrow, you fund it when you confirm a worker; otherwise payment stays between the two of you." %}{% else %}{% translate "Nothing is charged here, now or later. You and the worker settle the day between you — the platform keeps the record, not the money." %}{% endif %}
       </p>
     {% endif %}
 

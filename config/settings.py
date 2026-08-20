@@ -188,6 +188,9 @@ TEMPLATES = [
                 "messaging.views.unread_count",
                 # Which navigation tab is current.
                 "core.context.nav",
+                # Whether the platform can hold money at all. Read by the
+                # handful of templates that promise something about payment.
+                "core.context.escrow",
                 # Cache-busting stamp for the stylesheet and script.
                 "core.context.assets",
                 # Whether to render the assistant launcher at all.

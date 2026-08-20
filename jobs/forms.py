@@ -27,6 +27,36 @@ from .models import (
 )
 
 
+def escrow_available() -> bool:
+    """Whether this deployment can actually hold money.
+
+    Read per call rather than at import: settings are read from the
+    environment, and a test that overrides the key expects the form built after
+    it to have noticed.
+
+    Imported inside the function so ``jobs.forms`` does not pull the payments
+    app in at import time for a boolean.
+    """
+    from payments import gateway
+
+    return gateway.configured()
+
+
+def _hide_escrow(form) -> None:
+    """Take the escrow question off a form that must not ask it.
+
+    ``disabled`` rather than only hiding it, and the distinction is the whole
+    point: a hidden input is a value a caller can post anyway, and this one
+    decides whether the platform is expected to hold somebody's money. Django
+    ignores submitted data for a disabled field and uses the initial, so the
+    answer is False whatever arrives.
+    """
+    field = form.fields["use_escrow"]
+    field.disabled = True
+    field.initial = False
+    field.widget = forms.HiddenInput()
+
+
 class _RegionDefaultMixin(forms.ModelForm):
     """Pre-fill and hide the region while there is only one launch market.
 
@@ -216,6 +246,23 @@ class GigForm(_BaseJobForm):
         self.fields["gig_dates"].widget.attrs.update(
             date_picker_attrs(floor=timezone.localdate())
         )
+
+        # No Stripe, no escrow question — and no screen asking it either. The
+        # optional coordinates move up to the description step rather than
+        # being stranded behind a heading about payment, which leaves five
+        # questions instead of six. steps() numbers whatever it is given.
+        if not escrow_available():
+            _hide_escrow(self)
+            self.STEPS = [
+                (question, fields, *rest)
+                for question, fields, *rest in self.STEPS
+                if fields != ["use_escrow"]
+            ]
+            self.STEPS[-1] = (
+                self.STEPS[-1][0],
+                self.STEPS[-1][1],
+                ["site_latitude", "site_longitude"],
+            )
 
     def clean_gig_dates(self) -> list:
         dates = parse_date_list(
@@ -568,6 +615,12 @@ class CounterForm(forms.ModelForm):
         self.order_fields(
             ["gig_dates", "fixed_pay", "gig_hours", "use_escrow", "note"]
         )
+
+        # "Yes, but not on trust" is a real answer and a good reason to counter
+        # — when there is an escrow to ask for. Where there is not, asking is
+        # proposing terms the other side could accept and nobody could honour.
+        if not escrow_available():
+            _hide_escrow(self)
 
         # The days they have already sold. Attached before the early return
         # below, because the picker is how the field is operated and not part

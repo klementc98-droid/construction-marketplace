@@ -13,7 +13,7 @@ the same view and the same form; nothing here replaces them.
 
 from __future__ import annotations
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from .forms import GigForm, StandingForm
@@ -61,6 +61,7 @@ class StepCoverageTests(TestCase):
         self.assertEqual([f.name for f in step["folded"]],
                          ["site_latitude", "site_longitude"])
 
+
     def test_the_steps_are_numbered_from_one(self):
         for form_class in self.forms:
             with self.subTest(form=form_class.__name__):
@@ -87,14 +88,20 @@ class StepCoverageTests(TestCase):
                 for step in form_class().steps():
                     self.assertTrue(step["fields"])
 
+    @override_settings(STRIPE_SECRET_KEY="sk_test_configured")
     def test_a_gig_asks_six_questions(self):
+        """Six on a platform that can hold money. The sixth is how it is paid,
+        and it is not asked at all where the answer could only be one thing —
+        see EscrowQuestionTests."""
         self.assertEqual(len(GigForm().steps()), 6)
 
+    @override_settings(STRIPE_SECRET_KEY="sk_test_configured")
     def test_a_position_asks_fewer(self):
         """It has no date and no escrow decision — nothing is held for work
         with no day attached."""
         self.assertLess(len(StandingForm().steps()), len(GigForm().steps()))
 
+    @override_settings(STRIPE_SECRET_KEY="sk_test_configured")
     def test_the_optional_coordinates_are_not_the_question(self):
         """Step six asks how the job is paid. Two decimal inputs for the site's
         position are worth keeping and are not what is being asked."""
@@ -107,6 +114,66 @@ class StepCoverageTests(TestCase):
         for form_class in self.forms:
             with self.subTest(form=form_class.__name__):
                 self.assertEqual(form_class.STEPS[0][1], ["trade"])
+
+
+class EscrowQuestionTests(TestCase):
+    """The payment question, on a deployment that cannot take a payment.
+
+    Without Stripe keys the app runs and every gig settles directly — the
+    default, and the ordinary case. What it also did was keep offering "hold it
+    in escrow", so a client could choose it, a worker could accept it, and the
+    funding page would then say the platform is not configured. Nothing
+    crashed. It was a door with no room behind it, and the person who walked
+    through it was holding the money.
+    """
+
+    def test_no_stripe_no_question(self):
+        with override_settings(STRIPE_SECRET_KEY=""):
+            questions = [str(s["question"]) for s in GigForm().steps()]
+        self.assertNotIn("How is it paid?", questions)
+
+    def test_and_the_coordinates_are_not_stranded_with_it(self):
+        """They were folded into the payment step. Losing that screen must not
+        lose them — they move up rather than disappearing."""
+        with override_settings(STRIPE_SECRET_KEY=""):
+            last = GigForm().steps()[-1]
+        self.assertEqual([f.name for f in last["folded"]],
+                         ["site_latitude", "site_longitude"])
+
+    def test_every_visible_field_still_belongs_to_a_step(self):
+        """The coverage rule holds in both configurations, which is the whole
+        reason the coordinates had somewhere to go."""
+        with override_settings(STRIPE_SECRET_KEY=""):
+            form = GigForm()
+            covered = {n for _q, f, *rest in form.STEPS
+                       for n in list(f) + (list(rest[0]) if rest else [])}
+            visible = {b.name for b in form if not b.is_hidden}
+        self.assertEqual(visible - covered, set())
+
+    def test_posting_escrow_anyway_is_ignored(self):
+        """The rule, not the rendering. A hidden input is a value a caller can
+        post regardless, and this one decides whether the platform is expected
+        to hold somebody's money — so the field is disabled, which makes Django
+        use the initial and ignore whatever arrived.
+        """
+        with override_settings(STRIPE_SECRET_KEY=""):
+            form = GigForm(data={"use_escrow": "True"})
+            form.is_valid()
+            self.assertIs(form.cleaned_data.get("use_escrow"), False)
+
+    def test_a_counter_cannot_ask_for_it_either(self):
+        """"Yes, but not on trust" is a good reason to counter — when there is
+        an escrow to ask for. Where there is not, it proposes terms nobody
+        could honour."""
+        from .forms import CounterForm
+
+        with override_settings(STRIPE_SECRET_KEY=""):
+            self.assertTrue(CounterForm().fields["use_escrow"].disabled)
+
+    def test_with_stripe_the_question_comes_back(self):
+        with override_settings(STRIPE_SECRET_KEY="sk_test_configured"):
+            questions = [str(s["question"]) for s in GigForm().steps()]
+        self.assertIn("How is it paid?", questions)
 
 
 class StepRenderingTests(JobFactoryMixin, TestCase):
