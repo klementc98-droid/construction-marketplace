@@ -1,10 +1,17 @@
 # Deploying XTISE
 
-One VPS, Docker, nginx in front, Postgres beside it. Everything below assumes
-a fresh Ubuntu box and the domain **xtise.gr** already bought.
+Two arrangements, and the first is temporary on purpose.
 
-Read the two warnings first. Both are things that are easy to set now and
-expensive to change later.
+**From a PC**, with a Cloudflare tunnel, while there is no server yet — see
+[Interim](#interim-serving-xtisegr-from-a-pc) below. The site is up while the
+machine is awake and nothing about it is migrated later; it is thrown away.
+
+**On a VPS**, with Docker, nginx and Postgres — everything from step 1 onwards.
+Assumes a fresh Ubuntu box.
+
+Read the two warnings first either way. Both are cheap to set now and expensive
+to change later, and the first one is written into the database the very first
+time the app runs.
 
 ---
 
@@ -35,6 +42,106 @@ CURRENCY=eur
 sense: a browser that has seen the header refuses plain HTTP for the whole
 duration whatever the server later says. Deploy with `DJANGO_HSTS_SECONDS=300`,
 confirm HTTPS works properly, then raise it.
+
+---
+
+## Interim: serving xtise.gr from a PC
+
+Before there is a server, the domain can point at a machine on a desk. This is
+a real arrangement with one honest limitation — the site is up only while that
+machine is awake — and everything in it is thrown away, not migrated, when the
+VPS arrives. Skip to step 1 below if you already have the server.
+
+**Cloudflare Tunnel, not port forwarding.** A home connection in Greece is
+usually behind CGNAT, which means there is no public address to forward a port
+to; and even where there is, opening 443 on a home router to a Windows box is a
+bad trade. The tunnel dials out, so nothing is exposed, no port is opened, and
+the certificate is Cloudflare's problem rather than yours.
+
+The cost is that the domain's nameservers move to Cloudflare. That is free, and
+it is where they will want to stay afterwards anyway.
+
+1. Add `xtise.gr` at [dash.cloudflare.com](https://dash.cloudflare.com), then
+   change the nameservers at the registrar to the two it gives you. Minutes to
+   a few hours.
+
+2. On the machine:
+
+   ```
+   winget install Cloudflare.cloudflared
+   cloudflared tunnel login
+   cloudflared tunnel create xtise
+   cloudflared tunnel route dns xtise xtise.gr
+   cloudflared tunnel route dns xtise www.xtise.gr
+   ```
+
+3. `%USERPROFILE%\.cloudflared\config.yml`:
+
+   ```yaml
+   tunnel: xtise
+   credentials-file: C:\Users\YOU\.cloudflared\<tunnel-id>.json
+   ingress:
+     - hostname: xtise.gr
+       service: http://localhost:8000
+     - hostname: www.xtise.gr
+       service: http://localhost:8000
+     - service: http_status:404
+   ```
+
+4. `.env`, and the three lines that differ from a real deployment:
+
+   ```
+   DJANGO_DEBUG=False
+   DJANGO_ALLOWED_HOSTS=xtise.gr,www.xtise.gr,127.0.0.1
+   SITE_URL=https://xtise.gr
+   DJANGO_SSL_REDIRECT=False
+   DJANGO_HSTS_SECONDS=0
+   ```
+
+   `DEBUG` must be off. On a public domain a traceback page is a settings dump,
+   and this app's settings contain Stripe keys.
+
+   The redirect is off because Cloudflare already serves the site over HTTPS and
+   forwards plain HTTP to the tunnel; leaving it on risks a loop for no gain.
+   HSTS is zero because this arrangement is temporary and HSTS is not — a
+   browser that sees it refuses plain HTTP to xtise.gr for the whole duration,
+   long after this machine has stopped being the server.
+
+5. Static files, once per deploy of new code:
+
+   ```
+   python manage.py collectstatic --noinput
+   ```
+
+   They are served by WhiteNoise from inside the app, so there is no nginx and
+   nothing to configure. With `DEBUG` off nothing else serves them, which is
+   why this step is not optional.
+
+6. Run it, in two terminals:
+
+   ```
+   pip install waitress
+   waitress-serve --listen=127.0.0.1:8000 config.wsgi:application
+   ```
+
+   ```
+   python manage.py run_timers
+   ```
+
+   `waitress`, not `gunicorn`: gunicorn is POSIX-only and will not start on
+   Windows. `runserver` would also work and is a development server that says
+   so — waitress is a real one and is one `pip install` away.
+
+   The second terminal is what sends email, expires stale gigs and settles
+   finished ones. Without it the app looks fine and quietly never sends
+   anything, which is the exact failure `run_timers` was written for.
+
+7. Turn off sleep. Settings → System → Power → Screen and sleep → *When plugged
+   in, put my device to sleep*: **Never**. A sleeping machine is a domain that
+   returns nothing, and Google will notice during OAuth verification.
+
+Then do step 6 below — Google, and Brevo if you want email. Stripe can wait;
+see the note there.
 
 ---
 
