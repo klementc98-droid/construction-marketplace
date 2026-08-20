@@ -30,6 +30,7 @@ from dataclasses import dataclass, fields
 from typing import Any
 
 from django.conf import settings
+from django.core.cache import cache
 
 from . import registry
 from .schemas import FormSpec, UnknownChoice, required_fields, to_form_data
@@ -116,14 +117,46 @@ class Conversation:
 
     # -- rate limiting -----------------------------------------------------
 
-    def rate_limited(self) -> bool:
-        """A stuck client retrying in a loop is the realistic failure here."""
-        cutoff = time.time() - 3600
-        self.calls = [t for t in self.calls if t > cutoff]
-        return len(self.calls) >= settings.ASSISTANT_RATE_LIMIT_PER_HOUR
+    def claim_call(self, user_id) -> bool:
+        """Take one of this hour's calls, or say there are none left.
 
-    def note_call(self) -> None:
-        self.calls.append(time.time())
+        Checking and counting are one operation, which they were not. The
+        count lived in the session: every request read the same list, appended
+        its own timestamp, and the last save won — so ten requests fired
+        together counted as one, and the limit meant nothing to the only
+        client it exists to stop, the stuck one retrying in a loop.
+
+        It lives in the cache now, keyed by the person rather than by their
+        session, because a session is something a caller can throw away and
+        get a fresh allowance with. ``add`` then ``incr`` is the atomic pair:
+        whoever creates the key gets 1, everybody else gets a number nobody
+        else has.
+
+        A fixed hourly bucket rather than a sliding window, and that is a
+        deliberate trade. A sliding window needs the list of timestamps this
+        was built on, and a list cannot be incremented atomically. The cost is
+        that somebody spanning a boundary can send up to twice the limit across
+        two hours; the benefit is that the check cannot be raced at all, which
+        is the failure that was actually happening.
+
+        One caveat worth writing down: with the in-memory cache this app runs
+        by default the count is per process, so several workers each get their
+        own allowance. Production wants a shared cache — the limit is only as
+        atomic as the thing holding it.
+        """
+        window = int(time.time() // 3600)
+        key = f"assistant-calls:{user_id}:{window}"
+        if cache.add(key, 1, timeout=3600):
+            used = 1
+        else:
+            try:
+                used = cache.incr(key)
+            except ValueError:
+                # Expired between the add and the incr. Start again rather
+                # than letting a race hand out a free pass.
+                cache.set(key, 1, timeout=3600)
+                used = 1
+        return used <= settings.ASSISTANT_RATE_LIMIT_PER_HOUR
 
     # -- transcript --------------------------------------------------------
 

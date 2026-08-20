@@ -225,13 +225,25 @@ transaction. It is not written yet.
 python manage.py test
 ```
 
-Around 700 tests, no network calls — Stripe and the assistant are both stubbed.
+Around 710 tests, no network calls — Stripe and the assistant are both stubbed.
 
 Stubbing the payment gateway is what makes the suite runnable without keys, and
 it hides exactly one thing: a mock accepts any arguments, so a service calling
 the gateway wrongly would pass every test and fail on the first real call. Two
 things stop that now — the patches are autospec'd, and one test binds the calls
 the services make against the signatures that will actually run.
+
+One file is the exception, and it exists because of what stubbing costs. A
+mock answers what it was told to answer, so the suite proves things about this
+application and nothing about the thing it talks to — it cannot tell you that
+Stripe caps an application fee at the captured amount, or that an unknown
+session raises the error this code catches. `payments/test_live_stripe.py`
+asks Stripe those questions directly. It skips unless `STRIPE_SECRET_KEY` is
+set and refuses any key that is not `sk_test_`:
+
+```bash
+STRIPE_SECRET_KEY=sk_test_... python manage.py test payments.test_live_stripe
+```
 
 Stripe does not promise its events arrive in the order they happened, so the
 handlers are written to survive arriving backwards — a `payment_failed` for a

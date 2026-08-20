@@ -14,6 +14,7 @@ from __future__ import annotations
 from datetime import timedelta
 from unittest.mock import patch
 
+from django.core.cache import cache
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
@@ -48,6 +49,13 @@ class AssistantFixture(TestCase):
         cls.client_profile = ClientProfile.objects.create(
             user=cls.client_user, region=cls.region
         )
+
+    def setUp(self):
+        # The rate limit lives in the cache now, and the cache is not reset
+        # between tests the way the database is. Without this, one test's
+        # calls count against the next one's allowance and the failure shows
+        # up somewhere unrelated, hours later, looking like flakiness.
+        cache.clear()
 
     def sign_in(self, user=None):
         self.client.force_login(user or self.worker_user)
@@ -600,6 +608,41 @@ class ResilienceTests(AssistantFixture):
             )
         self.assertEqual(response.status_code, 503)
         self.assertIn("fill the form in yourself", response.json()["reply"])
+
+    @override_settings(ASSISTANT_RATE_LIMIT_PER_HOUR=1)
+    def test_two_calls_at_once_cannot_both_pass_the_same_check(self):
+        """The bug the counter had: check and count were separate steps.
+
+        Every request read the same list from the session, appended its own
+        entry, and the last save won — so requests fired together all saw the
+        same remaining allowance and the limit meant nothing to the only client
+        it exists to stop.
+        """
+        from assistant.conversation import Conversation
+
+        first = Conversation()
+        second = Conversation()
+
+        self.assertTrue(first.claim_call(self.worker_user.pk))
+        self.assertFalse(
+            second.claim_call(self.worker_user.pk),
+            "a second call must not see the allowance the first already took",
+        )
+
+    @override_settings(ASSISTANT_RATE_LIMIT_PER_HOUR=1)
+    def test_a_fresh_session_does_not_reset_the_allowance(self):
+        """It is keyed by the person, not by something they can throw away."""
+        from assistant.conversation import Conversation
+
+        self.assertTrue(Conversation().claim_call(self.worker_user.pk))
+        self.assertFalse(Conversation().claim_call(self.worker_user.pk))
+
+    @override_settings(ASSISTANT_RATE_LIMIT_PER_HOUR=1)
+    def test_somebody_else_has_their_own(self):
+        from assistant.conversation import Conversation
+
+        self.assertTrue(Conversation().claim_call(self.worker_user.pk))
+        self.assertTrue(Conversation().claim_call(self.client_user.pk))
 
     @override_settings(ASSISTANT_RATE_LIMIT_PER_HOUR=2)
     def test_a_stuck_client_is_rate_limited(self):
