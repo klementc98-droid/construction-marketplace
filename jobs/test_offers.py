@@ -14,6 +14,7 @@ from __future__ import annotations
 from datetime import timedelta
 
 from django.db import IntegrityError, transaction
+from contextlib import contextmanager
 from unittest.mock import patch
 
 from django.test import TestCase
@@ -39,7 +40,7 @@ from .forms import OfferForm
 from .models import Counter, CounterStatus
 from accounts.models import ClientProfile
 
-from .views import _offerable_jobs
+from .views.offers import _offerable_jobs
 from .tests import JobFactoryMixin, make_user
 
 
@@ -910,12 +911,23 @@ class LateWritesLeaveNoResidueTests(JobFactoryMixin, TestCase):
     def setUp(self):
         self.job = self.gig(is_private=True)
 
+    @contextmanager
     def taken_behind_the_form(self):
+        """The database moves; the view keeps the read it started with.
+
+        A patch names the module doing the lookup, and the two views under
+        test do it in different ones — countering in jobs.views.negotiation,
+        publishing in jobs.views.offers. Both are held open rather than
+        pretending one covers the other.
+        """
         stale = Job.objects.get(pk=self.job.pk)
         Job.objects.filter(pk=self.job.pk).update(
             state=JobState.ACCEPTED, assigned_worker=self.worker_profile
         )
-        return patch("jobs.views.get_object_or_404", return_value=stale)
+        with patch(
+            "jobs.views.negotiation.get_object_or_404", return_value=stale
+        ), patch("jobs.views.offers.get_object_or_404", return_value=stale):
+            yield
 
     def test_a_counter_cannot_be_written_onto_a_job_just_taken(self):
         Offer.objects.create(job=self.job, worker=self.worker_profile)
@@ -1001,7 +1013,7 @@ class StatusWritesAreClaimedTests(JobFactoryMixin, TestCase):
         stale = Job.objects.get(pk=self.job.pk)
         Job.objects.filter(pk=self.job.pk).update(state=JobState.ACCEPTED)
 
-        with patch("jobs.views.get_object_or_404", return_value=stale):
+        with patch("jobs.views.applications.get_object_or_404", return_value=stale):
             self.client.post(
                 reverse("jobs:apply", args=[self.job.pk]), {"message": "me please"}
             )
@@ -1089,7 +1101,7 @@ class StaleEditTests(JobFactoryMixin, TestCase):
         Job.objects.filter(pk=self.job.pk).update(
             state=JobState.ACCEPTED, assigned_worker=self.worker_profile
         )
-        return patch("jobs.views.get_object_or_404", return_value=stale)
+        return patch("jobs.views.posting.get_object_or_404", return_value=stale)
 
     def test_a_stale_edit_cannot_change_the_terms_of_an_accepted_job(self):
         """The money case: €100 agreed, €70 written over it afterwards."""

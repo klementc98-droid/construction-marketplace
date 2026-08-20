@@ -405,7 +405,7 @@ class PublicBoardTests(CounterFixture):
 
         from core.state_machine import Actor
 
-        from .views import _seal
+        from .views.common import _seal
 
         now = timezone.now()
 
@@ -426,7 +426,7 @@ class PublicBoardTests(CounterFixture):
             )
             return result
 
-        with mock.patch("jobs.views.assert_transition", side_effect=steal):
+        with mock.patch("jobs.views.common.assert_transition", side_effect=steal):
             with transaction.atomic():
                 sealed = _seal(
                     self.job.pk, self.worker_profile, None, now, actor=Actor.CLIENT
@@ -446,7 +446,7 @@ class PublicBoardTests(CounterFixture):
 
         from core.state_machine import Actor
 
-        from .views import _seal
+        from .views.common import _seal
 
         now = timezone.now()
         counter = self.counter(
@@ -462,7 +462,7 @@ class PublicBoardTests(CounterFixture):
             )
             return result
 
-        with mock.patch("jobs.views.assert_transition", side_effect=steal):
+        with mock.patch("jobs.views.common.assert_transition", side_effect=steal):
             with transaction.atomic():
                 sealed = _seal(
                     self.job.pk, self.worker_profile, counter, now, actor=Actor.CLIENT
