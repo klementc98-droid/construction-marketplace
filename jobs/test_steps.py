@@ -1,0 +1,186 @@
+"""Posting a job as a sequence of questions.
+
+The wizard is a rendering choice, not a new state machine: every fieldset is in
+the page, one submit posts the lot, and the server validates what it always
+validated. So the tests here are about the two ways that arrangement can go
+wrong — a field that belongs to no step and therefore renders nowhere, and a
+step that promises a question it does not ask.
+
+What must keep working is that a job can still be posted from this page with a
+single POST. That is covered by the existing posting tests, which go through
+the same view and the same form; nothing here replaces them.
+"""
+
+from __future__ import annotations
+
+from django.test import TestCase
+from django.urls import reverse
+
+from .forms import GigForm, StandingForm
+from .tests import JobFactoryMixin
+
+
+class StepCoverageTests(TestCase):
+    """Every question is asked exactly once.
+
+    This is the test the arrangement exists for. The grouping is written by
+    hand, the fields are not, and the failure it guards against is silent: a
+    field added to the form and forgotten here would vanish from the page, and
+    the first sign of it would be a job posted without a price.
+    """
+
+    forms = (GigForm, StandingForm)
+
+    def test_every_visible_field_belongs_to_a_step(self):
+        for form_class in self.forms:
+            with self.subTest(form=form_class.__name__):
+                form = form_class()
+                grouped = set(form_class.step_field_names())
+                visible = {f.name for f in form if not f.is_hidden}
+                self.assertEqual(visible - grouped, set())
+
+    def test_no_step_names_a_field_that_does_not_exist(self):
+        """A renamed field would otherwise leave a step quietly short."""
+        for form_class in self.forms:
+            with self.subTest(form=form_class.__name__):
+                form = form_class()
+                for name in form_class.step_field_names():
+                    self.assertIn(name, form.fields, name)
+
+    def test_no_field_is_asked_twice(self):
+        """Two inputs for one field would post the second one's value."""
+        for form_class in self.forms:
+            with self.subTest(form=form_class.__name__):
+                names = form_class.step_field_names()
+                self.assertEqual(len(names), len(set(names)))
+
+    def test_a_folded_field_is_still_a_field_of_the_step(self):
+        """Folding is a rendering choice. A field behind the disclosure still
+        posts, still validates, and still counts as covered."""
+        step = GigForm().steps()[-1]
+        self.assertEqual([f.name for f in step["folded"]],
+                         ["site_latitude", "site_longitude"])
+
+    def test_the_steps_are_numbered_from_one(self):
+        for form_class in self.forms:
+            with self.subTest(form=form_class.__name__):
+                steps = form_class().steps()
+                self.assertEqual([s["index"] for s in steps],
+                                 list(range(1, len(steps) + 1)))
+
+    def test_every_step_carries_the_total_and_knows_the_last(self):
+        """The progress reads "step n of N" from these, and the buttons swap
+        Next for Post it on the strength of is_last."""
+        for form_class in self.forms:
+            with self.subTest(form=form_class.__name__):
+                steps = form_class().steps()
+                self.assertTrue(all(s["total"] == len(steps) for s in steps))
+                self.assertEqual([s["is_last"] for s in steps][-1], True)
+                self.assertNotIn(True, [s["is_last"] for s in steps][:-1])
+
+    def test_a_step_with_nothing_left_to_ask_is_not_counted(self):
+        """The region is filled in and hidden while there is one market. A step
+        holding only it would be a screen with no question on it, and counting
+        it would make the progress promise a step that never appears."""
+        for form_class in self.forms:
+            with self.subTest(form=form_class.__name__):
+                for step in form_class().steps():
+                    self.assertTrue(step["fields"])
+
+    def test_a_gig_asks_six_questions(self):
+        self.assertEqual(len(GigForm().steps()), 6)
+
+    def test_a_position_asks_fewer(self):
+        """It has no date and no escrow decision — nothing is held for work
+        with no day attached."""
+        self.assertLess(len(StandingForm().steps()), len(GigForm().steps()))
+
+    def test_the_optional_coordinates_are_not_the_question(self):
+        """Step six asks how the job is paid. Two decimal inputs for the site's
+        position are worth keeping and are not what is being asked."""
+        step = GigForm().steps()[-1]
+        self.assertEqual([f.name for f in step["fields"]], ["use_escrow"])
+
+    def test_the_first_question_is_the_easy_one(self):
+        """Starting on a question with no wrong answer is what gets the second
+        one answered."""
+        for form_class in self.forms:
+            with self.subTest(form=form_class.__name__):
+                self.assertEqual(form_class.STEPS[0][1], ["trade"])
+
+
+class StepRenderingTests(JobFactoryMixin, TestCase):
+    """What the page actually sends, with and without the script."""
+
+    def setUp(self):
+        self.client.force_login(self.client_user)
+
+    def _post_page(self):
+        return self.client.get(reverse("jobs:post", args=["gig"]))
+
+    def test_the_form_asks_the_script_to_step_it(self):
+        self.assertContains(self._post_page(), "data-steps")
+
+    def test_every_step_is_in_the_page_already(self):
+        """Nothing is fetched between steps and nothing is held on the server.
+        A half-finished job that exists nowhere cannot be stranded."""
+        response = self._post_page()
+        for step in GigForm().steps():
+            with self.subTest(step=step["index"]):
+                self.assertContains(response, 'data-step="%s"' % step["index"])
+
+    def test_the_questions_are_asked_in_words(self):
+        self.assertContains(self._post_page(), "Which days?")
+
+    def test_the_hidden_region_is_still_posted(self):
+        """It is filled in and hidden, and it is not in any step's fields —
+        so it has to be rendered outside them or the form posts without it."""
+        self.assertContains(self._post_page(), 'name="region"')
+
+    def test_the_progress_starts_hidden(self):
+        """With no script the whole form is on one screen, and a progress bar
+        there would describe a sequence that is not happening."""
+        response = self._post_page()
+        self.assertContains(response, "data-step-progress")
+        self.assertContains(response, "steps-progress")
+
+    def test_the_real_submit_is_always_there(self):
+        """Back and Next are added by the script and hidden without it. Post it
+        is the form's own button and must work with nothing running."""
+        response = self._post_page()
+        self.assertContains(response, "step-submit")
+        self.assertContains(response, "Post it")
+
+    def test_posting_still_takes_one_request(self):
+        """The whole point of rendering the steps rather than storing them."""
+        before = self.client_profile.jobs.count()
+        response = self.client.post(
+            reverse("jobs:post", args=["gig"]),
+            {
+                "trade": self.carpentry.pk,
+                "title": "Carrying and mixing",
+                "description": "A day on a house build.",
+                "experience_wanted": "none",
+                "region": self.region.pk,
+                "location": "Nea Smyrni",
+                "gig_dates": "2027-03-04",
+                "gig_hours": "8",
+                "fixed_pay": "80",
+                "use_escrow": "True",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(self.client_profile.jobs.count(), before + 1)
+
+
+class EditIsNotAWizardTests(JobFactoryMixin, TestCase):
+    """Somebody editing came to change one field."""
+
+    def test_editing_shows_the_whole_form(self):
+        """Walking them through six screens to reach the price would be a worse
+        form than the one the wizard replaced."""
+        job = self.gig()
+        self.client.force_login(self.client_user)
+        response = self.client.get(reverse("jobs:edit", args=[job.pk]))
+        self.assertNotContains(response, "data-steps")
+        self.assertNotContains(response, 'class="step"')

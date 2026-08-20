@@ -20,6 +20,14 @@
       <p>
         {% translate "Tradespeople here are looking for a pair of hands, not a CV. One day, one job, or a permanent place — you learn on site and you are paid for the days you work." %}
       </p>
+      {% comment %} The doors come before the account. Somebody three seconds old does
+         not yet know which side of this they are on, and asking them to hand
+         over a Google account before they have seen a single job is asking for
+         commitment ahead of proof. Free to look is one of the three promises
+         below; this is what honouring it looks like in the order of the page.
+      {% endcomment %}
+      {% include "accounts/_paths.html" %}
+
       <a class="btn" href="{% url 'google_login' %}?process=login">
         <svg viewBox="0 0 24 24" aria-hidden="true" width="17" height="17">
           <path fill="currentColor" d="M21.6 12.23c0-.7-.06-1.37-.18-2.02H12v3.82h5.38a4.6 4.6 0 0 1-2 3.02v2.5h3.23c1.89-1.74 2.98-4.3 2.98-7.32Z" opacity=".9"/>

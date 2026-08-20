@@ -17,26 +17,82 @@
     {% include "assistant/_form_offer.html" with form_key=job_type %}
   {% endif %}
 
-  <form method="post" class="card">
+  <form method="post" class="card{% if not job %} stepform{% endif %}"
+        {% if not job %}data-steps=""{% endif %}>
     {% csrf_token %}
-    {% include "_required_note.html" %}
     {{ form.non_field_errors }}
-    {% for field in form %}{% include "_field.html" %}{% endfor %}
 
-    {% comment %} Said where the price is typed, not only on the How it works page. The
-       number in that box is what the client will be charged and what the worker
-       will be paid, and it is the moment somebody wonders who is holding it.
-    {% endcomment %}
-    {% if is_gig %}
+    {% if job %}
+      {% comment %} Editing: the whole form at once. Somebody came here to change the
+         price, and walking them back through six screens to reach it would be
+         a worse form than the one this replaced.
+      {% endcomment %}
+      {% include "_required_note.html" %}
+      {% for field in form %}{% include "_field.html" %}{% endfor %}
+
+    {% else %}
+      {% comment %} Posting: one question per screen.
+
+         Every step is rendered, in the page, inside one form that posts once.
+         The script hides all but the current one and moves between them; with
+         no script the fieldsets are simply a form with headings on it, which
+         is the form this page had before. That is the whole trick — there is
+         no wizard state on the server, no half-written job in a session, and
+         nothing that can be left stranded between step three and step four.
+      {% endcomment %}
+      {% for field in form.hidden_fields %}{{ field }}{% endfor %}
+
+      {% include "jobs/_step_progress.html" with total=form.steps|length %}
+
+      {% for step in form.steps %}
+        <fieldset class="step{% if step.label_said %} step-said{% endif %}"
+                  data-step="{{ step.index }}">
+          <legend class="step-q">{{ step.question }}</legend>
+          {% for field in step.fields %}{% include "_field.html" %}{% endfor %}
+
+          {% comment %} Present, closed, and skipped by a thumb going for Next. <details>
+             rather than a class toggled by script, for the same reason the
+             filter panel uses one: it opens and closes on its own, carries its
+             own state for a screen reader, and works with nothing running.
+          {% endcomment %}
+          {% if step.folded %}
+            <details class="step-more">
+              <summary>{% translate "Add site coordinates (optional)" %}</summary>
+              {% for field in step.folded %}{% include "_field.html" %}{% endfor %}
+            </details>
+          {% endif %}
+
+          {% comment %} Said where the price is typed, not only on the How it works page.
+             The number in that box is what the client will be charged and what
+             the worker will be paid, and it is the moment somebody wonders who
+             is holding it.
+          {% endcomment %}
+          {% if is_gig and step.is_last %}
+            <p class="trust">
+              <svg class="trust-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-shield"/></svg>
+              {% translate "Nothing is charged by posting. If you choose escrow, you fund it when you confirm a worker; otherwise payment stays between the two of you." %}
+            </p>
+          {% endif %}
+        </fieldset>
+      {% endfor %}
+    {% endif %}
+
+    {% if job and is_gig %}
       <p class="trust">
         <svg class="trust-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-shield"/></svg>
         {% translate "Nothing is charged by posting. If you choose escrow, you fund it when you confirm a worker; otherwise payment stays between the two of you." %}
       </p>
     {% endif %}
 
-    <div class="btn-row" style="margin-top:16px">
-      <button class="btn" type="submit"
-              data-busy-label="{% if job %}Saving…{% else %}Posting…{% endif %}">{% if job %}{% translate "Save changes" %}{% else %}{% translate "Post it" %}{% endif %}</button>
+    {% comment %} One set of buttons for the whole form, not one per step. Back and Next
+       are added by the script and removed with it; Post it is the form's real
+       submit and works on its own with nothing running.
+    {% endcomment %}
+    <div class="btn-row step-nav" style="margin-top:16px">
+      <button class="btn step-next" type="button" hidden>{% translate "Next" %}</button>
+      <button class="btn step-submit" type="submit"
+              data-busy-label="{% if job %}{% translate "Saving…" %}{% else %}{% translate "Posting…" %}{% endif %}">{% if job %}{% translate "Save changes" %}{% else %}{% translate "Post it" %}{% endif %}</button>
+      <button class="btn step-back secondary" type="button" hidden>{% translate "Back" %}</button>
       <a class="btn secondary" href="{% if job %}{% url 'jobs:detail' job.pk %}{% else %}{% url 'jobs:post_choose' %}{% endif %}">{% translate "Cancel" %}</a>
     </div>
   </form>

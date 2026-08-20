@@ -1,0 +1,45 @@
+{% load i18n %}{% comment %}
+PathCards — the two ways in, in the first person.
+
+Everything else on this page is framed as browsing: find work, find workers. A
+visitor three seconds old is not browsing, they are working out which side of
+this they are on, and the answer decides everything they see next. So the two
+paths are stated as they would say them — I need work, I need a hand — and each
+lands somewhere that proves the claim rather than explaining it.
+
+The first goes to the board already filtered to jobs wanting no experience.
+That is the strongest available answer to "is there anything here for me": not
+a sentence saying most jobs need none, but a screen of them. It also puts the
+reader in front of the chips, so the filter is discovered by using it.
+{% endcomment %}
+<div class="paths">
+  <a class="path" href="{% url 'jobs:list' %}?experience=none">
+    <span class="path-ico" aria-hidden="true">
+      <svg viewBox="0 0 24 24"><use href="#i-hardhat"/></svg>
+    </span>
+    <span class="path-body">
+      <strong>{% translate "I'm looking for work" %}</strong>
+      <span class="path-sub">{% translate "Jobs you can take with no experience — you learn on site." %}</span>
+    </span>
+    <svg class="path-go" viewBox="0 0 24 24" aria-hidden="true"
+         fill="none" stroke="currentColor" stroke-width="2"
+         stroke-linecap="round" stroke-linejoin="round">
+      <path d="m9 5 7 7-7 7"/>
+    </svg>
+  </a>
+
+  <a class="path" href="{% url 'jobs:worker_list' %}">
+    <span class="path-ico" aria-hidden="true">
+      <svg viewBox="0 0 24 24"><use href="#i-workers"/></svg>
+    </span>
+    <span class="path-body">
+      <strong>{% translate "I need a hand on site" %}</strong>
+      <span class="path-sub">{% translate "People free to work, with their trade, rate and days." %}</span>
+    </span>
+    <svg class="path-go" viewBox="0 0 24 24" aria-hidden="true"
+         fill="none" stroke="currentColor" stroke-width="2"
+         stroke-linecap="round" stroke-linejoin="round">
+      <path d="m9 5 7 7-7 7"/>
+    </svg>
+  </a>
+</div>
