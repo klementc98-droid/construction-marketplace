@@ -215,7 +215,16 @@ messaging/       conversations between the two sides of a job
 payments/        Stripe Connect, escrow, webhooks
 worklog/         check-in, sign-off, settlement
 assistant/       the in-app chat helper
+templates/       every page, server-rendered
+static/          one stylesheet, one script, no build step
+docs/            the whitepaper, and how the interface is put together
 ```
+
+The interface has a small named component system — JobCard, ExperienceBadge,
+ExperienceChips, StepForm and the rest — written down in
+[docs/ui.md](docs/ui.md) along with the rules that hold it together: what the
+board must always say about experience, why the six-step posting flow keeps no
+state on the server, and the tokens a new screen is allowed to use.
 
 One state machine in `core/state_machine.py` covers the job and its payment
 together. A job's state and its money's state are the same fact, and modelling
@@ -242,7 +251,7 @@ transaction. It is not written yet.
 python manage.py test
 ```
 
-Around 710 tests, no network calls — Stripe and the assistant are both stubbed.
+Around 780 tests, no network calls — Stripe and the assistant are both stubbed.
 
 Stubbing the payment gateway is what makes the suite runnable without keys, and
 it hides exactly one thing: a mock accepts any arguments, so a service calling

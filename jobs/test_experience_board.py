@@ -202,6 +202,35 @@ class ApplyBarTests(JobFactoryMixin, TestCase):
         self.assertContains(response, "applybar-spacer")
 
 
+class EmptyLevelTests(JobFactoryMixin, TestCase):
+    """An empty board says something useful about why it is empty."""
+
+    def setUp(self):
+        self.gig(title="Second fix wiring", experience_wanted=ExperienceWanted.SKILLED)
+
+    def test_an_empty_level_offers_the_beginners_board(self):
+        """Somebody who tapped a chip narrowed by the one thing that decides
+        whether they can take the work. "Try clearing the trade" is useless
+        advice to them."""
+        response = self.client.get(reverse("jobs:list"), {"experience": "some"})
+        self.assertContains(response, "Nothing open at that level")
+        self.assertContains(response, "experience=none")
+
+    def test_it_does_not_offer_the_level_you_are_already_on(self):
+        """A button that reloads the same empty board."""
+        response = self.client.get(reverse("jobs:list"), {"experience": "none"})
+        self.assertNotContains(response, "Show jobs needing no experience")
+
+    def test_the_way_back_to_everything_is_offered(self):
+        response = self.client.get(reverse("jobs:list"), {"experience": "some"})
+        self.assertContains(response, "Show every level")
+
+    def test_an_ordinary_empty_filter_still_says_clear_filters(self):
+        """The other empty board, with its own advice. Two different problems."""
+        response = self.client.get(reverse("jobs:list"), {"q": "nothing matches this"})
+        self.assertContains(response, "Clear filters")
+
+
 class TradeIconTests(JobFactoryMixin, TestCase):
     """Every trade gets a mark, including one nobody has mapped yet."""
 

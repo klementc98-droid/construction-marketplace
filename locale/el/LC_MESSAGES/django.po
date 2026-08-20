@@ -1764,6 +1764,10 @@ msgstr "Από εδώ και πέρα τίποτα δεν προχωράει μ�
 msgid "Nothing on the board right now."
 msgstr "Τίποτα στον πίνακα αυτή τη στιγμή."
 
+#: templates/jobs/job_list.html
+msgid "Nothing open at that level right now."
+msgstr "Τίποτα ανοιχτό σε αυτό το επίπεδο αυτή τη στιγμή."
+
 #: templates/accounts/client_detail.html
 msgid "Nothing open at the moment. Their track record below still tells you what they're like to work for."
 msgstr "Τίποτα ανοιχτό αυτή τη στιγμή. Το ιστορικό παρακάτω σου λέει πάντως πώς είναι να δουλεύεις γι' αυτόν."
@@ -2393,6 +2397,14 @@ msgstr "Στέλνεται ως το πρώτο σου μήνυμα σε μια 
 msgid "Set up payouts"
 msgstr "Ρύθμισε τις πληρωμές"
 
+#: templates/jobs/job_list.html
+msgid "Show every level"
+msgstr "Δείξε όλα τα επίπεδα"
+
+#: templates/jobs/job_list.html
+msgid "Show jobs needing no experience"
+msgstr "Δείξε δουλειές χωρίς εμπειρία"
+
 #: accounts/models.py
 msgid "Shown at the top of your profile. Change it as often as you like."
 msgstr "Εμφανίζεται στην κορυφή του προφίλ σου. Άλλαξέ το όσο συχνά θέλεις."
@@ -2565,6 +2577,10 @@ msgstr "Αυτά για την ώρα."
 #: templates/core/about.html
 msgid "The board is public and readable without an account. Find a job, send a message with your application, and the client picks from everyone who put their hand up."
 msgstr "Ο πίνακας είναι δημόσιος και διαβάζεται χωρίς λογαριασμό. Βρες μια δουλειά, στείλε μήνυμα με την αίτησή σου, και ο μάστορας διαλέγει ανάμεσα σε όσους δήλωσαν ενδιαφέρον."
+
+#: templates/jobs/job_list.html
+msgid "The board turns over fast — most days are posted a few days ahead. Try another level, or come back tomorrow."
+msgstr "Ο πίνακας αλλάζει γρήγορα — οι περισσότερες μέρες ανεβαίνουν λίγες μέρες πριν. Δοκίμασε άλλο επίπεδο, ή πέρνα ξανά αύριο."
 
 #: templates/worklog/workspace.html
 msgid "The client can approve sooner. If they do nothing, it releases anyway."
