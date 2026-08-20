@@ -74,6 +74,7 @@ class Report:
     holds_released: list = field(default_factory=list)
     accounts_adopted: list = field(default_factory=list)
     states_repaired: list = field(default_factory=list)
+    checkouts_abandoned: list = field(default_factory=list)
     unreachable: list = field(default_factory=list)
 
     @property
@@ -84,6 +85,7 @@ class Report:
             + len(self.holds_released)
             + len(self.accounts_adopted)
             + len(self.states_repaired)
+            + len(self.checkouts_abandoned)
         )
 
     def lines(self) -> list[str]:
@@ -98,6 +100,8 @@ class Report:
             )
         for worker_id, account_id in self.accounts_adopted:
             out.append(f"  worker {worker_id}: adopted lost account {account_id}")
+        for escrow_id in self.checkouts_abandoned:
+            out.append(f"  escrow {escrow_id}: checkout expired unpaid — recorded")
         for job_id, was, now in self.states_repaired:
             out.append(f"  job {job_id}: payment had settled — {was} moved to {now}")
         for what, why in self.unreachable:
@@ -303,6 +307,24 @@ def _reconcile_pending(
 
             services.mark_authorized(escrow, intent_id)
         report.captured_recorded.append((escrow.pk, escrow.amount))
+        return
+
+    # A checkout that ended without being paid. Only the "paid" case was
+    # handled, so one that expired or was declined sat at PENDING for ever:
+    # the funding page kept offering to reuse a session Stripe had closed, and
+    # nothing ever said what had happened. Recorded as failed, which is also
+    # what lets the client start a fresh attempt.
+    if session.get("status") == "expired":
+        if not dry_run:
+            claim(
+                EscrowPayment,
+                escrow.pk,
+                field="status",
+                expect=EscrowStatus.PENDING,
+                to=EscrowStatus.FAILED,
+                last_error="Checkout expired without being paid.",
+            )
+        report.checkouts_abandoned.append(escrow.pk)
 
 
 def _release_dead_hold(escrow: EscrowPayment, report: Report) -> None:
