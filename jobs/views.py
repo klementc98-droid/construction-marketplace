@@ -1550,6 +1550,19 @@ def counter_create(request, pk: int, worker_pk: int | None = None):
     if request.method == "POST":
         form = CounterForm(request.POST, terms=terms)
         if form.is_valid():
+            # The negotiable check at the top read a state from before this
+            # form was filled in. Somebody confirmed in that window leaves a
+            # PENDING counter on a job that is taken — terms nobody will ever
+            # answer, shown to both sides as a live negotiation. Same narrowing
+            # as applying and offering, and the same reason it is only a
+            # narrowing: a counter has no prior status of its own to claim.
+            if not Job.objects.filter(pk=job.pk, state=JobState.POSTED).exists():
+                messages.error(
+                    request,
+                    "That job was answered while you were writing — nothing "
+                    "has been sent.",
+                )
+                return redirect("jobs:detail", pk=job.pk)
             now = timezone.now()
             with transaction.atomic():
                 # Supersede rather than delete: the sequence of numbers is the
@@ -1765,8 +1778,22 @@ def offer_publish(request, pk: int):
         )
         return redirect("jobs:detail", pk=job.pk)
 
-    job.is_private = False
-    job.save(update_fields=["is_private", "updated_at"])
+    # Conditional on both of the things checked above still being true. The
+    # three guards judge a row read before this request did anything, and the
+    # one that matters can change underneath: a worker accepting in that window
+    # would leave an accepted job published to the board, advertised to
+    # everyone as available.
+    published = Job.objects.filter(
+        pk=job.pk, state=JobState.POSTED, is_private=True
+    ).update(is_private=False, updated_at=timezone.now())
+    if not published:
+        messages.error(
+            request,
+            "That job was answered while you were publishing it — it has not "
+            "gone on the board.",
+        )
+        return redirect("jobs:detail", pk=job.pk)
+
     messages.success(request, "Posted to the board. Anyone can apply now.")
     return redirect("jobs:detail", pk=job.pk)
 

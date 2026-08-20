@@ -402,3 +402,61 @@ class SendingTests(NotificationTestCase):
 
         broken.refresh_from_db()
         self.assertEqual(broken.attempts, 5)
+
+
+class DedupeKeepsTheNewestTests(TestCase):
+    """One row per key, carrying the latest words rather than the first.
+
+    The key collapses a five-day booking into one email, which is the point.
+    But a second event under the same key while the first was still queued was
+    dropped entirely — so three messages before the queue drained sent the
+    recipient the oldest one while two newer ones sat unread behind it. The
+    opposite of what a notification is for.
+    """
+
+    def setUp(self):
+        self.region = Region.objects.filter(is_active=True).first()
+        self.recipient = User.objects.create_user(email="reader@example.com")
+        WorkerProfile.objects.create(user=self.recipient, region=self.region)
+
+    def queue(self, preview):
+        return notify(
+            self.recipient,
+            Kind.OFFER_RECEIVED,
+            dedupe="one-key",
+            job_title="Second fix",
+            preview=preview,
+        )
+
+    def test_the_second_event_still_makes_no_second_row(self):
+        self.queue("first")
+        self.queue("second")
+
+        self.assertEqual(Notification.objects.count(), 1)
+
+    def test_but_the_row_now_carries_the_latest(self):
+        self.queue("first")
+        self.queue("second")
+        self.queue("third")
+
+        row = Notification.objects.get()
+        self.assertEqual(row.payload["preview"], "third")
+
+    def test_the_place_in_the_queue_is_not_lost(self):
+        """They have been waiting since the first one; the order is theirs."""
+        first = self.queue("first")
+        self.queue("second")
+
+        row = Notification.objects.get()
+        self.assertEqual(row.created_at, first.created_at)
+
+    def test_a_sent_notification_is_not_rewritten(self):
+        """Once it has gone out it is history, and the next event is news."""
+        first = self.queue("first")
+        Notification.objects.filter(pk=first.pk).update(sent_at=timezone.now())
+
+        self.queue("second")
+
+        first.refresh_from_db()
+        self.assertEqual(first.payload["preview"], "first")
+        self.assertEqual(Notification.objects.count(), 2)
