@@ -1,4 +1,10 @@
+# Every environment file except the annotated example. The pattern is a glob
+# rather than one filename because the next one somebody makes — .env.production,
+# .env.staging, .env.bak — will hold the same keys as this one, and a leak is
+# permanent in a way that a missing ignore rule is not.
 .env
+.env.*
+!.env.example
 .venv/
 venv/
 __pycache__/
