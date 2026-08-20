@@ -256,7 +256,7 @@ transaction. It is not written yet.
 python manage.py test
 ```
 
-Around 750 tests, no network calls — Stripe and the assistant are both stubbed.
+Around 780 tests, no network calls — Stripe and the assistant are both stubbed.
 
 Stubbing the payment gateway is what makes the suite runnable without keys, and
 it hides exactly one thing: a mock accepts any arguments, so a service calling

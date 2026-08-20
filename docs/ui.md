@@ -27,7 +27,7 @@ list of jobs, the level is filterable from it.
 | **ExperienceChips** | `templates/jobs/_experience_chips.html` | The level as a one-tap filter. Takes `form` (a `JobFilterForm`), reads `form.chips`. Links, not a form: each chip is a URL you can send someone. |
 | **JobHead** | top of `templates/jobs/job_detail.html` | The card's three bands at page-heading size, so opening a card resolves into the page it was showing. |
 | **ApplyBar** | bottom of `templates/jobs/job_detail.html` | Apply, pinned to the bottom of a phone screen with the rate beside it. Hidden on the breakpoint where the inline row shows — one Apply per screen, never two. |
-| **StepForm** | `templates/jobs/job_form.html` | One question per screen. Every fieldset is in the page; the script hides all but one. See below. |
+| **StepForm** | `templates/jobs/job_form.html`, `templates/accounts/worker_edit.html` | One question per screen. Every fieldset is in the page; the script hides all but one. See below. |
 | **StepProgress** | `templates/jobs/_step_progress.html` | A bar and the words. Takes `total`. Hidden until the script shows it. |
 | **PathCards** | `templates/accounts/_paths.html` | The two ways in, in the first person. On the homepage, above the account button. |
 | **Openers** | in `templates/jobs/job_apply.html` | Buttons that write the first line of an application into the box. Append, never replace. |
@@ -58,8 +58,27 @@ without being what it asks, like the optional site coordinates on "How is it
 paid?". Fold them rather than deleting them — "we removed the field nobody
 used" is how a feature disappears for the few who did.
 
-Editing a job is not stepped. Somebody who came to change one number should not
-be walked through six screens to reach it.
+Two forms use it: posting a job and writing a helper's profile. The machinery
+is `core.steps.StepsMixin`, in `core/` rather than either app, because neither
+app should import the other's form module.
+
+Neither is stepped when it is being edited. Somebody who came to change one
+number should not be walked through six screens to reach it. The job form tells
+the two apart by whether it has an instance; the profile asks whether it has
+any trades, because the profile row is created when the role is chosen and so
+its existence proves nothing.
+
+## Dates
+
+There is one date control, `data-date-list`, drawn by `crew.js` and configured
+by `core.dates.date_picker_attrs`. Posting a job, offering one, setting your
+availability and countering an offer all use it, and all of them pick a set of
+days rather than a day.
+
+Two pickers for the same question is how one of them quietly stays broken. If a
+form needs dates, it gets this one — with `taken=` set to the days the worker
+has already sold, so a day that cannot be agreed is not tickable rather than
+being refused after the form is filled in.
 
 ## Icons
 
