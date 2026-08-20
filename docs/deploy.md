@@ -121,8 +121,26 @@ it is where they will want to stay afterwards anyway.
 
    ```
    pip install waitress
-   waitress-serve --listen=127.0.0.1:8000 config.wsgi:application
+   waitress-serve --listen=127.0.0.1:8000 --threads=8      --trusted-proxy=127.0.0.1 --trusted-proxy-count=1      --trusted-proxy-headers="x-forwarded-for x-forwarded-proto x-forwarded-host"      --no-clear-untrusted-proxy-headers      config.wsgi:application
    ```
+
+   The proxy arguments are not optional and the failure without them is quiet.
+   waitress strips every `X-Forwarded-*` header it has not been told to trust,
+   so Django never learns the request arrived over HTTPS and builds `http://`
+   absolute URLs — including the Google OAuth callback, which Google then
+   rejects for not matching the registered redirect URI. Nothing logs an error;
+   sign-in simply stops working.
+
+   Two flags rather than one, because they fix different halves. `--trusted-proxy`
+   makes waitress *read* the headers, which sets the scheme it reports.
+   `--no-clear-untrusted-proxy-headers` makes it *leave them in place*, which is
+   what `SECURE_PROXY_SSL_HEADER` reads — waitress consumes and deletes them
+   otherwise. Note the header list is one argument with spaces inside it: repeat
+   the option and only the last value survives, silently.
+
+   Keeping unread forwarded headers is safe only because the listener is bound
+   to `127.0.0.1`, so the sole thing that can reach it is cloudflared, which
+   overwrites them. Do not bind this to `0.0.0.0`.
 
    ```
    python manage.py run_timers
