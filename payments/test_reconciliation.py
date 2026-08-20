@@ -211,6 +211,89 @@ class DeadHoldTests(EscrowTestCase):
         cancel.assert_not_called()
 
 
+class JobsLeftBehindTests(EscrowTestCase):
+    """The reconciler repaired one row of two and stopped looking at the other.
+
+    It claims the escrow first and the job second. A lost race on the second
+    used to end there: the escrow was no longer AUTHORIZED, so no later pass
+    would ever look at it again — a payment and a job disagreeing permanently,
+    produced inside the pass whose whole purpose is to end disagreements.
+    """
+
+    def escrow_in(self, status, *, job_state):
+        self.ready_account()
+        job = self.make_gig(state=job_state)
+        return EscrowPayment.objects.create(
+            job=job,
+            worker=self.worker_profile,
+            amount=Decimal("90"),
+            platform_fee=Decimal("10.80"),
+            worker_payout=Decimal("79.20"),
+            status=status,
+            payment_intent_id="pi_behind",
+            authorized_at=timezone.now(),
+        )
+
+    def test_a_released_payment_drags_its_job_to_paid_out(self):
+        escrow = self.escrow_in(
+            EscrowStatus.RELEASED, job_state=JobState.COMPLETED
+        )
+
+        report = reconciliation.reconcile()
+
+        escrow.job.refresh_from_db()
+        self.assertEqual(escrow.job.state, JobState.PAID_OUT)
+        self.assertEqual(len(report.states_repaired), 1)
+
+    def test_a_refunded_payment_drags_its_job_too(self):
+        escrow = self.escrow_in(
+            EscrowStatus.REFUNDED, job_state=JobState.ESCROW_HELD
+        )
+
+        reconciliation.reconcile()
+
+        escrow.job.refresh_from_db()
+        self.assertEqual(escrow.job.state, JobState.REFUNDED)
+
+    def test_a_move_the_lifecycle_forbids_is_reported_not_forced(self):
+        """Repairing a disagreement by inventing a worse one is not a repair."""
+        escrow = self.escrow_in(
+            EscrowStatus.RELEASED, job_state=JobState.CANCELLED
+        )
+
+        with self.assertLogs("payments.reconciliation", level="WARNING"):
+            reconciliation.reconcile()
+
+        escrow.job.refresh_from_db()
+        self.assertEqual(escrow.job.state, JobState.CANCELLED)
+
+    def test_jobs_already_in_step_are_left_alone(self):
+        self.escrow_in(EscrowStatus.RELEASED, job_state=JobState.PAID_OUT)
+
+        report = reconciliation.reconcile()
+
+        self.assertEqual(len(report.states_repaired), 0)
+
+    @patch("payments.gateway.retrieve_payment_intent", autospec=True)
+    def test_a_cancellation_moves_the_job_as_well_as_the_payment(self, intent):
+        """The half the cancellation branch was leaving behind."""
+        intent.return_value = {
+            "id": "pi_behind",
+            "status": "canceled",
+            "amount_received": Decimal("0"),
+        }
+        escrow = self.escrow_in(
+            EscrowStatus.AUTHORIZED, job_state=JobState.ESCROW_HELD
+        )
+
+        reconciliation.reconcile()
+
+        escrow.refresh_from_db()
+        escrow.job.refresh_from_db()
+        self.assertEqual(escrow.status, EscrowStatus.REFUNDED)
+        self.assertEqual(escrow.job.state, JobState.REFUNDED)
+
+
 class LostAccountTests(EscrowTestCase):
     """The 24-hour hole, closed by a record rather than by a key."""
 

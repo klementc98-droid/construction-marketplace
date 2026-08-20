@@ -4,12 +4,15 @@ from __future__ import annotations
 
 import logging
 
+from datetime import timedelta
+
 from django.contrib import messages as flash
 from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError, transaction
 from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
@@ -218,6 +221,46 @@ def cancel_and_refund(request, pk: int):
 # ---------------------------------------------------------------------------
 
 
+#: How long a claim may be held before another delivery may take it over. Long
+#: enough that no honest run is interrupted, short enough that an event stuck
+#: behind a dead process is picked up within one Stripe retry cycle.
+WEBHOOK_LEASE = timedelta(minutes=5)
+
+
+def _take_over(event_id: str):
+    """What a duplicate delivery should do with a claim it could not make.
+
+    Three answers, and the old code only had one of them:
+
+    * ``None`` — the work is finished. Answer 200 and stop.
+    * ``"busy"`` — somebody is doing it right now. Answer 409 so Stripe comes
+      back; by then they will have finished or let go.
+    * a row — the holder has gone quiet past the lease and this delivery is
+      taking over.
+    """
+    held = WebhookEvent.objects.filter(pk=event_id).first()
+    if held is None:
+        # Released between the failed insert and this read: the previous run
+        # gave up. Treat it as busy so Stripe retries rather than assuming it
+        # went well.
+        return "busy"
+    if held.is_handled:
+        return None
+
+    if held.received_at > timezone.now() - WEBHOOK_LEASE:
+        return "busy"
+
+    # Conditional on the timestamp we just read, so two deliveries racing to
+    # take over the same abandoned claim cannot both win it.
+    taken = WebhookEvent.objects.filter(
+        pk=held.pk, handled_at__isnull=True, received_at=held.received_at
+    ).update(received_at=timezone.now())
+    if not taken:
+        return "busy"
+    logger.warning("Took over an abandoned webhook claim: %s", event_id)
+    return held
+
+
 @csrf_exempt
 @require_POST
 def webhook(request):
@@ -246,16 +289,33 @@ def webhook(request):
     # while the first is still running — both find nothing and both proceed.
     # The insert is a single atomic claim, so exactly one of them wins it.
     #
-    # What saves this from the opposite failure, a claim held by a run that
-    # then crashed, is the delete in the except below: the claim is released
-    # and Stripe's next retry does the work for real.
+    # A claim, not a receipt, and the difference decides what a *duplicate*
+    # gets told. Answering 200 to a delivery that collided with a run still in
+    # progress is a promise nobody is in a position to make: if that run then
+    # fails, the 200 has already told Stripe the event was delivered and no
+    # retry is coming. The event is lost — the opposite failure from the one
+    # this table exists to prevent, and the quieter one, because nothing
+    # anywhere reads as wrong afterwards.
+    #
+    # So a duplicate is answered by what the row actually says. Finished means
+    # 200. In flight means 409, which Stripe treats as a failure and retries —
+    # by which time the first run has either finished or released its claim.
+    #
+    # And the claim is a lease, because a process can die without releasing
+    # anything. After WEBHOOK_LEASE a duplicate takes it over rather than
+    # answering 409 forever to an event nobody is working on.
+    claim = None
     try:
         with transaction.atomic():
             claim = WebhookEvent.objects.create(
                 event_id=event["id"], event_type=event["type"]
             )
     except IntegrityError:
-        return HttpResponse(status=200)
+        claim = _take_over(event["id"])
+        if claim is None:
+            return HttpResponse(status=200)
+        if claim == "busy":
+            return HttpResponse(status=409)
 
     obj = event["data"]["object"]
     handled = ""
@@ -303,11 +363,14 @@ def webhook(request):
         # which is the one outcome worse than doing the work twice — the retry
         # that would have fixed it never comes.
         logger.exception("Webhook %s failed", event["id"])
-        WebhookEvent.objects.filter(pk=claim.pk).delete()
+        WebhookEvent.objects.filter(pk=claim.pk, handled_at__isnull=True).delete()
         return HttpResponse(status=500)
 
-    # Only the summary is written here now; the claim itself already exists.
-    WebhookEvent.objects.filter(pk=claim.pk).update(payload_summary=handled)
+    # Now it is a receipt. Until this line the row was a lease, and only this
+    # write lets a later duplicate be answered with 200.
+    WebhookEvent.objects.filter(pk=claim.pk).update(
+        payload_summary=handled, handled_at=timezone.now()
+    )
     return HttpResponse(status=200)
 
 
