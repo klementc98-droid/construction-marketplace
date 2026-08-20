@@ -14,6 +14,8 @@ from __future__ import annotations
 from datetime import timedelta
 
 from django.db import IntegrityError, transaction
+from unittest.mock import patch
+
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -887,6 +889,119 @@ class OfferPageLinksTests(JobFactoryMixin, TestCase):
         self.client.force_login(self.worker_user)
         response = self.client.get(reverse("jobs:counter", args=[job.pk]))
         self.assertEqual(response.status_code, 200)
+
+
+class StaleEditTests(JobFactoryMixin, TestCase):
+    """Editing and cancelling had to claim what they write, like everything else.
+
+    Both read the state, checked it, and wrote — with the whole of a form being
+    filled in sitting in the gap. _seal exists because a worker can accept
+    during exactly that gap, and these two were the endpoints that had not been
+    told.
+
+    Staged the way the other races here are: the request is holding a read that
+    the database has already moved past.
+    """
+
+    def setUp(self):
+        self.job = self.gig()
+
+    def edit_payload(self, **overrides):
+        return {
+            "trade": self.job.trade.pk,
+            "region": self.job.region.pk,
+            "title": self.job.title,
+            "description": self.job.description,
+            "gig_dates": self.job.gig_date.isoformat(),
+            "gig_hours": "6",
+            "fixed_pay": "70",
+            "use_escrow": "False",
+        } | overrides
+
+    def accept_behind_the_form(self):
+        """Somebody says yes while the form is open, and the view never sees it.
+
+        The database moves; the request keeps the read it started with. Patching
+        the lookup is what makes that reproducible — without it the view reads
+        the *new* state and takes an earlier branch, which tests the guard that
+        was already there rather than the one being added.
+        """
+        stale = Job.objects.get(pk=self.job.pk)
+        Job.objects.filter(pk=self.job.pk).update(
+            state=JobState.ACCEPTED, assigned_worker=self.worker_profile
+        )
+        return patch("jobs.views.get_object_or_404", return_value=stale)
+
+    def test_a_stale_edit_cannot_change_the_terms_of_an_accepted_job(self):
+        """The money case: €100 agreed, €70 written over it afterwards."""
+        self.client.force_login(self.client_user)
+
+        with self.accept_behind_the_form():
+            response = self.client.post(
+                reverse("jobs:edit", args=[self.job.pk]), self.edit_payload()
+            )
+
+        self.job.refresh_from_db()
+        self.assertEqual(self.job.fixed_pay, Decimal("90"))
+        self.assertEqual(self.job.gig_hours, Decimal("8"))
+        self.assertEqual(response.status_code, 302)
+
+    def test_and_cannot_erase_the_acceptance_itself(self):
+        """job.save() wrote the whole row from a read taken before the accept,
+        so state and assigned_worker travelled with the price."""
+        self.client.force_login(self.client_user)
+
+        with self.accept_behind_the_form():
+            self.client.post(
+                reverse("jobs:edit", args=[self.job.pk]), self.edit_payload()
+            )
+
+        self.job.refresh_from_db()
+        self.assertEqual(self.job.state, JobState.ACCEPTED)
+        self.assertEqual(self.job.assigned_worker, self.worker_profile)
+
+    def test_the_client_is_told_rather_than_left_guessing(self):
+        self.client.force_login(self.client_user)
+
+        with self.accept_behind_the_form():
+            response = self.client.post(
+                reverse("jobs:edit", args=[self.job.pk]),
+                self.edit_payload(),
+                follow=True,
+            )
+
+        self.assertContains(response, "answered this job while you were editing")
+
+    def test_an_ordinary_edit_still_goes_through(self):
+        self.client.force_login(self.client_user)
+
+        self.client.post(
+            reverse("jobs:edit", args=[self.job.pk]), self.edit_payload()
+        )
+
+        self.job.refresh_from_db()
+        self.assertEqual(self.job.fixed_pay, Decimal("70"))
+        self.assertEqual(self.job.gig_hours, Decimal("6"))
+
+    def test_cancelling_cannot_land_on_a_job_just_accepted(self):
+        """It used to write CANCELLED over an acceptance, leaving a cancelled
+        job with a worker assigned to it."""
+        self.client.force_login(self.client_user)
+
+        with self.accept_behind_the_form():
+            self.client.post(reverse("jobs:cancel", args=[self.job.pk]))
+
+        self.job.refresh_from_db()
+        self.assertEqual(self.job.state, JobState.ACCEPTED)
+        self.assertEqual(self.job.assigned_worker, self.worker_profile)
+
+    def test_an_ordinary_cancel_still_works(self):
+        self.client.force_login(self.client_user)
+
+        self.client.post(reverse("jobs:cancel", args=[self.job.pk]))
+
+        self.job.refresh_from_db()
+        self.assertEqual(self.job.state, JobState.CANCELLED)
 
 
 class EditingADayOfABookingTests(JobFactoryMixin, TestCase):

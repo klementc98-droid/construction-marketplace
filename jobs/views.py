@@ -30,7 +30,7 @@ from notifications.services import audience_for, booking_key, notify
 from config import business_rules as rules
 from assistant.conversation import take_handoff
 from core.models import Region
-from core.state_machine import Actor, JobState, assert_transition
+from core.state_machine import Actor, JobState, assert_transition, claim
 
 from .forms import (
     JOB_FORMS,
@@ -401,9 +401,46 @@ def job_edit(request, pk: int):
     if request.method == "POST":
         form = form_class(request.POST, instance=job)
         if form.is_valid():
-            job = form.save(commit=False)
-            job.full_clean()
-            job.save()
+            edited = form.save(commit=False)
+            edited.full_clean()
+
+            # Written as a conditional UPDATE on the columns this form owns,
+            # and both halves of that are load-bearing.
+            #
+            # Conditional, because the check above read a state that another
+            # request can move while this form is being filled in. A worker
+            # accepting between the two turns this into an edit of a job
+            # somebody has already agreed to — and the fields here are the
+            # money: a stale form could write €70 onto a day accepted at €100,
+            # and funding takes its amount straight from the job.
+            #
+            # And only these columns, because ``job.save()`` writes the whole
+            # row from an instance read before the accept. That is worse than
+            # the wrong price: state and assigned_worker travel with it, so the
+            # save could put the job back to POSTED and erase the worker
+            # entirely, leaving the offer and application rows pointing at an
+            # acceptance the job no longer records.
+            columns = [
+                name
+                for name in form._meta.fields
+                if name not in ("state", "assigned_worker")
+            ]
+            values = {name: getattr(edited, name) for name in columns}
+            if job.is_gig:
+                # Not in Meta.fields — GigForm derives it from the day picker.
+                values["gig_date"] = edited.gig_date
+            values["updated_at"] = timezone.now()
+
+            written = Job.objects.filter(pk=job.pk, state=JobState.POSTED).update(
+                **values
+            )
+            if not written:
+                messages.error(
+                    request,
+                    "Somebody answered this job while you were editing it — "
+                    "nothing has been changed. Open it to see where it stands.",
+                )
+                return redirect("jobs:detail", pk=job.pk)
             messages.success(request, "Updated.")
             return redirect("jobs:detail", pk=job.pk)
     else:
@@ -423,8 +460,20 @@ def job_cancel(request, pk: int):
     # Route the change through the state machine rather than assigning the
     # state directly, so an illegal move raises instead of being written.
     assert_transition(job.state, JobState.CANCELLED, Actor.CLIENT)
-    job.state = JobState.CANCELLED
-    job.save(update_fields=["state", "updated_at"])
+
+    # And then claim it, which is the half that was missing. The check above
+    # judges a state read a moment ago, and _seal exists precisely because
+    # another request can move that state in between — a worker accepting as
+    # the client cancels. Without the claim this wrote CANCELLED over an
+    # acceptance that had already happened, leaving a cancelled job with a
+    # worker assigned to it and an offer row saying yes.
+    if not claim(Job, job.pk, expect=job.state, to=JobState.CANCELLED):
+        messages.error(
+            request,
+            "This job moved while you were cancelling it — nothing has been "
+            "changed. Open it to see where it stands.",
+        )
+        return redirect("jobs:detail", pk=job.pk)
     messages.success(request, "Cancelled.")
     return redirect("jobs:mine")
 
