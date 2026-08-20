@@ -146,6 +146,25 @@ run a two-minute dispute window without a code change.
 That separation is deliberate: changing the platform fee should never involve
 opening the file that also controls `DEBUG`.
 
+### Production
+
+The public domain is **https://xtise.gr**, written down once as `SITE_DOMAIN`
+in `config/settings.py`. Templates build their own absolute URLs from the
+request, so the same code serves localhost, a phone tunnel and the live site
+without knowing which it is on; the only runtime that has to know is email,
+which cannot use a relative link.
+
+Turning `DJANGO_DEBUG=False` is what switches on the production posture — the
+host list stops defaulting to `*`, CSRF origins are derived from it, and the
+HTTPS redirect, HSTS, secure cookies, the forwarded-proto header and the
+clickjacking and referrer headers all come on together. That block is keyed on
+`DEBUG` rather than living in a separate settings module, because a
+production-only file is a file nobody runs until the day it matters.
+
+HSTS is not revocable in any useful sense — a browser that has seen the header
+refuses plain HTTP for its duration whatever the server later says — so
+`DJANGO_HSTS_SECONDS` exists to start it short on the first deploy.
+
 ---
 
 ## Scheduled work

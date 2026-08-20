@@ -2896,6 +2896,11 @@ a.job-row:hover .jobcard-title { color: var(--accent-ink); }
   .applybar-spacer { display: block; height: 66px; }
 }
 
+/* On a feed card the badge sits between the headline and the tag row, where
+   the tags are a wrapping paragraph and it is not. Its own line, with the same
+   air above and below as the rest of the card. */
+.feed-card .xp { margin: 4px 0 10px; }
+
 /* --------------------------------------------------------------------------
    ExperienceChips - templates/jobs/_experience_chips.html
    --------------------------------------------------------------------------
