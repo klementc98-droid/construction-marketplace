@@ -431,7 +431,7 @@
     </div>
   {% elif not user.is_authenticated %}
     <div class="btn-row apply-inline">
-      <a class="btn" href="{% url 'account_login' %}">{% translate "Sign in to apply" %}</a>
+      <a class="btn" href="{% url 'google_login' %}?process=login&amp;next={{ request.get_full_path|urlencode }}">{% translate "Sign in to apply" %}</a>
     </div>
   {% endif %}
 
@@ -460,7 +460,7 @@
         {% if can_apply %}
           <a class="btn applybar-go" href="{% url 'jobs:apply' job.pk %}">{% translate "Apply" %}</a>
         {% else %}
-          <a class="btn applybar-go" href="{% url 'account_login' %}">{% translate "Sign in to apply" %}</a>
+          <a class="btn applybar-go" href="{% url 'google_login' %}?process=login&amp;next={{ request.get_full_path|urlencode }}">{% translate "Sign in to apply" %}</a>
         {% endif %}
       </div>
     </div>

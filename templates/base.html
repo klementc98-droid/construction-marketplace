@@ -270,7 +270,10 @@ correct answer anyway.
         {% include "_avatar.html" with person=user size="sm" %}
       </a>
     {% else %}
-      <a class="nav-link" href="{% url 'account_login' %}">{% translate "Sign in" %}</a>
+      {% comment %} Straight to Google, not to a page with one button on it. The current
+         path travels with it so signing in from a job lands back on that job.
+      {% endcomment %}
+      <a class="nav-link" href="{% url 'google_login' %}?process=login&amp;next={{ request.get_full_path|urlencode }}">{% translate "Sign in" %}</a>
     {% endif %}
   </div>
 </header>
@@ -333,7 +336,7 @@ correct answer anyway.
       {% include "_avatar.html" with person=user size="sm" %}
       <span class="label">{% translate "Profile" %}</span></a>
   {% else %}
-    <a href="{% url 'account_login' %}">
+    <a href="{% url 'google_login' %}?process=login&amp;next={{ request.get_full_path|urlencode }}">
       <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-workers"/></svg>
       <span class="label">{% translate "Sign in" %}</span></a>
   {% endif %}

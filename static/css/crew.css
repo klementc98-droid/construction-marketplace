@@ -2729,6 +2729,17 @@ a.job-row:hover .jobcard-title { color: var(--accent-ink); }
 }
 
 /* --------------------------------------------------------------------------
+   Sign in - templates/account/login.html
+   --------------------------------------------------------------------------
+   A short column in the middle of the page. There is one thing to do here and
+   the page should look like it: nothing else on screen, and the button as wide
+   as the card so it cannot be missed with a thumb.
+   ------------------------------------------------------------------------ */
+.signin { max-width: 460px; margin-inline: auto; }
+.signin-go { width: 100%; justify-content: center; }
+.signin .note { margin-top: 14px; }
+
+/* --------------------------------------------------------------------------
    PathCards - templates/accounts/_paths.html
    --------------------------------------------------------------------------
    Two rows, not two columns. Side by side they would be two 150px boxes on a

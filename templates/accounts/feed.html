@@ -28,7 +28,7 @@
       {% endcomment %}
       {% include "accounts/_paths.html" %}
 
-      <a class="btn" href="{% url 'google_login' %}?process=login">
+      <a class="btn" href="{% url 'google_login' %}?process=login&amp;next={{ request.get_full_path|urlencode }}">
         <svg viewBox="0 0 24 24" aria-hidden="true" width="17" height="17">
           <path fill="currentColor" d="M21.6 12.23c0-.7-.06-1.37-.18-2.02H12v3.82h5.38a4.6 4.6 0 0 1-2 3.02v2.5h3.23c1.89-1.74 2.98-4.3 2.98-7.32Z" opacity=".9"/>
           <path fill="currentColor" d="M12 22c2.7 0 4.96-.9 6.61-2.43l-3.22-2.5c-.9.6-2.05.95-3.39.95-2.6 0-4.81-1.76-5.6-4.13H3.08v2.59A10 10 0 0 0 12 22Z" opacity=".75"/>

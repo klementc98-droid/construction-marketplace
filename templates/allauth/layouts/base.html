@@ -1,0 +1,14 @@
+{% extends "base.html" %}{% comment %}
+Every allauth page, in this app's chrome.
+
+allauth ships its own layout: a bare document with a "Menu:" list and no
+stylesheet. Any page it renders that we have not replaced — a sign-in that
+failed, a cancelled Google flow, a stale link — landed the reader on that, and
+it does not look like a page of this site. It looks like something went wrong
+in a way they should worry about.
+
+One file fixes all of them at once. allauth's own templates only ever fill in
+`content`, which this app's base already has a slot for, so they arrive inside
+the real header, footer and stylesheet without being touched individually.
+{% endcomment %}
+{% block title %}{% block head_title %}{% endblock %} — Construction's Finest{% endblock %}

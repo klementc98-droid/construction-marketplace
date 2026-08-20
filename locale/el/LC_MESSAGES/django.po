@@ -745,6 +745,7 @@ msgstr "Construction's Finest, αρχική"
 msgid "Continue"
 msgstr "Συνέχεια"
 
+#: templates/account/login.html
 #: templates/accounts/feed.html
 msgid "Continue with Google"
 msgstr "Συνέχεια με Google"
@@ -1849,6 +1850,10 @@ msgstr "Στο τραπέζι τώρα"
 msgid "Once the job is finished you can each leave a rating."
 msgstr "Μόλις ολοκληρωθεί η δουλειά μπορείτε να αφήσετε αξιολόγηση."
 
+#: templates/account/login.html
+msgid "One account, whichever side of a job you are on. Free to browse either way."
+msgstr "Ένας λογαριασμός, από όποια πλευρά της δουλειάς κι αν είσαι. Και από τις δύο, το ψάξιμο είναι δωρεάν."
+
 #: templates/jobs/job_form.html
 msgid "One date, one price. You choose below how it is paid."
 msgstr "Μία ημερομηνία, μία τιμή. Διάλεξε παρακάτω πώς πληρώνεται."
@@ -1956,6 +1961,10 @@ msgstr "Προαιρετικό. Συμπλήρωσε μόνο όσα αφορο�
 #: jobs/models.py
 msgid "Optional. What makes you right for this one?"
 msgstr "Προαιρετικό. Τι σε κάνει κατάλληλο γι' αυτή;"
+
+#: templates/account/login.html
+msgid "Or look at the board first&nbsp;→"
+msgstr "Ή δες πρώτα τον πίνακα&nbsp;→"
 
 #: templates/jobs/job_apply.html
 msgid "Or start with:"
@@ -2413,6 +2422,7 @@ msgstr "Εμφανίζεται στην κορυφή του προφίλ σου.
 msgid "Shown under your name — e.g. “Framing and finish carpentry, own tools”."
 msgstr "Εμφανίζεται κάτω από το όνομά σου — π.χ. «Σκελετοί και φινίρισμα, δικά μου εργαλεία»."
 
+#: templates/account/login.html
 #: templates/base.html
 msgid "Sign in"
 msgstr "Σύνδεση"
@@ -2955,6 +2965,10 @@ msgstr "Δεν χρησιμοποιούμε την τοποθεσία για ν�
 #: templates/core/about.html
 msgid "We do not verify licence numbers."
 msgstr "Δεν επαληθεύουμε αριθμούς αδειών."
+
+#: templates/account/login.html
+msgid "We use Google so there is no password to lose on a site. We get your name, your email and your picture — nothing else."
+msgstr "Χρησιμοποιούμε Google ώστε να μην υπάρχει κωδικός να χαθεί σε κάποιο σάιτ. Παίρνουμε το όνομά σου, το email σου και τη φωτογραφία σου — τίποτα άλλο."
 
 #: jobs/forms.py
 msgid "We'll settle it directly — cash, invoice, our own way"

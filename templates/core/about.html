@@ -127,7 +127,7 @@ a marketing page that disagrees with the code is a false statement about someone
 
   {% if not user.is_authenticated %}
     <div class="btn-row" style="margin-top:16px">
-      <a class="btn" href="{% url 'account_login' %}">{% translate "Get started" %}</a>
+      <a class="btn" href="{% url 'google_login' %}?process=login&amp;next={{ request.get_full_path|urlencode }}">{% translate "Get started" %}</a>
       <a class="btn secondary" href="{% url 'jobs:list' %}">{% translate "Look at the board first" %}</a>
     </div>
   {% endif %}
