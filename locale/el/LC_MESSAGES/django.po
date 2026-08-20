@@ -1495,6 +1495,10 @@ msgstr "Νέα προφίλ ανεβαίνουν καθημερινά — ξαν
 msgid "New terms — your move"
 msgstr "Νέοι όροι — η σειρά σου"
 
+#: templates/accounts/worker_detail.html
+msgid "New to the trade — here to learn"
+msgstr "Νέος στην τέχνη — ήρθα να μάθω"
+
 #: templates/notifications/email/job_posted.txt
 msgid "New work in %(trade)s: %(title)s."
 msgstr "Νέα δουλειά σε %(trade)s: %(title)s."
@@ -1644,10 +1648,6 @@ msgstr "Μη διαθέσιμος αυτή τη στιγμή"
 #: jobs/models.py
 msgid "Not selected"
 msgstr "Δεν επιλέχθηκε"
-
-#: templates/accounts/_worker_card.html
-msgid "Not stated"
-msgstr "Δεν δηλώθηκε"
 
 #: templates/accounts/worker_detail.html
 msgid "Not taking work at the moment, so offers are turned off. Their profile stays up — worth checking back."
@@ -2404,6 +2404,10 @@ msgstr "Μόνιμη θέση"
 #: templates/accounts/feed.html
 msgid "Start on a site."
 msgstr "Ξεκίνα σε ένα εργοτάξιο."
+
+#: templates/accounts/_worker_card.html
+msgid "Starting out"
+msgstr "Ξεκινάω τώρα"
 
 #: templates/payments/escrow_detail.html
 #: templates/payments/payouts.html

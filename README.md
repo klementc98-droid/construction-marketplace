@@ -1,8 +1,18 @@
 # Construction's Finest
 
-A hiring marketplace for the building trades. Clients post work, tradespeople
-apply or receive direct offers, both sides agree the terms, and the money moves
-when the day is signed off.
+Where a tradesperson finds a pair of hands, and where somebody with no
+experience gets their first day on a site.
+
+Most jobs on this board need nobody who already knows the work: a bricklayer
+needs someone to carry and mix and learn, and the person who takes that day may
+be nineteen and have never held a trowel. So *no experience needed* is a field
+on the job rather than a line in a description, it leads every card, and it is
+the one filter that answers "is this for me?" in a tap.
+
+The arrangement runs from one day to a permanent place, and the platform
+carries the whole of it: the post, the applications, the conversation, the
+agreement, the days worked, the money, and what each side says about the other
+afterwards.
 
 Built as a Django monolith with server-rendered pages and no JavaScript
 framework. Every page works without JS; the interactive parts progressively
@@ -12,10 +22,17 @@ enhance markup that already functions.
 
 ## What it does
 
+**How much experience it needs, said out loud.** Every job answers one of three
+things: no experience needed, some helps, or it wants somebody who knows the
+trade. It defaults to the first, and that default is an opinion rather than a
+shrug — the people this exists to reach have nothing to declare, and a board
+that assumes skill turns them away before they have applied.
+
 **Two kinds of post.** A *gig* is one dated shift at a fixed price for that day.
 A *standing position* is ongoing work paid at a rate. They behave differently
 enough — escrow, sign-off, expiry — that they are separate forms rather than one
-form with a mode switch.
+form with a mode switch. Between them they cover the arc this market actually
+has: one day, then a few, then a place.
 
 **Two ways to get hired.** Apply to something on the public board, or receive a
 direct offer written for you by name. A direct offer never appears publicly, and

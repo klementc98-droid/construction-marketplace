@@ -1,6 +1,6 @@
 # Construction's Finest
 
-**A hiring market for the building trades, built around the payment rather than the listing.**
+**A way into the building trades, and a way for tradespeople to find hands — built around the day worked and the money for it rather than around the listing.**
 
 Version 1 · 31 July 2026
 
@@ -8,11 +8,20 @@ Version 1 · 31 July 2026
 
 ## 1. Summary
 
-Construction's Finest is a two-sided marketplace connecting construction clients with
-tradespeople, for both single dated shifts and ongoing positions. Its distinguishing
-design choice is that **the money is the primary object, not an afterthought**: for a
-dated gig, the client's funds are authorised and held before the worker travels, and
-released to the worker on a timer that no party can stall by going quiet.
+Construction's Finest is a two-sided marketplace connecting tradespeople who need
+labour with people who want to work — for a single dated shift, a run of days, or an
+ongoing position.
+
+Its distinguishing choice is who the second side is. This is not a board where
+qualified tradespeople bid for contracts. It is a bricklayer who needs somebody to
+carry and mix, and a nineteen-year-old who has never held a trowel and has no way in.
+**Most of the work here requires no experience**, and the platform says so as
+structured data rather than as prose: a job declares what it needs, the board can be
+filtered to what a beginner can take, and the answer leads every card.
+
+The second choice is that **the money is the primary object, not an afterthought**:
+for a dated gig, the client's funds are authorised and held before the worker travels,
+and released on a timer that no party can stall by going quiet.
 
 This document describes the model, the mechanism, and the deliberate limits of v1.
 
@@ -20,7 +29,8 @@ This document describes the model, the mechanism, and the deliberate limits of v
 
 ## 2. The problem
 
-Two problems compound in day-rate construction work.
+Three problems compound in day-rate construction work, and the third is the one
+this platform is built around.
 
 **Payment risk falls entirely on the worker.** The worker delivers first and invoices
 after. For a single day's labour, the cost of chasing an unpaid invoice — phone calls,
@@ -36,7 +46,30 @@ gating content behind sign-up, which makes it strictly worse — a tradesperson 
 evaluate whether the board is worth an account without seeing whether there is work on
 it.
 
+**And the labour is not there to be matched.** This is the problem the other two sit
+inside. A tradesperson looking for a helper is not competing for a scarce pool of
+qualified people; they are looking for somebody willing to turn up, and the person who
+would say yes has no idea the job exists. Meanwhile a great many young people have no
+route into a trade at all — the way in has always been knowing somebody, and if you do
+not, there is no door to knock on.
+
+Every other marketplace in this space treats supply as a fixed population to be moved
+from somewhere else. It is not fixed. The supply is people who are not currently in
+the trade, and reaching them is a different product: it means saying *no experience
+needed* loudly and structurally, because the person who needs to hear it assumes the
+opposite and stops reading.
+
 ## 3. Design response
+
+**A job says what it needs from the person taking it.** Three answers — no
+experience, some helps, or it wants somebody who knows the trade — with the first as
+the default. It is a field rather than a sentence in a description because the reader
+this matters to has already decided the answer is no; it has to be visible in the
+half-second before they scroll past, and it has to be filterable, so that "is any of
+this for me?" is one tap rather than forty job pages.
+
+The default is an opinion. A board that assumes skill by default is a board that
+quietly excludes everybody it was built for.
 
 **The board is public.** Jobs and worker profiles are readable without an account.
 Creating an account is required only to *act* — to apply, to post, to be paid. The
@@ -63,6 +96,12 @@ cases where someone actively objects.
 | Price | Fixed total for the day | A rate (hourly/daily/weekly), optionally a range |
 | Escrow | Yes | No |
 | Platform revenue | Percentage of the payout | None in v1 |
+
+The two are ends of one arc rather than two products, and the arc is the point: a
+tradesperson who will not commit to hiring somebody will commit to one day, and a
+person who does not know whether they want the trade will try one day. That first day
+is the entry the market otherwise lacks, and a standing position is where it leads if
+both sides want it to.
 
 These are separate forms with separate fields, not one form that hides half its inputs.
 A client posting a gig never sees a rate-range input at all — not disabled, not hidden,
@@ -175,6 +214,16 @@ appear on a profile only after a threshold number of finished jobs; below it, pr
 read "New". One bad first day should not brand someone with a 0% completion rate
 forever, and a single job at 100% is not evidence of anything either.
 
+This matters more here than on a board of established tradespeople. Almost everybody
+arriving on the worker side has no history at all, and a platform that renders absence
+as failure would contradict its own promise on the first screen. "New" is a state, not
+a score.
+
+It is also the thing being built. In a trade where the entire reputation system is
+*does my cousin know him*, a record of days worked and how they went is portable in a
+way that word of mouth is not — and for somebody with no cousin in the trade, it is
+the only reputation available.
+
 **Licences are self-reported and labelled as such.** The platform does not verify trade
 licence numbers and says so, in both the place they are entered and the place they are
 displayed. An unverified claim presented as verified would be worse than no claim at all.
@@ -219,6 +268,12 @@ The platform takes nothing from standing positions, and nothing from a job that 
 complete. Revenue is therefore strictly proportional to work that actually got done and
 paid for — the incentive is to close jobs successfully, not to maximise listings.
 
+That alignment is what makes the entry-level positioning affordable. A first day for
+somebody with no experience is a small transaction and a small fee; it is worth having
+because the same person may work fifty more days through the platform, and because
+every one of them is a day a tradesperson could not otherwise staff. Charging to post
+would tax exactly the behaviour the market needs most of.
+
 Every configurable rule — the fee, each timer, the guaranteed minimum, the reputation
 threshold — lives in exactly one module and can be overridden per environment. No fee or
 window is hardcoded anywhere else in the system, including in user-facing copy: the
@@ -259,3 +314,7 @@ In rough order of dependency:
    stand on.
 4. A second region, exercising the assumption that regions are data.
 5. Monetising standing positions, most plausibly on placement rather than subscription.
+6. Making the record of days worked legible as a route through the trade rather than
+   as a list of transactions — "eight months, forty-one days, four tradespeople" is a
+   sentence somebody can take to their next job, and it is the thing this platform can
+   give a beginner that nothing else in the market does.
