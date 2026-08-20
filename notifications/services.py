@@ -9,6 +9,7 @@ not lose somebody their job application.
 from __future__ import annotations
 
 from django.db import IntegrityError, transaction
+from django.utils import timezone
 
 from .models import Kind, Notification
 
@@ -86,6 +87,18 @@ def notify(
         with transaction.atomic():
             row.save()
     except IntegrityError:
+        # A second event under the same key while the first is still queued.
+        # One row is the point of the key — a five-day booking is one email —
+        # but the row should carry the *latest* words, and it was keeping the
+        # first. Three messages before the queue drained sent the recipient the
+        # oldest one while two newer ones sat unread behind it, which is the
+        # opposite of what a notification is for.
+        #
+        # The payload only. created_at stays where it was, because the person
+        # has been waiting since then and the queue is ordered by it.
+        Notification.objects.filter(
+            recipient=recipient, dedupe_key=dedupe, sent_at__isnull=True
+        ).update(payload=payload, updated_at=timezone.now())
         return None
     return row
 

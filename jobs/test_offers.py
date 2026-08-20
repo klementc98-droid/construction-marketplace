@@ -899,6 +899,60 @@ class OfferPageLinksTests(JobFactoryMixin, TestCase):
         self.assertEqual(response.status_code, 200)
 
 
+class LateWritesLeaveNoResidueTests(JobFactoryMixin, TestCase):
+    """Writes that cannot win the job, but used to leave something behind.
+
+    None of these can take a job from whoever won it — _seal's conditional
+    UPDATE is the only thing that decides that. What they could do is leave a
+    counter, or a published board post, attached to work already spoken for.
+    """
+
+    def setUp(self):
+        self.job = self.gig(is_private=True)
+
+    def taken_behind_the_form(self):
+        stale = Job.objects.get(pk=self.job.pk)
+        Job.objects.filter(pk=self.job.pk).update(
+            state=JobState.ACCEPTED, assigned_worker=self.worker_profile
+        )
+        return patch("jobs.views.get_object_or_404", return_value=stale)
+
+    def test_a_counter_cannot_be_written_onto_a_job_just_taken(self):
+        Offer.objects.create(job=self.job, worker=self.worker_profile)
+        self.client.force_login(self.worker_user)
+
+        with self.taken_behind_the_form():
+            self.client.post(
+                reverse("jobs:counter", args=[self.job.pk]),
+                {
+                    "fixed_pay": "150",
+                    "gig_hours": "8",
+                    "gig_date": self.job.gig_date.isoformat(),
+                    "note": "",
+                },
+            )
+
+        self.assertFalse(Counter.objects.filter(job=self.job).exists())
+
+    def test_an_accepted_job_cannot_be_published_to_the_board(self):
+        """It would advertise work that is already somebody's."""
+        self.client.force_login(self.client_user)
+
+        with self.taken_behind_the_form():
+            self.client.post(reverse("jobs:offer_publish", args=[self.job.pk]))
+
+        self.job.refresh_from_db()
+        self.assertTrue(self.job.is_private)
+
+    def test_publishing_an_untouched_offer_still_works(self):
+        self.client.force_login(self.client_user)
+
+        self.client.post(reverse("jobs:offer_publish", args=[self.job.pk]))
+
+        self.job.refresh_from_db()
+        self.assertFalse(self.job.is_private)
+
+
 class StatusWritesAreClaimedTests(JobFactoryMixin, TestCase):
     """Every write that moves an Application, Offer or Counter names its old
     state and claims it.
