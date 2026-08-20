@@ -15,7 +15,15 @@ from django.utils.translation import gettext_lazy as _
 from core.dates import date_picker_attrs, parse_date_list
 from core.models import Region, Trade
 
-from .models import Application, Counter, Job, JobType, PositionType, Review
+from .models import (
+    Application,
+    Counter,
+    ExperienceWanted,
+    Job,
+    JobType,
+    PositionType,
+    Review,
+)
 
 
 class _RegionDefaultMixin(forms.ModelForm):
@@ -556,8 +564,14 @@ class BrowseFilterForm(forms.Form):
     #: Rendered in the search bar rather than the panel.
     SEARCH_FIELD = "q"
 
+    #: Rendered as chips above the list rather than in the panel. A filter this
+    #: important cannot live behind a button: the person it is for has to see
+    #: it without being told the panel exists.
+    CHIP_FIELD = None
+
     def panel_fields(self):
-        return [f for f in self if f.name != self.SEARCH_FIELD]
+        hoisted = {self.SEARCH_FIELD, self.CHIP_FIELD}
+        return [f for f in self if f.name not in hoisted]
 
     def active_count(self) -> int:
         """How many panel filters are set.
@@ -589,10 +603,51 @@ class JobFilterForm(BrowseFilterForm):
         choices=[("", _("Standing and gigs"))] + list(JobType.choices),
     )
     #: The one filter that answers "is this app for me?". Somebody with no
-    #: trade behind them is asking exactly this, and it should take one tap.
-    beginners = forms.BooleanField(
-        required=False, label=_("No experience needed")
+    #: trade behind them is asking exactly this, and it should take one tap —
+    #: so it is rendered as chips above the board, not folded into the panel.
+    experience = forms.ChoiceField(
+        required=False,
+        label=_("Experience"),
+        choices=[("", _("All"))] + list(ExperienceWanted.choices),
     )
+
+    CHIP_FIELD = "experience"
+
+    #: Short forms for the chips. The full choice labels are sentences written
+    #: for somebody filling in a form ("No experience needed — will show you");
+    #: a row of chips on a phone has room for two words.
+    CHIP_LABELS = {
+        "": _("All"),
+        ExperienceWanted.NONE: _("No experience"),
+        ExperienceWanted.SOME: _("Some experience"),
+        ExperienceWanted.SKILLED: _("Skilled"),
+    }
+
+    def chips(self):
+        """The experience filter as one tap each, in order of how much is asked.
+
+        Yields the value, its short label, its tone, and whether it is the one
+        currently applied, so the template stays markup and does not have to
+        know the choice values.
+        """
+        current = self.data.get(self.CHIP_FIELD) or ""
+        tones = {
+            "": "all",
+            ExperienceWanted.NONE: "go",
+            ExperienceWanted.SOME: "steady",
+            ExperienceWanted.SKILLED: "stop",
+        }
+        for value in ("", ExperienceWanted.NONE, ExperienceWanted.SOME,
+                      ExperienceWanted.SKILLED):
+            yield {
+                # None rather than "" for All: the querystring tag drops a
+                # parameter set to None and keeps an empty one, and a URL
+                # ending "?experience=" is a filter that looks applied.
+                "value": value or None,
+                "label": self.CHIP_LABELS[value],
+                "tone": tones[value],
+                "current": current == value,
+            }
 
     def filtered(self, queryset):
         data = self.cleaned_data if self.is_valid() else {}
@@ -601,7 +656,7 @@ class JobFilterForm(BrowseFilterForm):
             queryset.matching(data.get("q"))
             .for_trade(trade.slug if trade else None)
             .for_type(data.get("job_type"))
-            .open_to_beginners(bool(data.get("beginners")))
+            .for_experience(data.get("experience"))
         )
 
 

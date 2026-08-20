@@ -396,6 +396,10 @@ msgstr "Συμφωνήστε μεταξύ σας"
 msgid "Agreed"
 msgstr "Συμφωνήθηκε"
 
+#: jobs/forms.py
+msgid "All"
+msgstr "Όλα"
+
 #: templates/messaging/thread.html
 msgid "All messages"
 msgstr "Όλα τα μηνύματα"
@@ -450,6 +454,7 @@ msgstr "Έγινε αίτηση και για τις %(count)s ημέρες."
 #: templates/accounts/_feed_items.html
 #: templates/jobs/_filters.html
 #: templates/jobs/job_apply.html
+#: templates/jobs/job_detail.html
 msgid "Apply"
 msgstr "Εφαρμογή"
 
@@ -936,9 +941,15 @@ msgstr ""
 msgid "Expected length of the day."
 msgstr "Αναμενόμενη διάρκεια της ημέρας."
 
+#: jobs/forms.py
 #: templates/accounts/_worker_card.html
+#: templates/jobs/_experience_chips.html
 msgid "Experience"
 msgstr "Εμπειρία"
+
+#: templates/jobs/_experience_badge.html
+msgid "Experienced"
+msgstr "Θέλει έμπειρο"
 
 #: core/state_machine.py
 msgid "Expired"
@@ -1075,7 +1086,6 @@ msgid "Getting paid — Construction's Finest"
 msgstr "Πώς πληρώνεσαι — Construction's Finest"
 
 #: templates/accounts/_feed_items.html
-#: templates/jobs/_job_row.html
 #: templates/jobs/job_detail.html
 #: templates/jobs/job_post_choose.html
 #: templates/jobs/offer_choose.html
@@ -1545,7 +1555,10 @@ msgid "No days picked yet."
 msgstr "Δεν έχεις διαλέξει ημέρες ακόμη."
 
 #: jobs/forms.py
-#: templates/jobs/_job_row.html
+msgid "No experience"
+msgstr "Χωρίς εμπειρία"
+
+#: templates/jobs/_experience_badge.html
 msgid "No experience needed"
 msgstr "Δεν χρειάζεται εμπειρία"
 
@@ -2345,6 +2358,10 @@ msgstr "Γεωγραφικό πλάτος εργοταξίου (προαιρετ
 msgid "Site longitude (optional)"
 msgstr "Γεωγραφικό μήκος εργοταξίου (προαιρετικό)"
 
+#: jobs/forms.py
+msgid "Skilled"
+msgstr "Έμπειρος"
+
 #: assistant/options.py
 msgid "Skip"
 msgstr ""
@@ -2352,6 +2369,14 @@ msgstr ""
 #: templates/base.html
 msgid "Skip to content"
 msgstr "Μετάβαση στο περιεχόμενο"
+
+#: jobs/forms.py
+msgid "Some experience"
+msgstr "Κάποια εμπειρία"
+
+#: templates/jobs/_experience_badge.html
+msgid "Some experience helps"
+msgstr "Βοηθάει λίγη εμπειρία"
 
 #: jobs/models.py
 msgid "Some experience helps, not essential"
@@ -3290,6 +3315,10 @@ msgstr "απομένουν"
 #: templates/core/whitepaper.html
 msgid "page covers the same ground in plainer language."
 msgstr "σελίδα καλύπτει τα ίδια θέματα με απλούστερα λόγια."
+
+#: templates/jobs/job_detail.html
+msgid "per day"
+msgstr "τη μέρα"
 
 #: templates/accounts/dashboard.html
 msgid "profile"

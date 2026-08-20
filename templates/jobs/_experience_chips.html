@@ -1,0 +1,24 @@
+{% load i18n %}{% comment %}
+ExperienceChips — the experience filter, one tap each, above the board.
+
+This filter does not belong in the panel behind the Filters button with the
+trade and the job type. Those narrow a list; this one answers "is there
+anything here for me at all?", and the person asking it is the person this app
+was built for. Hiding it behind a button means they never find it, decide the
+board is for tradespeople, and leave.
+
+Links rather than a form: each chip is a URL you can send someone, it works
+with no JavaScript, and the back button behaves. {% templatetag openblock %} querystring {% templatetag closeblock %} keeps
+the search term and any panel filters that are already set, so tapping a chip
+narrows what is on screen instead of resetting it.
+{% endcomment %}
+<div class="chips" role="group" aria-label="{% translate "Experience" %}">
+  {% for chip in form.chips %}
+    <a class="chip chip-{{ chip.tone }}{% if chip.current %} is-on{% endif %}"
+       href="{% querystring experience=chip.value %}"
+       {% if chip.current %}aria-current="true"{% endif %}>
+      {% if chip.tone != "all" %}<span class="chip-dot" aria-hidden="true"></span>{% endif %}
+      {{ chip.label }}
+    </a>
+  {% endfor %}
+</div>

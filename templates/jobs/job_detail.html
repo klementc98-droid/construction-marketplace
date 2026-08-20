@@ -8,13 +8,35 @@
   {% translate "Find work" as jobs_label %}
   {% include "_back.html" with href=back_href|default:jobs_url label=back_label|default:jobs_label %}
 
-  <h1>{{ job.title }}</h1>
-  <p class="lede">
-    {% if job.is_gig %}<span class="badge gig">{% translate "Gig" %}</span>{% else %}<span class="badge">{{ job.get_position_type_display }}</span>{% endif %}
-    {% if job.is_private %}<span class="badge">{% translate "Private offer" %}</span>{% endif %}
-    {% if not job.is_open %}<span class="badge state-{{ job.state_tone }}">{{ job.get_state_display }}</span>{% endif %}
-    {{ job.trade }}{% if job.location %} · {{ job.location }}{% else %} · {{ job.region.name }}{% endif %}
-  </p>
+  {% comment %} The head, and it answers the reader's questions in their order: what
+     trade, what job, and — before anything else on this page — whether they can
+     take it at all. That last one used to be nowhere on this page: somebody
+     could read a whole listing, write an application and only find out from the
+     description that the job wanted a time-served electrician.
+  {% endcomment %}
+  <div class="jobhead">
+    <div class="jobhead-top">
+      <span class="jobcard-ico" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><use href="#{{ job.trade_icon }}"/></svg>
+      </span>
+      <div class="jobhead-what">
+        <span class="jobcard-trade">{{ job.trade }}</span>
+        <h1 class="jobhead-title">{{ job.title }}</h1>
+      </div>
+    </div>
+
+    {% include "jobs/_experience_badge.html" with job=job %}
+
+    <p class="jobhead-meta">
+      {% if job.is_gig %}<span class="badge gig">{% translate "Gig" %}</span>{% else %}<span class="badge">{{ job.get_position_type_display }}</span>{% endif %}
+      {% if job.is_private %}<span class="badge">{% translate "Private offer" %}</span>{% endif %}
+      {% if not job.is_open %}<span class="badge state-{{ job.state_tone }}">{{ job.get_state_display }}</span>{% endif %}
+      <span class="fact">
+        <svg class="fact-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-pin"/></svg>
+        {{ job.location|default:job.region.name }}
+      </span>
+    </p>
+  </div>
 
   {% comment %} The offer, answered or not, sits above everything. Somebody who followed a
      link from their offers list is here to make one decision, and making them
@@ -394,7 +416,7 @@
     </div>
 
   {% elif can_apply %}
-    <div class="btn-row">
+    <div class="btn-row apply-inline">
       <a class="btn" href="{% url 'jobs:apply' job.pk %}">{% translate "Apply for this" %}</a>
       {% comment %} The third answer, on every open gig — not only on direct offers. A
          worker who would take the job at a different price currently has to
@@ -408,8 +430,41 @@
       {% endif %}
     </div>
   {% elif not user.is_authenticated %}
-    <div class="btn-row">
+    <div class="btn-row apply-inline">
       <a class="btn" href="{% url 'account_login' %}">{% translate "Sign in to apply" %}</a>
     </div>
+  {% endif %}
+
+  {% comment %} ApplyBar — the same button, pinned to the bottom of a phone screen.
+
+     This page is long, and it is long for good reasons: the terms, the work,
+     who posted it, the track record. On a phone that puts the one thing the
+     reader came to do below several screens of scrolling, and a decision made
+     at the top of the page has to survive a scroll to be acted on.
+
+     The bar carries the rate as well as the verb, so the button is the whole
+     decision and not half of it. It is a link to the same URL as the row above,
+     which is hidden on the same breakpoint — one Apply per screen, never two.
+  {% endcomment %}
+  {% comment %} The same condition as the two rows above, exactly. A bar that appeared
+     on fewer pages than the row it replaces would leave a phone with no way to
+     apply at all on the pages where they disagreed.
+  {% endcomment %}
+  {% if can_apply or not user.is_authenticated %}
+    <div class="applybar">
+      <div class="applybar-in">
+        <span class="applybar-pay">
+          {{ job.pay_display }}
+          {% if group_days > 1 %}<span class="applybar-per">{% translate "per day" %}</span>{% endif %}
+        </span>
+        {% if can_apply %}
+          <a class="btn applybar-go" href="{% url 'jobs:apply' job.pk %}">{% translate "Apply" %}</a>
+        {% else %}
+          <a class="btn applybar-go" href="{% url 'account_login' %}">{% translate "Sign in to apply" %}</a>
+        {% endif %}
+      </div>
+    </div>
+    {# Height for the bar, so the last card is never trapped underneath it. #}
+    <div class="applybar-spacer" aria-hidden="true"></div>
   {% endif %}
 {% endblock %}

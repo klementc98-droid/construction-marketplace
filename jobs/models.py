@@ -98,18 +98,20 @@ class JobQuerySet(models.QuerySet):
     def for_trade(self, trade_slug: str | None):
         return self.filter(trade__slug=trade_slug) if trade_slug else self
 
-    def open_to_beginners(self, wanted: bool = True):
-        """Jobs somebody with no trade behind them can actually take.
+    def for_experience(self, level: str | None):
+        """Jobs asking for exactly this much of the person taking them.
 
         The one filter on this board that changes who applies rather than what
         they see. Somebody deciding whether this app is for them is asking
         exactly this question, and it should take one tap to answer.
+
+        Exact match rather than "this level and below". The chip says *No
+        experience needed*, so it has to mean the jobs that say that — a filter
+        that quietly widens is a filter nobody can predict, and the reader
+        would be left wondering why a job wanting three years is in the
+        beginners list.
         """
-        if not wanted:
-            return self
-        return self.filter(
-            experience_wanted__in=(ExperienceWanted.NONE, ExperienceWanted.SOME)
-        )
+        return self.filter(experience_wanted=level) if level in ExperienceWanted.values else self
 
     def for_type(self, job_type: str | None):
         return self.filter(job_type=job_type) if job_type in JobType.values else self
@@ -634,6 +636,45 @@ class Job(TimestampedModel):
         nothing for either side to rate.
         """
         return self.state in (JobState.PAID_OUT, JobState.CLOSED)
+
+    #: Which of the eight trade icons stands for this job, by trade slug. The
+    #: mapping is here rather than in a template because a template that has to
+    #: know the slugs is a template nobody can add a trade to.
+    TRADE_ICONS = {
+        "general-labor": "i-hardhat",
+        "electrician": "i-bolt",
+        "plumber": "i-wrench",
+        "hvac": "i-wrench",
+        "carpenter": "i-saw",
+        "drywall-framing": "i-saw",
+        "mason-concrete": "i-brick",
+        "roofer": "i-brick",
+        "painter": "i-roller",
+        "welder": "i-hammer",
+        "landscaping-excavation": "i-trade",
+        "heavy-equipment-operator": "i-trade",
+    }
+
+    @property
+    def trade_icon(self) -> str:
+        """Falls back rather than disappearing: a new trade gets the generic
+        mark, not a hole where the icon should be."""
+        return self.TRADE_ICONS.get(self.trade.slug, "i-trade")
+
+    @property
+    def experience_tone(self) -> str:
+        """go / steady / stop, for the badge that decides whether somebody
+        reads the rest of the card.
+
+        Three levels rather than a yes/no, because "some experience helps" is
+        the honest middle and collapsing it either way loses the jobs most
+        people can actually take.
+        """
+        return {
+            ExperienceWanted.NONE: "go",
+            ExperienceWanted.SOME: "steady",
+            ExperienceWanted.SKILLED: "stop",
+        }.get(self.experience_wanted, "steady")
 
     @property
     def teaches_on_the_job(self) -> bool:

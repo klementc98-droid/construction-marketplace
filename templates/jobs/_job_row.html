@@ -1,48 +1,79 @@
 {% load i18n money_extras %}{% comment %}
-One row on any list of jobs. Shared by the board, "mine", and search results
+JobCard — one job, on any list. Shared by the board, "mine" and search results
 so a job looks the same everywhere it appears.
+
+The order of the lines is the design. Somebody scanning this board asks "could
+I do this?" before "where is it?" and long before anything else, so the trade
+and the experience come first and the answer that used to sit four lines down
+is now the second thing on the card. Pay is large because it is the other half
+of the decision; where, when and how long are one quiet row underneath.
 {% endcomment %}
 <a class="job-row" href="{% url 'jobs:detail' job.pk %}">
-  <div class="card">
-    <div class="row-top">
-      <span class="title">{{ job.title }}</span>
-      <span class="pay">
+  <div class="card jobcard">
+
+    <div class="jobcard-head">
+      <span class="jobcard-ico" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><use href="#{{ job.trade_icon }}"/></svg>
+      </span>
+      <span class="jobcard-what">
+        <span class="jobcard-trade">{{ job.trade }}</span>
+        <span class="jobcard-title">{{ job.title }}</span>
+      </span>
+      <span class="jobcard-pay">
         {% if job.group_days > 1 %}
           {% blocktranslate with pay=job.fixed_pay|money %}{{ pay }} per day{% endblocktranslate %}
         {% else %}{{ job.pay_display }}{% endif %}
       </span>
     </div>
-    {% comment %} First line of the card, before the trade or the money: whether this is
-       a job the reader can take at all. Most people on this board have never
-       done the work, and a card that makes them read to the bottom to find out
-       is a card they scroll past.
-    {% endcomment %}
-    {% if job.teaches_on_the_job %}
-      <span class="badge learn">{% translate "No experience needed" %}</span>
-    {% endif %}
-    <div class="row-meta">
+
+    {% include "jobs/_experience_badge.html" with job=job %}
+
+    <div class="jobcard-facts">
       {% if job.is_gig %}
-        {% comment %} A booking of several days is one row: the badge carries the count
-           and the dates read as a span, because three cards differing only by
-           date read as the same job posted three times by mistake. The pay is
-           per day either way — that is what fixed_pay has always meant.
+        {% comment %} A booking of several days is one card: the span and the count, not
+           three near-identical cards differing only by date.
         {% endcomment %}
-        {% if job.group_days > 1 %}
-          <span class="badge gig">{% blocktranslate count n=job.group_days %}{{ n }} day{% plural %}{{ n }} days{% endblocktranslate %}</span>
-          {{ job.group_dates.0|date:"j M" }} – {{ job.group_dates|last|date:"j M" }}
-          · {% blocktranslate with total=job.group_pay|money n=job.group_days %}{{ total }} total for {{ n }} days{% endblocktranslate %}
-          · {% blocktranslate with h=job.group_hours|floatformat:"-1" %}{{ h }} hrs in all{% endblocktranslate %}
-        {% else %}
-          <span class="badge gig">{% translate "Gig" %}</span>
-          {{ job.gig_date|date:"D j M" }}
-        {% endif %}
-        {% if job.implied_hourly %}· ≈{{ job.implied_hourly|money }}/{% translate "hr" %}{% endif %}
+        <span class="fact">
+          <svg class="fact-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-clock"/></svg>
+          {% if job.group_days > 1 %}
+            {{ job.group_dates.0|date:"j M" }} – {{ job.group_dates|last|date:"j M" }}
+            · {% blocktranslate count n=job.group_days %}{{ n }} day{% plural %}{{ n }} days{% endblocktranslate %}
+          {% else %}{{ job.gig_date|date:"D j M" }}{% endif %}
+        </span>
       {% else %}
-        <span class="badge">{{ job.get_position_type_display }}</span>
+        <span class="fact">
+          <svg class="fact-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-clock"/></svg>
+          {{ job.get_position_type_display }}
+        </span>
       {% endif %}
-      {% if not job.is_open %}<span class="badge state-{{ job.state_tone }}">{{ job.get_state_display }}</span>{% endif %}
-      <br>
-      {{ job.trade }}{% if job.location %} · {{ job.location }}{% endif %}
+
+      <span class="fact">
+        <svg class="fact-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-pin"/></svg>
+        {{ job.location|default:job.region.name }}
+      </span>
+
+      {% comment %} Only when it is not the ordinary case. A board where every card carries
+         a status badge is a board where none of them mean anything.
+      {% endcomment %}
+      {% if not job.is_open %}
+        <span class="badge state-{{ job.state_tone }}">{{ job.get_state_display }}</span>
+      {% endif %}
     </div>
+
+    {% comment %} The arithmetic, kept but demoted. Somebody comparing two multi-day
+       bookings wants the total and the rate per hour; nobody scanning the board
+       for the first time does, so it reads last and small.
+    {% endcomment %}
+    {% if job.is_gig and job.group_days > 1 or job.implied_hourly %}
+      <div class="jobcard-sum">
+        {% if job.is_gig and job.group_days > 1 %}
+          {% blocktranslate with total=job.group_pay|money n=job.group_days %}{{ total }} total for {{ n }} days{% endblocktranslate %}
+          · {% blocktranslate with h=job.group_hours|floatformat:"-1" %}{{ h }} hrs in all{% endblocktranslate %}
+        {% endif %}
+        {% if job.implied_hourly %}
+          {% if job.is_gig and job.group_days > 1 %}· {% endif %}≈{{ job.implied_hourly|money }}/{% translate "hr" %}
+        {% endif %}
+      </div>
+    {% endif %}
   </div>
 </a>
